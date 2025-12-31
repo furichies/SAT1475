@@ -1,0 +1,309 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
+import {
+    ArrowLeft,
+    Clock,
+    User,
+    MessageSquare,
+    Send,
+    AlertCircle,
+    CheckCircle,
+    Package,
+    Calendar,
+    Tag
+} from 'lucide-react'
+
+export default function TicketDetailPage() {
+    const params = useParams()
+    const id = params?.id as string
+    const router = useRouter()
+    const { data: session, status } = useSession()
+    const [ticket, setTicket] = useState<any>(null)
+    const [nuevoComentario, setNuevoComentario] = useState('')
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSending, setIsSending] = useState(false)
+
+    const fetchTicket = async () => {
+        if (!id) return
+        try {
+            const res = await fetch(`/api/sat/tickets/${id}`)
+            const data = await res.json()
+            if (data.success) {
+                setTicket(data.ticket)
+            }
+        } catch (error) {
+            console.error('Error fetching ticket:', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/auth/login?callbackUrl=/sat/' + id)
+        } else if (session && id) {
+            fetchTicket()
+        }
+    }, [id, session, status])
+
+    const handleEnviarComentario = async () => {
+        if (!nuevoComentario.trim() || !id) return
+
+        setIsSending(true)
+        try {
+            const res = await fetch(`/api/sat/tickets/${id}/comentarios`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contenido: nuevoComentario })
+            })
+
+            const data = await res.json()
+            if (data.success) {
+                setNuevoComentario('')
+                fetchTicket()
+            }
+        } catch (error) {
+            console.error('Error sending comment:', error)
+        } finally {
+            setIsSending(false)
+        }
+    }
+
+    if (status === 'loading' || isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
+
+    if (!ticket) {
+        return (
+            <div className="min-h-screen py-16 flex flex-col items-center justify-center text-center p-4">
+                <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />
+                <h1 className="text-2xl font-bold mb-2">Ticket no encontrado</h1>
+                <p className="text-muted-foreground mb-6">El ticket solicitado no existe o no tienes permiso para verlo.</p>
+                <Button asChild>
+                    <Link href="/sat">Volver a mis tickets</Link>
+                </Button>
+            </div>
+        )
+    }
+
+    const getPrioridadColor = (p: string) => {
+        const colors: any = {
+            baja: 'bg-green-100 text-green-800 border-green-200',
+            media: 'bg-blue-100 text-blue-800 border-blue-200',
+            alta: 'bg-orange-100 text-orange-800 border-orange-200',
+            urgente: 'bg-red-100 text-red-800 border-red-200'
+        }
+        return colors[p] || 'bg-gray-100'
+    }
+
+    const getEstadoInfo = (e: string) => {
+        const info: any = {
+            abierto: { label: 'Abierto', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+            asignado: { label: 'Asignado', color: 'bg-blue-100 text-blue-800', icon: User },
+            en_progreso: { label: 'En Progreso', color: 'bg-purple-100 text-purple-800', icon: Package },
+            resuelto: { label: 'Resuelto', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+            cancelado: { label: 'Cancelado', color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
+        }
+        return info[e] || { label: e, color: 'bg-gray-100', icon: AlertCircle }
+    }
+
+    const estadoInfo = getEstadoInfo(ticket.estado)
+
+    return (
+        <div className="min-h-screen py-8 bg-muted/30">
+            <div className="container max-w-5xl">
+                <Link href="/sat" className="inline-flex items-center gap-2 mb-6 text-sm font-medium hover:text-primary transition-colors">
+                    <ArrowLeft className="h-4 w-4" />
+                    Volver a Mis Tickets
+                </Link>
+
+                <div className="grid lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-6">
+                        <Card className="shadow-lg border-none">
+                            <CardHeader className="pb-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-sm font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+                                        {ticket.numeroTicket}
+                                    </span>
+                                    <Badge className={`${estadoInfo.color} border-none shadow-sm px-4 py-1 rounded-full`}>
+                                        <div className="flex items-center gap-1.5 font-bold">
+                                            <estadoInfo.icon className="h-3.5 w-3.5" />
+                                            {estadoInfo.label.toUpperCase()}
+                                        </div>
+                                    </Badge>
+                                </div>
+                                <CardTitle className="text-4xl font-extrabold tracking-tight text-foreground">{ticket.asunto}</CardTitle>
+                                <CardDescription className="pt-6 text-lg leading-relaxed text-foreground/70 font-medium">
+                                    {ticket.descripcion}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-wrap gap-8 text-sm text-muted-foreground border-t pt-6 bg-muted/5 p-4 rounded-xl mt-4">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4 text-primary" />
+                                        <span className="font-semibold">Creado el {new Date(ticket.fechaCreacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Tag className="h-4 w-4 text-primary" />
+                                        <span className="capitalize font-semibold">Tipo: {ticket.tipo}</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="flex flex-col shadow-xl border-none overflow-hidden">
+                            <CardHeader className="border-b bg-primary/5">
+                                <CardTitle className="text-xl flex items-center gap-2 font-black text-primary">
+                                    <MessageSquare className="h-6 w-6" />
+                                    SEGUIMIENTO TÉCNICO
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0 bg-muted/10">
+                                <div className="max-h-[600px] min-h-[400px] overflow-y-auto p-8 space-y-8">
+                                    {ticket.seguimientos && ticket.seguimientos.length > 0 ? (
+                                        ticket.seguimientos.map((seg: any) => (
+                                            <div key={seg.id} className={`flex ${seg.usuarioId === session?.user?.id ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[85%] rounded-3xl p-5 shadow-sm relative group ${seg.usuarioId === session?.user?.id
+                                                        ? 'bg-primary text-primary-foreground rounded-tr-none ml-12'
+                                                        : 'bg-white text-foreground rounded-tl-none mr-12 border'
+                                                    }`}>
+                                                    <div className={`flex items-center justify-between gap-8 mb-3 pb-2 border-b ${seg.usuarioId === session?.user?.id ? 'border-white/20' : 'border-muted'
+                                                        }`}>
+                                                        <span className="text-xs font-black uppercase tracking-widest opacity-90">
+                                                            {seg.usuarioId === session?.user?.id ? 'Tú (Cliente)' : (seg.usuario?.nombre || 'Especialista MicroInfo')}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold opacity-70 whitespace-nowrap">
+                                                            {new Date(seg.fechaCreacion).toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[15px] whitespace-pre-wrap leading-relaxed font-medium">{seg.contenido}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-20 text-muted-foreground">
+                                            <div className="w-24 h-24 bg-white shadow-inner rounded-full flex items-center justify-center mx-auto mb-6">
+                                                <MessageSquare className="h-12 w-12 opacity-10" />
+                                            </div>
+                                            <p className="text-xl font-bold text-foreground/40">Sin mensajes todavía</p>
+                                            <p className="text-sm opacity-50 mt-2">Personal técnico revisará su caso en breve.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t p-8 bg-white">
+                                <div className="w-full space-y-6">
+                                    <div className="relative">
+                                        <Textarea
+                                            placeholder="Escriba aquí sus dudas, fotos o aclaraciones..."
+                                            value={nuevoComentario}
+                                            onChange={(e) => setNuevoComentario(e.target.value)}
+                                            className="resize-none focus-visible:ring-primary border-muted-foreground/20 rounded-2xl p-6 text-[15px] shadow-sm min-h-[120px]"
+                                        />
+                                        <div className="absolute bottom-4 right-4 text-[10px] text-muted-foreground font-bold uppercase">
+                                            Mensaje de Cliente
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-[11px] text-muted-foreground italic font-medium">
+                                            Su mensaje será notificado al técnico asignado.
+                                        </p>
+                                        <Button
+                                            onClick={handleEnviarComentario}
+                                            disabled={isSending || !nuevoComentario.trim()}
+                                            className="px-10 h-14 rounded-full gap-3 font-black text-lg shadow-xl hover:shadow-primary/20 transition-all hover:-translate-y-1 active:scale-95"
+                                        >
+                                            {isSending ? 'Enviando...' : 'ENVIAR MENSAJE'}
+                                            <Send className="h-5 w-5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardFooter>
+                        </Card>
+                    </div>
+
+                    <div className="space-y-8">
+                        <Card className="shadow-xl border-none overflow-hidden rounded-3xl">
+                            <div className="h-2 bg-primary w-full" />
+                            <CardHeader className="bg-muted/5 pb-2">
+                                <CardTitle className="text-2xl font-black tracking-tight">DATOS DEL SAT</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-8 pt-4">
+                                <div className="space-y-3">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nivel de Prioridad</p>
+                                    <Badge className={`${getPrioridadColor(ticket.prioridad)} px-5 py-2 text-[13px] font-black border-none rounded-xl shadow-sm w-full flex justify-center`}>
+                                        {ticket.prioridad.toUpperCase()}
+                                    </Badge>
+                                </div>
+
+                                <Separator className="opacity-50" />
+
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Responsable Técnico</p>
+                                    {ticket.tecnico ? (
+                                        <div className="flex items-center gap-4 p-5 bg-primary/5 rounded-3xl border border-primary/10 transition-colors hover:bg-primary/10">
+                                            <div className="h-14 w-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-black text-2xl shadow-xl rotate-3">
+                                                {ticket.tecnico.usuario.nombre.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="text-lg font-black text-primary leading-none mb-1">{ticket.tecnico.usuario.nombre}</p>
+                                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Nivel {ticket.tecnico.nivel}</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-3 p-6 bg-amber-50 rounded-3xl border border-amber-100 text-amber-800 text-center">
+                                            <div className="h-10 w-10 bg-amber-200 rounded-full flex items-center justify-center animate-bounce">
+                                                <Clock className="h-6 w-6" />
+                                            </div>
+                                            <p className="text-xs font-black uppercase tracking-tighter">Buscando técnico calificado...</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {ticket.numeroSerieProducto && (
+                                    <>
+                                        <Separator className="opacity-50" />
+                                        <div className="space-y-3">
+                                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Identificador de Producto</p>
+                                            <div className="bg-slate-900 text-slate-100 p-4 rounded-2xl font-mono text-sm break-all shadow-inner border-2 border-slate-800 relative group">
+                                                <div className="absolute -top-2 -left-2 bg-primary text-[8px] font-black px-2 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">S/N</div>
+                                                {ticket.numeroSerieProducto}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card className="bg-gradient-to-br from-primary/10 to-transparent border-none shadow-none p-1 rounded-3xl">
+                            <div className="bg-white/80 backdrop-blur-sm rounded-[22px] p-6 space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                                        <AlertCircle className="h-5 w-5" />
+                                    </div>
+                                    <CardTitle className="text-sm font-black text-primary uppercase">Asistencia en Vivo</CardTitle>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed font-bold">
+                                    Este canal es directo. Si desea añadir capturas de pantalla o documentos, indíquelo en el chat y el técnico le habilitará el enlace de subida.
+                                </p>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}

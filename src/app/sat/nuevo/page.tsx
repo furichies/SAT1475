@@ -24,8 +24,10 @@ import {
   Clock,
   Upload,
   FileText,
-  Info
+  Info,
+  Lock
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 const tipos = [
   { value: 'incidencia', label: 'Incidencia', icon: AlertTriangle },
@@ -44,6 +46,7 @@ const prioridades = [
 ]
 
 export default function NuevoTicketPage() {
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [tipo, setTipo] = useState('')
   const [prioridad, setPrioridad] = useState('media')
@@ -55,6 +58,19 @@ export default function NuevoTicketPage() {
   const [adjuntos, setAdjuntos] = useState<File[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    router.replace('/auth/login?callbackUrl=/sat/nuevo')
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -199,8 +215,8 @@ export default function NuevoTicketPage() {
                             type="button"
                             onClick={() => setPrioridad(p.value)}
                             className={`p-2 rounded-md border text-xs font-medium transition-all ${prioridad === p.value
-                                ? p.color + ' border-current'
-                                : 'bg-white border-gray-200 hover:border-primary/50'
+                              ? p.color + ' border-current'
+                              : 'bg-white border-gray-200 hover:border-primary/50'
                               }`}
                           >
                             <div className="truncate">{p.label}</div>

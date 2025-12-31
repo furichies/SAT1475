@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
@@ -125,11 +126,30 @@ const estados = {
 export default function SatPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [tickets, setTickets] = useState<any[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState('')
   const [prioridadFiltro, setPrioridadFiltro] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState('')
   const [soloPendientes, setSoloPendientes] = useState(false)
+
+  useEffect(() => {
+    if (session) {
+      fetchTickets()
+    }
+  }, [session])
+
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch('/api/sat/tickets')
+      const data = await res.json()
+      if (data.success) {
+        setTickets(data.tickets)
+      }
+    } catch (error) {
+      console.error('Error fetching tickets:', error)
+    }
+  }
 
   if (status === 'loading') {
     return (
@@ -183,7 +203,14 @@ export default function SatPage() {
     )
   }
 
-  const ticketsFiltrados = ticketsMock.filter((ticket) => {
+  const ticketsFiltrados = tickets.filter((ticket) => {
+    // 1. Filtro por Rol (CLIENTE solo ve los suyos, STAFF ve todos)
+    const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'tecnico' || session?.user?.role === 'superadmin'
+    const matchRol = isStaff || ticket.usuarioId === session?.user?.id
+
+    if (!matchRol) return false
+
+    // 2. Filtros de búsqueda y estado
     const matchBusqueda = !busqueda ||
       ticket.asunto.toLowerCase().includes(busqueda.toLowerCase()) ||
       ticket.numeroTicket.toLowerCase().includes(busqueda.toLowerCase())
@@ -373,24 +400,24 @@ export default function SatPage() {
                         <div className="flex items-center gap-1">
                           <MessageSquare className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">
-                            {ticket.numeroSeguimientos} mensajes
+                            {ticket._count?.seguimientos || 0} mensajes
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        <span>{ticket.fechaCreacion}</span>
+                        <span>{new Date(ticket.fechaCreacion).toLocaleDateString()}</span>
                       </div>
                     </div>
 
-                    {ticket.tecnico && (
+                    {ticket.tecnico?.usuario && (
                       <div className="flex items-center gap-2 pt-3 border-t">
                         <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
-                          {ticket.tecnico.nombre.charAt(0)}
+                          {ticket.tecnico.usuario.nombre.charAt(0)}
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium">
-                            {ticket.tecnico.nombre} {ticket.tecnico.apellidos}
+                            {ticket.tecnico.usuario.nombre}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {ticket.tecnico.nivel.charAt(0).toUpperCase() + ticket.tecnico.nivel.slice(1)} • {ticket.tecnico.valoracionMedia} ⭐
@@ -429,7 +456,7 @@ function getBadgeEstado(estado: string): string {
 }
 
 function getEstadoEstado(estado: string): { label: string, color: string, icon?: any } {
-  const estados = {
+  const infoEstados = {
     abierto: { label: 'Abierto', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: AlertCircle },
     asignado: { label: 'Asignado', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: CheckCircle },
     en_progreso: { label: 'En Progreso', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Clock },
@@ -437,5 +464,5 @@ function getEstadoEstado(estado: string): { label: string, color: string, icon?:
     resuelto: { label: 'Resuelto', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
     cancelado: { label: 'Cancelado', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: AlertCircle }
   }
-  return estados[estado as keyof typeof estados] || { label: estado, color: 'bg-gray-100', icon: AlertCircle }
+  return infoEstados[estado as keyof typeof infoEstados] || { label: estado, color: 'bg-gray-100', icon: AlertCircle }
 }

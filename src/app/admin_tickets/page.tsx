@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -42,7 +42,7 @@ const ticketsMock = [
 ]
 
 const estados = {
-  pendiente: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+  abierto: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
   asignado: { label: 'Asignado', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: User },
   en_progreso: { label: 'En Progreso', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Package },
   resuelto: { label: 'Resuelto', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle }
@@ -65,7 +65,8 @@ const tipos = {
 }
 
 export default function AdminTicketsPage() {
-  const [tickets, setTickets] = useState(ticketsMock)
+  const [tickets, setTickets] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [prioridad, setPrioridad] = useState('todos')
   const [tipo, setTipo] = useState('todos')
@@ -74,33 +75,71 @@ export default function AdminTicketsPage() {
   const [isEdicion, setIsEdicion] = useState(false)
   const [isNuevo, setIsNuevo] = useState(false)
 
+  useEffect(() => {
+    fetchTickets()
+  }, [])
+
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch('/api/sat/tickets')
+      const data = await res.json()
+      if (data.success) {
+        // Mapear los datos de la DB al formato que espera el componente admin
+        const mappedTickets = data.tickets.map((t: any) => ({
+          id: t.id,
+          numero: t.numeroTicket,
+          cliente: t.usuario?.nombre || 'Desconocido',
+          asunto: t.asunto,
+          prioridad: t.prioridad,
+          tipo: t.tipo,
+          tecnico: t.tecnico?.usuario?.nombre || 'Sin asignar',
+          fecha: new Date(t.fechaCreacion).toLocaleString(),
+          estado: t.estado,
+          descripcion: t.descripcion
+        }))
+        setTickets(mappedTickets)
+      }
+    } catch (error) {
+      console.error('Error fetching admin tickets:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const [formTicket, setFormTicket] = useState({
     asunto: '',
     descripcion: '',
     prioridad: 'media',
     tipo: 'incidencia',
-    estado: 'pendiente',
+    estado: 'abierto',
     tecnico: 'Sin asignar',
     cliente: ''
   })
 
-  const handleGuardar = () => {
-    if (isNuevo) {
-      const nuevoTicket = {
-        id: (tickets.length + 1).toString(),
-        numero: `SAT-2024-${(tickets.length + 101).toString()}`,
-        fecha: new Date().toISOString().split('T')[0] + ' ' + new Date().getHours() + ':' + new Date().getMinutes().toString().padStart(2, '0'),
-        ...formTicket
+  const handleGuardar = async () => {
+    setIsLoading(true)
+    try {
+      if (isNuevo) {
+        const res = await fetch('/api/sat/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formTicket)
+        })
+        if (res.ok) fetchTickets()
+      } else if (isEdicion && ticketSeleccionado) {
+        const res = await fetch(`/api/sat/tickets/${ticketSeleccionado.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formTicket)
+        })
+        if (res.ok) fetchTickets()
       }
-      setTickets([nuevoTicket, ...tickets])
-    } else if (isEdicion && ticketSeleccionado) {
-      setTickets(tickets.map((t: any) =>
-        t.id === ticketSeleccionado.id
-          ? { ...t, ...formTicket }
-          : t
-      ))
+      closeModals()
+    } catch (error) {
+      console.error('Error saving ticket:', error)
+    } finally {
+      setIsLoading(false)
     }
-    closeModals()
   }
 
   const openEdicion = (ticket: any) => {
@@ -123,7 +162,7 @@ export default function AdminTicketsPage() {
       descripcion: '',
       prioridad: 'media',
       tipo: 'incidencia',
-      estado: 'pendiente',
+      estado: 'abierto',
       tecnico: 'Sin asignar',
       cliente: ''
     })
@@ -151,7 +190,7 @@ export default function AdminTicketsPage() {
   }
 
   const getEstadoBadge = (est: string) => {
-    return estados[est as keyof typeof estados] || estados.pendiente
+    return estados[est as keyof typeof estados] || estados.abierto
   }
 
   return (
@@ -211,104 +250,112 @@ export default function AdminTicketsPage() {
           </Button>
         </div>
 
-        {/* Buscar y Filtrar */}
-        <div className="bg-white border rounded-lg p-4 mb-6 shadow-sm">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar por asunto, número o cliente..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={prioridad} onValueChange={setPrioridad}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Prioridad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Prioridades</SelectItem>
-                <SelectItem value="urgente">Urgente</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Media</SelectItem>
-                <SelectItem value="baja">Baja</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={tipo} onValueChange={setTipo}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los tipos</SelectItem>
-                <SelectItem value="incidencia">Incidencia</SelectItem>
-                <SelectItem value="consulta">Consulta</SelectItem>
-                <SelectItem value="reparacion">Reparación</SelectItem>
-                <SelectItem value="garantia">Garantía</SelectItem>
-              </SelectContent>
-            </Select>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
-        </div>
-
-        {/* Kanban Board */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Object.entries(estados).map(([key, info]) => (
-            <div key={key}>
-              <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                  <info.icon className="h-5 w-5 opacity-70" />
-                  <h2 className="font-bold text-gray-700">{info.label}</h2>
+        ) : (
+          <>
+            {/* Buscar y Filtrar */}
+            <div className="bg-white border rounded-lg p-4 mb-6 shadow-sm">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="relative flex-1 min-w-[300px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por asunto, número o cliente..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                <Badge variant="secondary">
-                  {ticketsFiltrados.filter(t => t.estado === key).length}
-                </Badge>
-              </div>
-              <div className="space-y-3">
-                {ticketsFiltrados.filter(t => t.estado === key).map((ticket) => {
-                  const prioBadge = getPrioridadBadge(ticket.prioridad)
-                  return (
-                    <Card key={ticket.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardHeader className="p-4 pb-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-mono text-muted-foreground">{ticket.numero}</span>
-                          <Badge className={`${prioBadge.color} text-[10px] px-1.5 py-0`}>
-                            {prioBadge.label}
-                          </Badge>
-                        </div>
-                        <h3 className="font-semibold text-sm line-clamp-2">{ticket.asunto}</h3>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-2 space-y-3">
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <User className="h-3 w-3" />
-                          <span>{ticket.cliente}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[10px] text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{ticket.fecha}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Tag className="h-3 w-3" />
-                            <span>{tipos[ticket.tipo as keyof typeof tipos]}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2 border-t">
-                          <Button variant="ghost" size="sm" className="h-8 flex-1" onClick={() => setTicketSeleccionado(ticket)}>
-                            <Eye className="h-3.5 w-3.5 mr-1" /> Ver
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-8 flex-1" onClick={() => openEdicion(ticket)}>
-                            <Edit className="h-3.5 w-3.5 mr-1" /> Editar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+                <Select value={prioridad} onValueChange={setPrioridad}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Prioridad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Prioridades</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={tipo} onValueChange={setTipo}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los tipos</SelectItem>
+                    <SelectItem value="incidencia">Incidencia</SelectItem>
+                    <SelectItem value="consulta">Consulta</SelectItem>
+                    <SelectItem value="reparacion">Reparación</SelectItem>
+                    <SelectItem value="garantia">Garantía</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Kanban Board */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Object.entries(estados).map(([key, info]) => (
+                <div key={key}>
+                  <div className="flex items-center justify-between mb-4 px-2">
+                    <div className="flex items-center gap-2">
+                      <info.icon className="h-5 w-5 opacity-70" />
+                      <h2 className="font-bold text-gray-700">{info.label}</h2>
+                    </div>
+                    <Badge variant="secondary">
+                      {ticketsFiltrados.filter(t => t.estado === key).length}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {ticketsFiltrados.filter(t => t.estado === key).map((ticket) => {
+                      const prioBadge = getPrioridadBadge(ticket.prioridad)
+                      return (
+                        <Card key={ticket.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-mono text-muted-foreground">{ticket.numero}</span>
+                              <Badge className={`${prioBadge.color} text-[10px] px-1.5 py-0`}>
+                                {prioBadge.label}
+                              </Badge>
+                            </div>
+                            <h3 className="font-semibold text-sm line-clamp-2">{ticket.asunto}</h3>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-2 space-y-3">
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                              <User className="h-3 w-3" />
+                              <span>{ticket.cliente}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{ticket.fecha}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                <span>{tipos[ticket.tipo as keyof typeof tipos]}</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 pt-2 border-t">
+                              <Button variant="ghost" size="sm" className="h-8 flex-1" onClick={() => setTicketSeleccionado(ticket)}>
+                                <Eye className="h-3.5 w-3.5 mr-1" /> Ver
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 flex-1" onClick={() => openEdicion(ticket)}>
+                                <Edit className="h-3.5 w-3.5 mr-1" /> Editar
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Modal Detalle */}
         <Dialog open={ticketSeleccionado && !isEdicion} onOpenChange={(open) => !open && closeModals()}>

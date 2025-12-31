@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 
 // Función para generar número de ticket único
 function generarNumeroTicket(): string {
@@ -48,19 +48,20 @@ export async function POST(req: NextRequest) {
         let numeroTicket = generarNumeroTicket()
 
         // Verificar que sea único (aunque es muy improbable que se repita)
-        let existente = await prisma.ticket.findUnique({
+        const existente = await db.ticket.findUnique({
             where: { numeroTicket }
         })
 
         while (existente) {
             numeroTicket = generarNumeroTicket()
-            existente = await prisma.ticket.findUnique({
+            const existsAgain = await db.ticket.findUnique({
                 where: { numeroTicket }
             })
+            if (!existsAgain) break
         }
 
         // Crear el ticket en la base de datos
-        const ticket = await prisma.ticket.create({
+        const ticket = await db.ticket.create({
             data: {
                 numeroTicket,
                 tipo,
@@ -108,9 +109,11 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        // Obtener todos los tickets del usuario
-        const tickets = await prisma.ticket.findMany({
-            where: {
+        const isStaff = session.user.role === 'admin' || session.user.role === 'tecnico' || session.user.role === 'superadmin'
+
+        // Obtener todos los tickets (o solo los del usuario si no es staff)
+        const tickets = await db.ticket.findMany({
+            where: isStaff ? {} : {
                 usuarioId: session.user.id
             },
             orderBy: {
@@ -121,6 +124,20 @@ export async function GET(req: NextRequest) {
                     select: {
                         nombre: true,
                         email: true
+                    }
+                },
+                tecnico: {
+                    include: {
+                        usuario: {
+                            select: {
+                                nombre: true
+                            }
+                        }
+                    }
+                },
+                _count: {
+                    select: {
+                        seguimientos: true
                     }
                 }
             }
