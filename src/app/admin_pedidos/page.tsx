@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Search,
   Package,
@@ -38,7 +39,7 @@ const pedidosMock = [
 export default function AdminPedidosPage() {
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState('todos')
-  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState<any>(null)
 
   const pedidosFiltrados = pedidosMock.filter(p => {
     if (busqueda && !p.numero.toLowerCase().includes(busqueda.toLowerCase()) && !p.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
@@ -153,7 +154,10 @@ export default function AdminPedidosPage() {
                         <td className="p-4">
                           <Badge className={estadoInfo.color}>
                             <div className="flex items-center gap-1">
-                              <estadoInfo.icon className="h-3 w-3" />
+                              {(() => {
+                                const Icon = estadoInfo.icon;
+                                return <Icon className="h-3 w-3" />;
+                              })()}
                               {estadoInfo.label}
                             </div>
                           </Badge>
