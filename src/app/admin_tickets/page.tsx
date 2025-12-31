@@ -22,6 +22,7 @@ import {
   X,
   Eye,
   Edit,
+  Trash2,
   Package,
   Settings,
   LayoutDashboard,
@@ -170,6 +171,8 @@ export default function AdminTicketsPage() {
   }
 
   const openNuevo = () => {
+    setIsNuevo(true)
+    setTicketSeleccionado(null)
     setFormTicket({
       asunto: '',
       descripcion: '',
@@ -179,7 +182,28 @@ export default function AdminTicketsPage() {
       tecnico: 'Sin asignar',
       cliente: ''
     })
-    setIsNuevo(true)
+  }
+
+  const handleEliminar = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este ticket pendiente?')) return
+
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/sat/tickets/${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        await fetchTickets()
+      } else {
+        alert('Error: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error deleting ticket:', error)
+      alert('Error de conexión al eliminar')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const closeModals = () => {
@@ -358,6 +382,11 @@ export default function AdminTicketsPage() {
                               <Button variant="ghost" size="sm" className="h-8 flex-1" onClick={() => openEdicion(ticket)}>
                                 <Edit className="h-3.5 w-3.5 mr-1" /> Editar
                               </Button>
+                              {ticket.estado === 'abierto' && (
+                                <Button variant="ghost" size="sm" className="h-8 flex-none text-red-600 hover:text-red-700 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleEliminar(ticket.id) }}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </CardContent>
                         </Card>

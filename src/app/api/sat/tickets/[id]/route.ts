@@ -95,3 +95,31 @@ export async function PATCH(
         return NextResponse.json({ success: false, error: 'Error al actualizar' }, { status: 500 })
     }
 }
+
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const session = await getServerSession(authOptions)
+
+        if (!session || !session.user) {
+            return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+        }
+
+        const isStaff = session.user.role === 'admin' || session.user.role === 'tecnico' || session.user.role === 'superadmin'
+        if (!isStaff) {
+            return NextResponse.json({ success: false, error: 'Privilegios insuficientes' }, { status: 403 })
+        }
+
+        const { id } = params
+        await db.ticket.delete({
+            where: { id }
+        })
+
+        return NextResponse.json({ success: true, message: 'Ticket eliminado correctamente' })
+    } catch (error) {
+        console.error('Error al eliminar ticket:', error)
+        return NextResponse.json({ success: false, error: 'Error al eliminar' }, { status: 500 })
+    }
+}
