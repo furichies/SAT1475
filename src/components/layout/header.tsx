@@ -139,13 +139,14 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
 
-                  {(user.role === UserRole.admin || user.role === UserRole.superadmin) && (
+
+                  {(user.role === UserRole.tecnico || user.role === UserRole.admin || user.role === UserRole.superadmin) && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/admin" className="cursor-pointer">
+                        <Link href="/admin/dashboard" className="cursor-pointer">
                           <Settings className="mr-2 h-4 w-4" />
-                          <span>Panel Admin</span>
+                          <span>Panel de Administración</span>
                         </Link>
                       </DropdownMenuItem>
                     </>

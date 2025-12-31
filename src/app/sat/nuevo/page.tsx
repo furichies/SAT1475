@@ -16,16 +16,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import {
-  Plus,
   ArrowLeft,
   AlertTriangle,
   Package,
   Clock,
   Upload,
-  FileText
+  FileText,
+  Info
 } from 'lucide-react'
 
 const tipos = [
@@ -38,10 +37,10 @@ const tipos = [
 ]
 
 const prioridades = [
-  { value: 'baja', label: 'Baja (24h)', color: 'bg-green-100 text-green-800 border-green-200' },
-  { value: 'media', label: 'Media (48h)', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { value: 'alta', label: 'Alta (24h)', color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  { value: 'urgente', label: 'Urgente (4h)', color: 'bg-red-100 text-red-800 border-red-200' }
+  { value: 'baja', label: 'Baja', tiempo: '24h', color: 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' },
+  { value: 'media', label: 'Media', tiempo: '48h', color: 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200' },
+  { value: 'alta', label: 'Alta', tiempo: '24h', color: 'bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200' },
+  { value: 'urgente', label: 'Urgente', tiempo: '4h', color: 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200' }
 ]
 
 export default function NuevoTicketPage() {
@@ -135,88 +134,86 @@ export default function NuevoTicketPage() {
   const necesitaProducto = ['reparacion', 'garantia', 'devolucion', 'incidencia'].includes(tipo)
 
   return (
-    <div className="min-h-screen py-8 bg-muted/30">
-      <div className="container max-w-4xl">
+    <div className="min-h-screen py-6 bg-muted/30">
+      <div className="container max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
-          <Link href="/sat" className="inline-flex items-center gap-2 mb-4 text-sm hover:text-primary transition-colors">
+        <div className="mb-6">
+          <Link href="/sat" className="inline-flex items-center gap-2 mb-3 text-sm hover:text-primary transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Volver a Mis Tickets
           </Link>
-          <h1 className="text-3xl font-bold mb-2">Crear Nuevo Ticket</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold mb-1">Crear Nuevo Ticket</h1>
+          <p className="text-sm text-muted-foreground">
             Rellena el formulario para crear un nuevo ticket de soporte técnico.
           </p>
         </div>
 
-        <Tabs defaultValue="ticket" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ticket">Ticket</TabsTrigger>
-            <TabsTrigger value="producto" disabled={!necesitaProducto}>
-              Producto
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Tab: Ticket */}
-          <TabsContent value="ticket" className="space-y-4">
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Formulario Principal */}
+          <div className="lg:col-span-2">
             <Card>
               <form onSubmit={handleSubmit}>
-                <CardHeader>
-                  <CardTitle>Información del Ticket</CardTitle>
-                  <CardDescription>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Información del Ticket</CardTitle>
+                  <CardDescription className="text-sm">
                     Proporciona los detalles de tu solicitud de soporte.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
                   {error && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-                      {error}
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>{error}</span>
                     </div>
                   )}
 
-                  {/* Tipo de ticket */}
-                  <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo de Ticket *</Label>
-                    <Select value={tipo} onValueChange={setTipo}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona el tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tipos.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>
-                            <div className="flex items-center gap-2">
-                              {t.icon && <t.icon className="h-4 w-4" />}
-                              {t.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Tipo y Prioridad en grid */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Tipo de ticket */}
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo" className="text-sm">Tipo de Ticket *</Label>
+                      <Select value={tipo} onValueChange={setTipo}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Selecciona el tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tipos.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              <div className="flex items-center gap-2">
+                                {t.icon && <t.icon className="h-4 w-4" />}
+                                {t.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  {/* Prioridad */}
-                  <div className="space-y-2">
-                    <Label htmlFor="prioridad">Prioridad *</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {prioridades.map((p) => (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={() => setPrioridad(p.value)}
-                          className={`p-3 rounded-lg border-2 transition-all ${prioridad === p.value
-                              ? p.color + ' border-current'
-                              : 'bg-white border-gray-200 hover:border-primary/50'
-                            }`}
-                        >
-                          <div className="text-sm font-medium">{p.label}</div>
-                        </button>
-                      ))}
+                    {/* Prioridad */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Prioridad *</Label>
+                      <div className="grid grid-cols-4 gap-1">
+                        {prioridades.map((p) => (
+                          <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => setPrioridad(p.value)}
+                            className={`p-2 rounded-md border text-xs font-medium transition-all ${prioridad === p.value
+                                ? p.color + ' border-current'
+                                : 'bg-white border-gray-200 hover:border-primary/50'
+                              }`}
+                          >
+                            <div className="truncate">{p.label}</div>
+                            <div className="text-[10px] opacity-70">{p.tiempo}</div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   {/* Asunto */}
                   <div className="space-y-2">
-                    <Label htmlFor="asunto">Asunto *</Label>
+                    <Label htmlFor="asunto" className="text-sm">Asunto *</Label>
                     <Input
                       id="asunto"
                       type="text"
@@ -226,15 +223,16 @@ export default function NuevoTicketPage() {
                       required
                       disabled={isLoading}
                       maxLength={100}
+                      className="h-9"
                     />
                     <div className="text-xs text-muted-foreground text-right">
-                      {asunto.length}/100 caracteres
+                      {asunto.length}/100
                     </div>
                   </div>
 
                   {/* Descripción */}
                   <div className="space-y-2">
-                    <Label htmlFor="descripcion">Descripción *</Label>
+                    <Label htmlFor="descripcion" className="text-sm">Descripción *</Label>
                     <Textarea
                       id="descripcion"
                       placeholder="Proporciona todos los detalles relevantes para resolver tu ticket..."
@@ -242,38 +240,66 @@ export default function NuevoTicketPage() {
                       onChange={(e) => setDescripcion(e.target.value)}
                       required
                       disabled={isLoading}
-                      rows={6}
+                      rows={5}
                       maxLength={2000}
+                      className="resize-none"
                     />
                     <div className="text-xs text-muted-foreground text-right">
-                      {descripcion.length}/2000 caracteres
+                      {descripcion.length}/2000
                     </div>
                   </div>
 
-                  {/* Número de Serie */}
-                  <div className="space-y-2">
-                    <Label htmlFor="serie">
-                      Número de Serie {necesitaSerie && '*'}
-                    </Label>
-                    <Input
-                      id="serie"
-                      type="text"
-                      placeholder="SN123456789"
-                      value={numeroSerie}
-                      onChange={(e) => setNumeroSerie(e.target.value)}
-                      disabled={isLoading || !necesitaSerie}
-                      maxLength={50}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {necesitaSerie
-                        ? 'Obligatorio para reparaciones, garantía y devoluciones'
-                        : 'Opcional'}
-                    </p>
-                  </div>
+                  {/* Campos condicionales */}
+                  {necesitaProducto && (
+                    <>
+                      <Separator />
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Package className="h-4 w-4" />
+                          Información del Producto
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {/* Número de Serie */}
+                          <div className="space-y-2">
+                            <Label htmlFor="serie" className="text-sm">
+                              Número de Serie {necesitaSerie && <span className="text-destructive">*</span>}
+                            </Label>
+                            <Input
+                              id="serie"
+                              type="text"
+                              placeholder="SN123456789"
+                              value={numeroSerie}
+                              onChange={(e) => setNumeroSerie(e.target.value)}
+                              disabled={isLoading || !necesitaSerie}
+                              maxLength={50}
+                              className="h-9"
+                            />
+                          </div>
+
+                          {/* ID de Pedido */}
+                          <div className="space-y-2">
+                            <Label htmlFor="pedidoId" className="text-sm">ID de Pedido (opcional)</Label>
+                            <Input
+                              id="pedidoId"
+                              type="text"
+                              placeholder="PED-2023-0001"
+                              value={pedidoId}
+                              onChange={(e) => setPedidoId(e.target.value)}
+                              disabled={isLoading}
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
 
                   {/* Adjuntos */}
                   <div className="space-y-2">
-                    <Label htmlFor="adjuntos">Adjuntos</Label>
+                    <Label htmlFor="adjuntos" className="text-sm">Adjuntos (opcional)</Label>
                     <div className="relative">
                       <Input
                         id="adjuntos"
@@ -287,22 +313,23 @@ export default function NuevoTicketPage() {
                       <Button
                         type="button"
                         variant="outline"
+                        size="sm"
                         onClick={() => document.getElementById('adjuntos')?.click()}
                         disabled={isLoading}
-                        className="w-full"
+                        className="w-full h-9"
                       >
                         <Upload className="h-4 w-4 mr-2" />
                         {adjuntos.length > 0
                           ? `${adjuntos.length} archivo(s) seleccionado(s)`
-                          : 'Subir archivos (imágenes, PDF, Word)'}
+                          : 'Subir archivos'}
                       </Button>
                     </div>
                     {adjuntos.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {adjuntos.map((file, index) => (
-                          <Badge key={index} variant="secondary" className="gap-1">
+                          <Badge key={index} variant="secondary" className="gap-1 text-xs py-0.5">
                             <FileText className="h-3 w-3" />
-                            {file.name}
+                            <span className="max-w-[120px] truncate">{file.name}</span>
                             <button
                               type="button"
                               onClick={() => setAdjuntos(adjuntos.filter((_, i) => i !== index))}
@@ -316,116 +343,64 @@ export default function NuevoTicketPage() {
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="flex gap-4">
-                  <Button variant="outline" onClick={() => router.push('/sat')}>
+                <CardFooter className="flex gap-3 pt-4">
+                  <Button type="button" variant="outline" onClick={() => router.push('/sat')} className="h-9">
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isLoading} className="flex-1">
-                    {isLoading ? 'Creando ticket...' : 'Crear Ticket'}
+                  <Button type="submit" disabled={isLoading} className="flex-1 h-9">
+                    {isLoading ? 'Creando...' : 'Crear Ticket'}
                   </Button>
                 </CardFooter>
               </form>
             </Card>
+          </div>
 
-            {/* Información de ayuda */}
+          {/* Panel lateral de información */}
+          <div className="space-y-4">
+            {/* Tiempos de Respuesta */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
                   Tiempos de Respuesta
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Badge className={prioridades.find(p => p.value === 'urgente')?.color + ' mt-1'}>
-                    Urgente
-                  </Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">4 horas</p>
-                    <p className="text-muted-foreground">Para incidencias críticas que impiden el uso del producto</p>
+              <CardContent className="space-y-3 text-sm">
+                {prioridades.map((p) => (
+                  <div key={p.value} className="flex items-start gap-2">
+                    <Badge className={p.color + ' mt-0.5 text-xs'}>
+                      {p.label}
+                    </Badge>
+                    <div className="flex-1">
+                      <p className="font-medium">{p.tiempo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.value === 'urgente' && 'Incidencias críticas'}
+                        {p.value === 'alta' && 'Reparaciones urgentes'}
+                        {p.value === 'media' && 'Consultas generales'}
+                        {p.value === 'baja' && 'Consultas no urgentes'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <Badge className={prioridades.find(p => p.value === 'alta')?.color + ' mt-1'}>
-                    Alta
-                  </Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">24 horas</p>
-                    <p className="text-muted-foreground">Para reparaciones urgentes o problemas importantes</p>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <Badge className={prioridades.find(p => p.value === 'media')?.color + ' mt-1'}>
-                    Media
-                  </Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">48 horas</p>
-                    <p className="text-muted-foreground">Para consultas generales o problemas no críticos</p>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <Badge className={prioridades.find(p => p.value === 'baja')?.color + ' mt-1'}>
-                    Baja
-                  </Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">24-48 horas</p>
-                    <p className="text-muted-foreground">Para consultas que no afectan al funcionamiento</p>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Información adicional */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start gap-2 text-sm">
+                  <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <p className="font-medium text-primary">Consejo</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Proporciona toda la información relevante en la descripción. Cuanto más detallado sea tu ticket, más rápido podremos ayudarte.
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Tab: Producto */}
-          <TabsContent value="producto" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Información del Producto (Opcional)</CardTitle>
-                <CardDescription>
-                  Asocia este ticket a un pedido o producto específico para agilizar el soporte.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="pedidoId">ID de Pedido</Label>
-                    <Input
-                      id="pedidoId"
-                      type="text"
-                      placeholder="PED-2023-0001"
-                      value={pedidoId}
-                      onChange={(e) => setPedidoId(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="productoId">ID de Producto</Label>
-                    <Input
-                      id="productoId"
-                      type="text"
-                      placeholder="ID del producto"
-                      value={productoId}
-                      onChange={(e) => setProductoId(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Nota:</strong> Si tienes un pedido activo, puedes asociar el ticket al pedido
-                    proporcionando el número de pedido. Esto nos permitirá ver el historial de
-                    la compra y proporcionar un mejor soporte.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   )

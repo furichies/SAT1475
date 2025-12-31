@@ -29,7 +29,6 @@ import {
   FileText,
   Calendar,
   Tag,
-  User as UserIcon,
   ChevronRight
 } from 'lucide-react'
 import Link from 'next/link'
@@ -69,7 +68,7 @@ export default function AdminTicketsPage() {
   const [prioridad, setPrioridad] = useState('todos')
   const [tipo, setTipo] = useState('todos')
   const [tecnico, setTecnico] = useState('todos')
-  const [ticketSeleccionado, setTicketSeleccionado] = useState(null)
+  const [ticketSeleccionado, setTicketSeleccionado] = useState<any>(null)
 
   const ticketsFiltrados = ticketsMock.filter(t => {
     if (busqueda && !t.asunto.toLowerCase().includes(busqueda.toLowerCase()) &&
@@ -224,7 +223,7 @@ export default function AdminTicketsPage() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex items-center gap-2 mb-2 text-sm">
-                          <UserIcon className="h-4 w-4 text-gray-400" />
+                          <User className="h-4 w-4 text-gray-400" />
                           <span className="text-gray-600">{ticket.cliente}</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -283,7 +282,7 @@ export default function AdminTicketsPage() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex items-center gap-2 mb-2 text-sm">
-                          <UserIcon className="h-4 w-4 text-gray-400" />
+                          <User className="h-4 w-4 text-gray-400" />
                           <span className="text-gray-600">{ticket.cliente}</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -297,7 +296,7 @@ export default function AdminTicketsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2 mb-2 p-2 bg-blue-50 rounded">
-                          <UserIcon className="h-4 w-4 text-blue-600" />
+                          <User className="h-4 w-4 text-blue-600" />
                           <span className="text-sm font-medium">{ticket.tecnico}</span>
                         </div>
                         <div className="flex gap-2">
@@ -346,7 +345,7 @@ export default function AdminTicketsPage() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex items-center gap-2 mb-2 text-sm">
-                          <UserIcon className="h-4 w-4 text-gray-400" />
+                          <User className="h-4 w-4 text-gray-400" />
                           <span className="text-gray-600">{ticket.cliente}</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -360,7 +359,7 @@ export default function AdminTicketsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2 mb-2 p-2 bg-purple-50 rounded">
-                          <UserIcon className="h-4 w-4 text-purple-600" />
+                          <User className="h-4 w-4 text-purple-600" />
                           <span className="text-sm font-medium">{ticket.tecnico}</span>
                         </div>
                         <div className="flex gap-2">
@@ -409,7 +408,7 @@ export default function AdminTicketsPage() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex items-center gap-2 mb-2 text-sm">
-                          <UserIcon className="h-4 w-4 text-gray-400" />
+                          <User className="h-4 w-4 text-gray-400" />
                           <span className="text-gray-600">{ticket.cliente}</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -423,7 +422,7 @@ export default function AdminTicketsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2 mb-2 p-2 bg-green-50 rounded">
-                          <UserIcon className="h-4 w-4 text-green-600" />
+                          <User className="h-4 w-4 text-green-600" />
                           <span className="text-sm font-medium">{ticket.tecnico}</span>
                         </div>
                         <div className="flex gap-2">
@@ -448,7 +447,7 @@ export default function AdminTicketsPage() {
               <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 <CardHeader className="flex items-center justify-between">
                   <div>
-                    <CardTicketTitle>Detalle del Ticket</CardTitle>
+                    <CardTicketTitle>Detalle del Ticket</CardTicketTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {ticketSeleccionado.numero}
                     </p>
@@ -466,7 +465,11 @@ export default function AdminTicketsPage() {
                         <p className="text-sm text-gray-600 mb-1">Estado</p>
                         <Badge className={getEstadoBadge(ticketSeleccionado.estado).color}>
                           <div className="flex items-center gap-1">
-                            <getEstadoBadge(ticketSeleccionado.estado).icon className="h-3 w-3" />
+                            {(() => {
+                              const badge = getEstadoBadge(ticketSeleccionado.estado);
+                              const Icon = badge.icon;
+                              return <Icon className="h-3 w-3" />;
+                            })()}
                             {getEstadoBadge(ticketSeleccionado.estado).label}
                           </div>
                         </Badge>

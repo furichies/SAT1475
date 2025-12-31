@@ -44,8 +44,8 @@ let ticketsReparacionMock = [
     tiempoEstimado: 24,
     tiempoReal: 6,
     costoReparacion: 149.99,
-    piezasCambiadas: ['Fuente de alimentación', 'Thermal paste']
-    imagenes: ['/images/portatil_before.jpg', '/images/portatil_after.jpg']
+    piezasCambiadas: ['Fuente de alimentación', 'Thermal paste'],
+    imagenes: ['/images/portatil_before.jpg', '/images/portatil_after.jpg'],
   },
   {
     id: '2',
@@ -152,20 +152,20 @@ Email: ${ticket.clienteEmail}
 DATOS DEL TÉCNICO
 --------------------
 Técnico: ${ticket.tecnicoNombre}
-Fecha de asignación: ${new Date(ticket.fechaAsignacion || ticket.fechaCreacion).toLocaleString('es-ES', { 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
-Fecha de resolución: ${new Date(ticket.fechaResolucion).toLocaleString('es-ES', { 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+Fecha de asignación: ${new Date(ticket.fechaAsignacion || ticket.fechaCreacion).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}
+Fecha de resolución: ${new Date(ticket.fechaResolucion).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}
 Tiempo real de reparación: ${ticket.tiempoReal ? ticket.tiempoReal + ' horas' : 'N/A'}
 Tiempo estimado: ${ticket.tiempoEstimado + ' horas'}
 
