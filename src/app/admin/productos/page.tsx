@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -53,8 +53,38 @@ export default function AdminProductosPage() {
     categoria: 'componentes',
     marca: '',
     destacado: false,
-    enOferta: false
+    enOferta: false,
+    imagen: ''
   })
+  const [subiendoImagen, setSubiendoImagen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setSubiendoImagen(true)
+    const formDataUpload = new FormData()
+    formDataUpload.append('file', file)
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload
+      })
+      const data = await res.json()
+      if (data.path) {
+        setFormData({ ...formData, imagen: data.path })
+      } else {
+        alert('Error al subir la imagen')
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      alert('Error en la conexión al subir la imagen')
+    } finally {
+      setSubiendoImagen(false)
+    }
+  }
 
   const resetForm = () => {
     setFormData({
@@ -65,7 +95,8 @@ export default function AdminProductosPage() {
       categoria: 'componentes',
       marca: '',
       destacado: false,
-      enOferta: false
+      enOferta: false,
+      imagen: ''
     })
     setProductoSeleccionado(null)
     setIsEditing(false)
@@ -87,7 +118,8 @@ export default function AdminProductosPage() {
       categoria: producto.categoria,
       marca: producto.marca,
       destacado: !!producto.destacado,
-      enOferta: !!producto.enOferta
+      enOferta: !!producto.enOferta,
+      imagen: producto.imagen || ''
     })
     setIsEditing(true)
     setIsFormModalOpen(true)
@@ -109,7 +141,7 @@ export default function AdminProductosPage() {
       ...formData,
       precio: parseFloat(formData.precio),
       stock: parseInt(formData.stock) || 0,
-      imagen: '/images/placeholder.png'
+      imagen: formData.imagen || '/images/placeholder.png'
     }
 
     if (isEditing && productoSeleccionado) {
@@ -397,12 +429,39 @@ export default function AdminProductosPage() {
                         <Label htmlFor="destacado" className="cursor-pointer">Destacado</Label>
                       </div>
                     </div>
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center bg-gray-50/50">
-                      <ImageIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-sm font-medium mb-1">Imagen del Producto</p>
-                      <p className="text-xs text-gray-500">
-                        {isEditing ? 'Haz clic para cambiar la imagen actual' : 'Haz clic para subir una imagen'}
-                      </p>
+                    <div
+                      className="border-2 border-dashed rounded-lg p-8 text-center bg-gray-50/50 hover:bg-gray-100 transition-colors cursor-pointer relative overflow-hidden"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                      />
+
+                      {subiendoImagen ? (
+                        <div className="space-y-2">
+                          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+                          <p className="text-sm font-medium">Subiendo y ajustando imagen...</p>
+                        </div>
+                      ) : formData.imagen ? (
+                        <div className="relative group">
+                          <img src={formData.imagen} alt="Vista previa" className="max-h-48 mx-auto rounded shadow-sm" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                            <p className="text-white text-xs font-medium">Click para cambiar</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                          <p className="text-sm font-medium mb-1">Imagen del Producto</p>
+                          <p className="text-xs text-gray-500">
+                            Haz clic para subir una imagen (JPG, PNG, WebP)
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

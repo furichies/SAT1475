@@ -181,8 +181,10 @@ export default function HomePage() {
                 Ver Tienda
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                Servicio Técnico
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
+                <Link href="/sat">
+                  Servicio Técnico
+                </Link>
               </Button>
             </div>
           </div>

@@ -27,8 +27,10 @@ import {
   CheckCircle,
   ChevronRight,
   Eye,
-  Download
+  Download,
+  Lock
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 // Mock data para tickets
 const ticketsMock = [
@@ -121,12 +123,65 @@ const estados = {
 }
 
 export default function SatPage() {
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [busqueda, setBusqueda] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState('')
   const [prioridadFiltro, setPrioridadFiltro] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState('')
   const [soloPendientes, setSoloPendientes] = useState(false)
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen py-16 bg-muted/30 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center">
+          <CardHeader>
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Identificación Necesaria</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Para solicitar soporte técnico o gestionar tus tickets SAT, debes estar identificado como cliente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button className="w-full py-6 text-lg" asChild>
+              <Link href="/auth/login?callbackUrl=/sat">
+                Iniciar Sesión
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground font-medium">¿Nuevo en MicroInfo?</span>
+              </div>
+            </div>
+            <Button variant="outline" className="w-full py-6 text-lg" asChild>
+              <Link href="/auth/register">
+                Crear una Cuenta de Cliente
+              </Link>
+            </Button>
+          </CardContent>
+          <CardFooter className="flex justify-center border-t py-4">
+            <Link href="/" className="text-sm text-primary hover:underline">
+              Volver a la Portada
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
 
   const ticketsFiltrados = ticketsMock.filter((ticket) => {
     const matchBusqueda = !busqueda ||
