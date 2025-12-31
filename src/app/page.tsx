@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -10,222 +11,95 @@ import {
   HardDrive,
   MemoryStick,
   Keyboard,
-  Mouse,
   Headphones,
   ArrowRight,
   ShoppingCart,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react'
 import Image from 'next/image'
+import { useCartStore } from '@/store/use-cart-store'
+import { useToast } from '@/hooks/use-toast'
 
-// Categorías con imágenes reales
 const categories = [
-  {
-    id: '1',
-    nombre: 'Ordenadores',
-    icon: Monitor,
-    imagen: '/images/categoria_ordenadores.png',
-    productos: 45
-  },
-  {
-    id: '2',
-    nombre: 'Componentes',
-    icon: Cpu,
-    imagen: '/images/categoria_componentes.png',
-    productos: 128
-  },
-  {
-    id: '3',
-    nombre: 'Almacenamiento',
-    icon: HardDrive,
-    imagen: '/images/categoria_almacenamiento.png',
-    productos: 56
-  },
-  {
-    id: '4',
-    nombre: 'Memoria RAM',
-    icon: MemoryStick,
-    imagen: '/images/categoria_ram.png',
-    productos: 34
-  },
-  {
-    id: '5',
-    nombre: 'Periféricos',
-    icon: Keyboard,
-    imagen: '/images/categoria_perifericos.png',
-    productos: 89
-  },
-  {
-    id: '6',
-    nombre: 'Audio',
-    icon: Headphones,
-    imagen: '/images/categoria_audio.png',
-    productos: 42
-  },
-]
-
-const featuredProducts = [
-  {
-    id: '1',
-    nombre: 'Portátil Gaming Pro X15',
-    descripcionCorta: 'Intel Core i7, RTX 4070, 32GB RAM',
-    precio: 1499,
-    precioOferta: 1299,
-    stock: 5,
-    marca: 'Asus',
-    valoracion: 4.8,
-    totalValoraciones: 124,
-    tipo: 'equipo_completo',
-    destacado: true,
-    imagenes: ['/images/producto_laptop_gaming.png']
-  },
-  {
-    id: '2',
-    nombre: 'SSD NVMe 2TB Samsung',
-    descripcionCorta: 'Velocidad de lectura 7.000 MB/s',
-    precio: 189.99,
-    precioOferta: null,
-    stock: 23,
-    marca: 'Samsung',
-    valoracion: 4.9,
-    totalValoraciones: 87,
-    tipo: 'componente',
-    destacado: true,
-    imagenes: ['/images/producto_ssd.png']
-  },
-  {
-    id: '3',
-    nombre: 'Memoria RAM 32GB DDR5',
-    descripcionCorta: '6000MHz CL36 RGB',
-    precio: 129.99,
-    precioOferta: 109.99,
-    stock: 15,
-    marca: 'Corsair',
-    valoracion: 4.7,
-    totalValoraciones: 156,
-    tipo: 'componente',
-    destacado: true,
-    imagenes: ['/images/producto_ram.png']
-  },
-  {
-    id: '4',
-    nombre: 'Monitor Curvo 32" 4K',
-    descripcionCorta: '165Hz, 1ms, HDR',
-    precio: 549.99,
-    precioOferta: 479.99,
-    stock: 8,
-    marca: 'LG',
-    valoracion: 4.6,
-    totalValoraciones: 92,
-    tipo: 'periferico',
-    destacado: true,
-    imagenes: ['/images/producto_monitor.png']
-  },
-]
-
-const offersProducts = [
-  {
-    id: '5',
-    nombre: 'Teclado Mecánico RGB',
-    descripcionCorta: 'Switch Cherry MX Red',
-    precio: 149.99,
-    precioOferta: 99.99,
-    stock: 42,
-    marca: 'Logitech',
-    valoracion: 4.5,
-    totalValoraciones: 203,
-    tipo: 'periferico',
-    destacado: false,
-    imagenes: ['/images/producto_teclado.png']
-  },
-  {
-    id: '6',
-    nombre: 'Ratón Gaming Inalámbrico',
-    descripcionCorta: '25.600 DPI, batería 90h',
-    precio: 79.99,
-    precioOferta: 59.99,
-    stock: 67,
-    marca: 'Razer',
-    valoracion: 4.7,
-    totalValoraciones: 312,
-    tipo: 'periferico',
-    destacado: false,
-    imagenes: ['/images/producto_raton.png']
-  },
+  { id: '1', nombre: 'Ordenadores', icon: Monitor, imagen: '/images/categoria_ordenadores.png', productos: 45 },
+  { id: '2', nombre: 'Componentes', icon: Cpu, imagen: '/images/categoria_componentes.png', productos: 128 },
+  { id: '3', nombre: 'Almacenamiento', icon: HardDrive, imagen: '/images/categoria_almacenamiento.png', productos: 56 },
+  { id: '4', nombre: 'Memoria RAM', icon: MemoryStick, imagen: '/images/categoria_ram.png', productos: 34 },
+  { id: '5', nombre: 'Periféricos', icon: Keyboard, imagen: '/images/categoria_perifericos.png', productos: 89 },
+  { id: '6', nombre: 'Audio', icon: Headphones, imagen: '/images/categoria_audio.png', productos: 42 },
 ]
 
 export default function HomePage() {
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/productos?destacado=true&porPagina=4')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setFeaturedProducts(data.data.productos)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section - Banner Principal con imagen real */}
-      <section className="relative bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
+      {/* Hero Section */}
+      <section className="relative h-[600px] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <Image
-            src="/images/hero_banner.png"
-            alt="Technology Store"
-            fill
-            className="object-cover opacity-20"
-            priority
-          />
+          <Image src="/images/hero_banner.png" alt="Tech Store" fill className="object-cover opacity-30 saturate-150" priority />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
         </div>
-        <div className="container relative z-10 py-16 md:py-24">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Tu Tienda de Informática de Confianza
+        <div className="container relative z-10 px-4">
+          <div className="max-w-3xl space-y-6">
+            <Badge className="bg-primary/10 text-primary border-primary/20 px-6 py-2 rounded-full font-bold text-sm tracking-widest uppercase">Expertos en Tecnología</Badge>
+            <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-none uppercase">
+              Hardware de <span className="text-primary">Élite</span> para Profesionales
             </h1>
-            <p className="text-lg md:text-xl text-slate-200 mb-8">
-              Descubre los mejores equipos, componentes y accesorios con el mejor servicio técnico especializado.
+            <p className="text-xl text-muted-foreground max-w-xl font-medium">
+              Venta de equipos de alto rendimiento y servicio técnico especializado con certificado de calidad.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                Ver Tienda
-                <ArrowRight className="ml-2 h-5 w-5" />
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Button size="lg" className="h-16 px-10 rounded-2xl text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/20" asChild>
+                <Link href="/tienda">Explorar Catálogo <ArrowRight className="ml-2" /></Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
-                <Link href="/sat">
-                  Servicio Técnico
-                </Link>
+              <Button size="lg" variant="outline" className="h-16 px-10 rounded-2xl text-lg font-black uppercase tracking-widest border-2" asChild>
+                <Link href="/sat">Servicio Técnico</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Categorías Destacadas con imágenes reales */}
-      <section className="py-12 md:py-16 bg-muted/30">
-        <div className="container">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold">Categorías</h2>
-              <p className="text-muted-foreground mt-2">Explora nuestra amplia gama de productos</p>
+      {/* Categorías */}
+      <section className="py-24 bg-white/40 backdrop-blur-md">
+        <div className="container px-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+            <div className="space-y-2">
+              <h2 className="text-4xl font-black uppercase tracking-tighter">Categorías Premium</h2>
+              <p className="text-muted-foreground font-medium">Equípate con lo mejor de cada segmento.</p>
             </div>
-            <Button variant="outline" className="hidden md:flex">
-              Ver todas
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button variant="ghost" className="font-bold uppercase tracking-widest" asChild>
+              <Link href="/tienda">Ver todo <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-            {categories.map((categoria) => {
-              const Icon = categoria.icon
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {categories.map((cat) => {
+              const Icon = cat.icon
               return (
-                <Link key={categoria.id} href="/tienda">
-                  <Card className="group hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer overflow-hidden">
-                    <div className="relative h-32 overflow-hidden">
-                      <Image
-                        src={categoria.imagen}
-                        alt={categoria.nombre}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-3 left-3 bg-primary/90 backdrop-blur-sm rounded-lg px-3 py-1">
-                        <Icon className="h-5 w-5 text-white" />
+                <Link key={cat.id} href={`/tienda?categoria=${cat.id}`}>
+                  <Card className="group border-none shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+                    <div className="relative h-40">
+                      <Image src={cat.imagen} alt={cat.nombre} fill className="object-cover transition-transform duration-700 group-hover:scale-125" />
+                      <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/0 transition-colors" />
+                      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-lg">
+                        <Icon className="h-6 w-6 text-primary" />
                       </div>
                     </div>
-                    <CardContent className="p-4 text-center">
-                      <h3 className="font-semibold mb-1">{categoria.nombre}</h3>
-                      <p className="text-sm text-muted-foreground">{categoria.productos} productos</p>
+                    <CardContent className="p-6 text-center">
+                      <h3 className="font-black uppercase tracking-tighter text-sm">{cat.nombre}</h3>
+                      <p className="text-xs font-bold text-primary mt-1">{cat.productos} Artículos</p>
                     </CardContent>
                   </Card>
                 </Link>
@@ -235,75 +109,46 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Productos Destacados con imágenes reales */}
-      <section className="py-12 md:py-16">
-        <div className="container">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold">Productos Destacados</h2>
-              <p className="text-muted-foreground mt-2">Los productos más populares de nuestra tienda</p>
+      {/* Destacados */}
+      <section className="py-24">
+        <div className="container px-4">
+          <div className="text-center mb-16 space-y-4">
+            <Badge variant="outline" className="border-primary text-primary font-black px-4 py-1">Top Selling</Badge>
+            <h2 className="text-5xl font-black uppercase tracking-tighter">Equipos Destacados</h2>
+          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[1, 2, 3, 4].map(i => <div key={i} className="aspect-[4/5] bg-muted animate-pulse rounded-[2.5rem]" />)}
             </div>
-            <Button variant="outline" asChild className="hidden md:flex">
-              <Link href="/tienda?destacado=true">
-                Ver todos
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((producto) => (
-              <ProductCard key={producto.id} producto={producto} />
-            ))}
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredProducts.map((p) => <ProductCard key={p.id} producto={p} />)}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Ofertas Especiales con imágenes reales */}
-      <section className="py-12 md:py-16 bg-muted/30">
-        <div className="container">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold">Ofertas Especiales</h2>
-              <p className="text-muted-foreground mt-2">Aprovecha nuestras mejores ofertas</p>
+      {/* Servicios Banner */}
+      <section className="container px-4 py-24">
+        <div className="relative rounded-[3rem] overflow-hidden bg-primary text-white p-12 md:p-24">
+          <div className="absolute inset-0 opacity-10">
+            <Image src="/images/hero_banner.png" alt="SAT" fill className="object-cover" />
+          </div>
+          <div className="relative z-10 max-w-2xl space-y-8">
+            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
+              Reparación <br /> <span className="text-secondary">Profesional</span> SAT
+            </h2>
+            <p className="text-xl font-medium opacity-80">
+              ¿Tu equipo va lento? ¿Pantalla rota? Nuestros técnicos certificados te devuelven la potencia en tiempo récord.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Button size="lg" variant="secondary" className="h-16 px-10 rounded-2xl text-lg font-black uppercase tracking-widest" asChild>
+                <Link href="/sat">Solicitar Reparación</Link>
+              </Button>
+              <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 rounded-2xl border border-white/20">
+                <div className="font-black text-2xl uppercase tracking-tighter">99.9% <span className="text-xs block font-bold opacity-60">Éxito Reparaciones</span></div>
+              </div>
             </div>
-            <Button variant="outline" asChild className="hidden md:flex">
-              <Link href="/tienda?enOferta=true">
-                Ver todas
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {offersProducts.map((producto) => (
-              <ProductCard key={producto.id} producto={producto} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA - Servicio Técnico */}
-      <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-        <div className="container text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            ¿Necesitas Servicio Técnico?
-          </h2>
-          <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Nuestro equipo de técnicos expertos está listo para ayudarte con cualquier problema en tu equipo.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="text-foreground" asChild>
-              <Link href="/sat">
-                Crear Ticket SAT
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10" asChild>
-              <Link href="/admin_conocimiento">
-                Ver Base de Conocimiento
-              </Link>
-            </Button>
           </div>
         </div>
       </section>
@@ -311,76 +156,42 @@ export default function HomePage() {
   )
 }
 
-// Componente de tarjeta de producto con imágenes reales
-function ProductCard({ producto }: { producto: typeof featuredProducts[0] }) {
-  const descuento = producto.precioOferta
-    ? Math.round((1 - producto.precioOferta / producto.precio) * 100)
-    : 0
+function ProductCard({ producto }: { producto: any }) {
+  const addItem = useCartStore((state) => state.addItem)
+  const { toast } = useToast()
+  const imagenes = Array.isArray(producto.imagenes) ? producto.imagenes : (typeof producto.imagenes === 'string' ? JSON.parse(producto.imagenes) : [])
+  const descuento = producto.precioOferta ? Math.round((1 - producto.precioOferta / producto.precio) * 100) : 0
 
   return (
-    <Card className="group hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden">
+    <Card className="group rounded-[2.5rem] border-none shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden bg-white/50 backdrop-blur-sm flex flex-col h-full">
       <div className="relative aspect-square bg-muted overflow-hidden">
-        {producto.imagenes[0] && (
-          <Image
-            src={producto.imagenes[0]}
-            alt={producto.nombre}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        )}
-        {descuento > 0 && (
-          <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground z-10">
-            -{descuento}%
-          </Badge>
-        )}
-        {producto.stock < 10 && (
-          <Badge variant="outline" className="absolute top-3 right-3 border-destructive text-destructive z-10">
-            ¡Últimas unidades!
-          </Badge>
-        )}
+        <Image src={imagenes[0] || '/placeholder.png'} alt={producto.nombre} fill className="object-cover transition-transform duration-700 group-hover:scale-110" />
+        {descuento > 0 && <Badge className="absolute top-6 left-6 bg-destructive text-white font-black px-4 py-2 rounded-full shadow-lg">-{descuento}%</Badge>}
+        <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+          <Button variant="secondary" className="translate-y-4 group-hover:translate-y-0 transition-transform font-black rounded-xl">VER DETALLES</Button>
+        </div>
       </div>
-      <CardContent className="p-4">
-        <Link href={`/producto/${producto.id}`}>
-          <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-            {producto.nombre}
-          </h3>
+      <CardContent className="p-8 flex-1 flex flex-col">
+        <Link href={`/producto/${producto.id}`} className="hover:text-primary transition-colors flex-1 mb-4">
+          <h3 className="font-black text-xl leading-tight uppercase tracking-tighter">{producto.nombre}</h3>
         </Link>
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-          {producto.descripcionCorta}
-        </p>
-        <div className="flex items-center gap-1 mb-3">
-          <Star className="h-4 w-4 fill-primary text-primary" />
-          <span className="text-sm font-medium">{producto.valoracion}</span>
-          <span className="text-xs text-muted-foreground">
-            ({producto.totalValoraciones})
-          </span>
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex flex-col">
+            <span className="text-sm font-bold opacity-40 uppercase tracking-widest">Precio</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-primary tracking-tighter">{(producto.precioOferta || producto.precio).toFixed(2)}€</span>
+              {descuento > 0 && <span className="text-sm text-muted-foreground line-through font-bold">{producto.precio.toFixed(2)}€</span>}
+            </div>
+          </div>
         </div>
-        <div className="flex items-end gap-2">
-          {producto.precioOferta ? (
-            <>
-              <span className="text-lg font-bold text-destructive">
-                {producto.precioOferta.toFixed(2)}€
-              </span>
-              <span className="text-sm text-muted-foreground line-through">
-                {producto.precio.toFixed(2)}€
-              </span>
-            </>
-          ) : (
-            <span className="text-lg font-bold">
-              {producto.precio.toFixed(2)}€
-            </span>
-          )}
-        </div>
+        <Button onClick={() => {
+          addItem({ id: producto.id, nombre: producto.nombre, precio: producto.precioOferta || producto.precio, imagen: imagenes[0], cantidad: 1 });
+          toast({ title: "¡ELEGIDO!", description: `${producto.nombre} añadido.` });
+        }} className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
+          <ShoppingCart className="h-5 w-5 mr-3" />
+          Añadir al Carrito
+        </Button>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1">
-          Ver Detalles
-        </Button>
-        <Button size="sm" className="flex-1">
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          Añadir
-        </Button>
-      </CardFooter>
     </Card>
   )
 }

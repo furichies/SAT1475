@@ -61,10 +61,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'El carrito está vacío' }, { status: 400 })
     }
 
-    // 1. Generar número de pedido único: PED-YYYY-XXXX
-    const count = await db.pedido.count()
-    const year = new Date().getFullYear()
-    const numeroPedido = `PED-${year}-${(count + 1).toString().padStart(4, '0')}`
+    // 1. Generar número de pedido único: PED-YYYYMMDD-XXXX (Random)
+    const now = new Date()
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+    const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase()
+    const numeroPedido = `PED-${dateStr}-${randomStr}`
 
     // 2. Transacción de base de datos para crear pedido y detalles, y actualizar stock
     const result = await db.$transaction(async (tx) => {
@@ -92,8 +93,14 @@ export async function POST(req: NextRequest) {
           where: { id: item.id }
         })
 
-        if (!product || product.stock < item.cantidad) {
-          throw new Error(`Stock insuficiente para el producto: ${item.nombre}`)
+        console.log(`[CHECKOUT] Item ID: ${item.id}, Name: ${item.nombre}, Qty: ${item.cantidad}, DB Found: ${!!product}, DB Stock: ${product?.stock ?? 'N/A'}`)
+
+        if (!product) {
+          throw new Error(`Producto no encontrado en el catálogo: ${item.nombre} (ID: ${item.id})`)
+        }
+
+        if (product.stock < item.cantidad) {
+          throw new Error(`Stock insuficiente para ${item.nombre}. Disponible: ${product.stock}, Solicitado: ${item.cantidad}`)
         }
 
         // Crear detalle del pedido

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -35,12 +35,17 @@ const impuestoIVA = 0.21
 function PayPalOverlay({ onComplete }: { onComplete: () => void }) {
   const [progress, setProgress] = useState(0)
 
+  const triggered = useRef(false)
+
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress((v) => {
         if (v >= 100) {
           clearInterval(interval)
-          setTimeout(onComplete, 500)
+          if (!triggered.current) {
+            triggered.current = true
+            setTimeout(onComplete, 500)
+          }
           return 100
         }
         return v + 2
@@ -190,7 +195,8 @@ export default function CarritoPage() {
     setShowPayPal(true)
   }
 
-  const procesarPedidoReal = async () => {
+  const procesarPedidoReal = useCallback(async () => {
+    if (isSubmitting) return
     setShowPayPal(false)
     setIsSubmitting(true)
     try {
@@ -229,7 +235,7 @@ export default function CarritoPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [cartItems, dbProducts, datosEnvio, metodoEnvio, total, clearCart, router, isSubmitting])
 
   if (!isMounted) return null
 
