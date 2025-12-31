@@ -8,6 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Search,
   Plus,
   User,
@@ -305,19 +311,15 @@ export default function AdminTicketsPage() {
         </div>
 
         {/* Modal Detalle */}
-        {ticketSeleccionado && !isEdicion && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-                <div>
-                  <CardTitle className="text-xl">Detalle de Ticket</CardTitle>
-                  <p className="text-sm font-mono text-muted-foreground mt-1">{ticketSeleccionado.numero}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={closeModals}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
+        <Dialog open={ticketSeleccionado && !isEdicion} onOpenChange={(open) => !open && closeModals()}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Detalle de Ticket</DialogTitle>
+              {ticketSeleccionado && <p className="text-sm font-mono text-muted-foreground mt-1">{ticketSeleccionado.numero}</p>}
+            </DialogHeader>
+
+            {ticketSeleccionado && (
+              <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Estado</p>
@@ -382,122 +384,118 @@ export default function AdminTicketsPage() {
                     <MessageSquare className="h-4 w-4 mr-2" /> Responder Cliente
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Modal Edición / Nuevo */}
-        {(isEdicion || isNuevo) && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-                <div>
-                  <CardTitle className="text-xl">{isEdicion ? 'Editar Ticket' : 'Crear Nuevo Ticket'}</CardTitle>
-                  {isEdicion && <p className="text-sm font-mono text-muted-foreground mt-1">{ticketSeleccionado.numero}</p>}
+        <Dialog open={isEdicion || isNuevo} onOpenChange={(open) => !open && closeModals()}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">{isEdicion ? 'Editar Ticket' : 'Crear Nuevo Ticket'}</DialogTitle>
+              {isEdicion && ticketSeleccionado && (
+                <p className="text-sm font-mono text-muted-foreground mt-1">{ticketSeleccionado.numero}</p>
+              )}
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo de Ticket</label>
+                  <Select value={formTicket.tipo} onValueChange={(v) => setFormTicket({ ...formTicket, tipo: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(tipos).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button variant="ghost" size="icon" onClick={closeModals}>
-                  <X className="h-5 w-5" />
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prioridad</label>
+                  <Select value={formTicket.prioridad} onValueChange={(v) => setFormTicket({ ...formTicket, prioridad: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(prioridades).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Estado Actual</label>
+                  <Select value={formTicket.estado} onValueChange={(v) => setFormTicket({ ...formTicket, estado: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(estados).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Asignar Técnico</label>
+                  <Select value={formTicket.tecnico} onValueChange={(v) => setFormTicket({ ...formTicket, tecnico: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sin asignar">Sin asignar</SelectItem>
+                      <SelectItem value="Carlos García">Carlos García</SelectItem>
+                      <SelectItem value="María Martínez">María Martínez</SelectItem>
+                      <SelectItem value="Diego Fernández">Diego Fernández</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cliente</label>
+                <Input
+                  value={formTicket.cliente}
+                  onChange={(e) => setFormTicket({ ...formTicket, cliente: e.target.value })}
+                  placeholder="Nombre completo del cliente"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Asunto</label>
+                <Input
+                  value={formTicket.asunto}
+                  onChange={(e) => setFormTicket({ ...formTicket, asunto: e.target.value })}
+                  placeholder="Resumen corto del problema"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descripción Detallada</label>
+                <Textarea
+                  value={formTicket.descripcion}
+                  onChange={(e) => setFormTicket({ ...formTicket, descripcion: e.target.value })}
+                  placeholder="Explica el problema con detalle..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-6">
+                <Button variant="outline" className="flex-1" onClick={closeModals}>Cancelar</Button>
+                <Button className="flex-1" onClick={handleGuardar}>
+                  {isEdicion ? 'Actualizar Ticket' : 'Crear Ticket'}
                 </Button>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo de Ticket</label>
-                    <Select value={formTicket.tipo} onValueChange={(v) => setFormTicket({ ...formTicket, tipo: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(tipos).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prioridad</label>
-                    <Select value={formTicket.prioridad} onValueChange={(v) => setFormTicket({ ...formTicket, prioridad: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(prioridades).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Estado Actual</label>
-                    <Select value={formTicket.estado} onValueChange={(v) => setFormTicket({ ...formTicket, estado: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(estados).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Asignar Técnico</label>
-                    <Select value={formTicket.tecnico} onValueChange={(v) => setFormTicket({ ...formTicket, tecnico: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Sin asignar">Sin asignar</SelectItem>
-                        <SelectItem value="Carlos García">Carlos García</SelectItem>
-                        <SelectItem value="María Martínez">María Martínez</SelectItem>
-                        <SelectItem value="Diego Fernández">Diego Fernández</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cliente</label>
-                  <Input
-                    value={formTicket.cliente}
-                    onChange={(e) => setFormTicket({ ...formTicket, cliente: e.target.value })}
-                    placeholder="Nombre completo del cliente"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Asunto</label>
-                  <Input
-                    value={formTicket.asunto}
-                    onChange={(e) => setFormTicket({ ...formTicket, asunto: e.target.value })}
-                    placeholder="Resumen corto del problema"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descripción Detallada</label>
-                  <Textarea
-                    value={formTicket.descripcion}
-                    onChange={(e) => setFormTicket({ ...formTicket, descripcion: e.target.value })}
-                    placeholder="Explica el problema con detalle..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-6">
-                  <Button variant="outline" className="flex-1" onClick={closeModals}>Cancelar</Button>
-                  <Button className="flex-1" onClick={handleGuardar}>
-                    {isEdicion ? 'Actualizar Ticket' : 'Crear Ticket'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )

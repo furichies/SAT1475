@@ -9,6 +9,22 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Plus,
   Search,
   Edit,
@@ -140,14 +156,108 @@ const estadosMock = {
 }
 
 export default function AdminConocimientoPage() {
+  const [articulos, setArticulos] = useState(articulosMock)
   const [busqueda, setBusqueda] = useState('')
   const [categoria, setCategoria] = useState('todos')
   const [estado, setEstado] = useState('todos')
   const [autor, setAutor] = useState('todos')
-  const [modalCrear, setModalCrear] = useState(false)
-  const [articuloEditando, setArticuloEditando] = useState(null)
+  const [articuloSeleccionado, setArticuloSeleccionado] = useState<any>(null)
+  const [isVerModalOpen, setIsVerModalOpen] = useState(false)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
-  const articulosFiltrados = articulosMock.filter(a => {
+  // Estado para el formulario
+  const [formData, setFormData] = useState({
+    titulo: '',
+    contenido: '',
+    categoria: '',
+    estado: 'borrador',
+    tags: ''
+  })
+
+  const resetForm = () => {
+    setFormData({
+      titulo: '',
+      contenido: '',
+      categoria: '',
+      estado: 'borrador',
+      tags: ''
+    })
+    setArticuloSeleccionado(null)
+    setIsEditing(false)
+  }
+
+  const handleNuevo = () => {
+    resetForm()
+    setIsEditing(false)
+    setIsFormModalOpen(true)
+  }
+
+  const handleVer = (articulo: any) => {
+    setArticuloSeleccionado(articulo)
+    setIsVerModalOpen(true)
+  }
+
+  const handleEditar = (articulo: any) => {
+    setArticuloSeleccionado(articulo)
+    setFormData({
+      titulo: articulo.titulo,
+      contenido: articulo.contenido,
+      categoria: articulo.categoria,
+      estado: articulo.estado,
+      tags: articulo.tags.join(', ')
+    })
+    setIsEditing(true)
+    setIsFormModalOpen(true)
+  }
+
+  const handleBorrar = (id: string) => {
+    if (confirm('¿Estás seguro de que deseas eliminar este artículo?')) {
+      setArticulos(articulos.filter(a => a.id !== id))
+    }
+  }
+
+  const handleGuardar = () => {
+    if (!formData.titulo || !formData.contenido) {
+      alert('Por favor, rellena los campos obligatorios (*)')
+      return
+    }
+
+    if (isEditing && articuloSeleccionado) {
+      setArticulos(articulos.map(a =>
+        a.id === articuloSeleccionado.id
+          ? {
+            ...a,
+            ...formData,
+            tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
+            fechaActualizacion: new Date().toISOString().split('T')[0]
+          }
+          : a
+      ))
+    } else {
+      const nuevo = {
+        id: (articulos.length + 1).toString(),
+        titulo: formData.titulo,
+        contenido: formData.contenido,
+        categoria: formData.categoria || 'General',
+        tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
+        autor: 'Admin Principal',
+        rol: 'admin',
+        estado: formData.estado,
+        vistas: 0,
+        likes: 0,
+        comentarios: 0,
+        fechaCreacion: new Date().toISOString().split('T')[0],
+        fechaActualizacion: new Date().toISOString().split('T')[0]
+      }
+      setArticulos([nuevo, ...articulos])
+    }
+
+    setIsFormModalOpen(false)
+    resetForm()
+  }
+
+  const articulosFiltrados = articulos.filter(a => {
     if (busqueda && !a.titulo.toLowerCase().includes(busqueda.toLowerCase()) &&
       !a.contenido.toLowerCase().includes(busqueda.toLowerCase()) &&
       !a.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))) return false
@@ -323,20 +433,33 @@ export default function AdminConocimientoPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 pt-2 border-t">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleVer(articulo)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Ver
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setArticuloEditando(articulo)}>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditar(articulo)}>
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => handleBorrar(articulo.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleEditar(articulo)}>Editar artículo</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleVer(articulo)}>Ver detalles</DropdownMenuItem>
+                          <DropdownMenuItem>Duplicar borrador</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleBorrar(articulo.id)}>Eliminar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </CardContent>
                 </Card>
@@ -344,9 +467,9 @@ export default function AdminConocimientoPage() {
             })}
           </div>
 
-          {/* Botón Crear */}
+          {/* Botón Nuevo */}
           <div className="fixed bottom-8 right-8">
-            <Button onClick={() => setModalCrear(true)} className="gap-2 shadow-lg">
+            <Button onClick={handleNuevo} className="gap-2 shadow-lg">
               <Plus className="h-4 w-4" />
               Nuevo Artículo
             </Button>
@@ -354,96 +477,140 @@ export default function AdminConocimientoPage() {
         </main>
       </div>
 
-      {/* Modal de Crear Artículo */}
-      {modalCrear && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Crear Nuevo Artículo</CardTitle>
-              <Button variant="ghost" onClick={() => setModalCrear(false)}>
-                <X className="h-5 w-5" />
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Título *</Label>
-                <Input placeholder="Título del artículo" />
+      {/* Modal Detalles */}
+      <Dialog open={isVerModalOpen} onOpenChange={setIsVerModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{articuloSeleccionado?.titulo}</DialogTitle>
+          </DialogHeader>
+          {articuloSeleccionado && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <Badge variant="secondary">{articuloSeleccionado.categoria}</Badge>
+                <Badge className={estadosMock[articuloSeleccionado.estado as keyof typeof estadosMock].color}>
+                  {estadosMock[articuloSeleccionado.estado as keyof typeof estadosMock].label}
+                </Badge>
               </div>
-              <div className="space-y-2">
-                <Label>Contenido *</Label>
-                <Textarea
-                  placeholder="Escribe el contenido del artículo..."
-                  rows={6}
-                />
+
+              <div className="prose max-w-none text-gray-700 leading-relaxed">
+                {articuloSeleccionado.contenido}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t text-sm">
                 <div className="space-y-2">
-                  <Label>Categoría *</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoriasMock.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <p className="text-gray-500">Autor</p>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span>{articuloSeleccionado.autor} ({articuloSeleccionado.rol})</span>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Estado *</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="borrador">Borrador</SelectItem>
-                      <SelectItem value="publicado">Publicado</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-gray-500">Fechas</p>
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" /> Creado: {articuloSeleccionado.fechaCreacion}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" /> Actualizado: {articuloSeleccionado.fechaActualizacion}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <Input placeholder="tag1, tag2, tag3..." />
-                <p className="text-xs text-gray-500">Separar por comas</p>
+
+              <div className="pt-4 border-t flex flex-wrap gap-2">
+                {articuloSeleccionado.tags.map((tag: string, idx: number) => (
+                  <Badge key={idx} variant="outline" className="text-xs">
+                    #{tag}
+                  </Badge>
+                ))}
               </div>
-              <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                <FileUp className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                <p className="text-sm font-medium mb-2">Subir Imagen</p>
-                <p className="text-xs text-gray-500 mb-3">
-                  Arrastra el archivo aquí o haz clic para seleccionar
-                </p>
-                <Button variant="outline" size="sm">
-                  Seleccionar Imagen
-                </Button>
-              </div>
-              <div className="flex items-center gap-4 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="publicar" defaultChecked />
-                  <Label htmlFor="publicar">Publicar inmediatamente</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="programar" />
-                  <Label htmlFor="programar">Programar publicación</Label>
-                </div>
-              </div>
-              {true && (
-                <div className="space-y-2">
-                  <Label>Fecha de publicación programada</Label>
-                  <Input type="datetime-local" />
-                </div>
-              )}
-            </CardContent>
-            <div className="flex justify-between p-6 border-t">
-              <Button variant="outline" onClick={() => setModalCrear(false)}>
-                Cancelar
-              </Button>
-              <Button>Crear Artículo</Button>
             </div>
-          </Card>
-        </div>
-      )}
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsVerModalOpen(false)}>Cerrar</Button>
+            <Button onClick={() => { setIsVerModalOpen(false); handleEditar(articuloSeleccionado); }}>
+              Editar Artículo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Formulario (Crear/Editar) */}
+      <Dialog open={isFormModalOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsFormModalOpen(open); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Editar Artículo' : 'Crear Nuevo Artículo'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input
+                placeholder="Título del artículo"
+                value={formData.titulo}
+                onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Contenido *</Label>
+              <Textarea
+                placeholder="Escribe el contenido del artículo..."
+                rows={8}
+                value={formData.contenido}
+                onChange={(e) => setFormData({ ...formData, contenido: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Categoría *</Label>
+                <Select
+                  value={formData.categoria}
+                  onValueChange={(v) => setFormData({ ...formData, categoria: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriasMock.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Estado *</Label>
+                <Select
+                  value={formData.estado}
+                  onValueChange={(v) => setFormData({ ...formData, estado: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="borrador">Borrador</SelectItem>
+                    <SelectItem value="publicado">Publicado</SelectItem>
+                    <SelectItem value="archivado">Archivado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <Input
+                placeholder="tag1, tag2, tag3..."
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+              />
+              <p className="text-xs text-gray-500">Separar por comas</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleGuardar}>
+              {isEditing ? 'Actualizar Artículo' : 'Crear Artículo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
