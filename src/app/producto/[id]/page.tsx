@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -26,46 +26,9 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 
-// Datos del producto (mock - vendrá de la API)
-const productoEjemplo = {
-  id: '1',
-  nombre: 'Portátil Gaming Pro X15',
-  descripcion: 'Potente portátil gaming diseñado para ofrecer el máximo rendimiento en juegos y aplicaciones exigentes. Equipado con el procesador Intel Core i7 de última generación, tarjeta gráfica NVIDIA RTX 4070 y 32GB de memoria RAM DDR5 ultrarrápida.',
-  descripcionCorta: 'Intel Core i7, RTX 4070, 32GB RAM DDR5, 1TB SSD NVMe',
-  precio: 1499,
-  precioOferta: 1299,
-  stock: 5,
-  stockMinimo: 3,
-  marca: 'Asus',
-  modelo: 'ROG Strix G15',
-  tipo: 'equipo_completo',
-  valoracion: 4.8,
-  totalValoraciones: 124,
-  destacado: true,
-  imagen: '/images/producto_laptop_gaming.png',
-  imagenes: [
-    '/images/producto_laptop_gaming.png',
-    '/images/producto_laptop_gaming.png',
-    '/images/producto_laptop_gaming.png'
-  ],
-  garantiaMeses: 24,
-  especificaciones: {
-    'Procesador': 'Intel Core i7-13700H, 14 núcleos (6P+8E)',
-    'Tarjeta Gráfica': 'NVIDIA GeForce RTX 4070, 8GB GDDR6',
-    'Memoria RAM': '32GB DDR5 4800MHz Dual Channel',
-    'Almacenamiento': '1TB NVMe SSD, 7000MB/s lectura',
-    'Pantalla': '15.6" QHD 240Hz, G-Sync Compatible',
-    'Batería': '90Wh, hasta 6 horas de uso mixto',
-    'Sistema Operativo': 'Windows 11 Home OEM',
-    'Conectividad': 'Wi-Fi 6E, Bluetooth 5.3, USB 3.2 Gen2, HDMI 2.1',
-    'Peso': '2.8 kg'
-  },
-  categoria: {
-    id: '1',
-    nombre: 'Ordenadores'
-  }
-}
+import { productosMock } from '@/lib/data/productos'
 
+// ... valoracionesMock and productosRelacionados remain same ...
 const valoracionesMock = [
   {
     id: '1',
@@ -126,16 +89,33 @@ const productosRelacionados = [
   }
 ]
 
+import { useCartStore } from '@/store/use-cart-store'
+import { useToast } from '@/hooks/use-toast'
+
 export default function ProductoPage() {
   const params = useParams()
   const router = useRouter()
+  const { toast } = useToast()
+  const addItem = useCartStore((state) => state.addItem)
+
   const [cantidad, setCantidad] = useState(1)
   const [imagenActiva, setImagenActiva] = useState(0)
   const [favorito, setFavorito] = useState(false)
   const [tabActiva, setTabActiva] = useState('descripcion')
 
-  const descuento = productoEjemplo.precioOferta 
-    ? Math.round((1 - productoEjemplo.precioOferta / productoEjemplo.precio) * 100)
+  const producto = productosMock.find(p => p.id === params.id)
+
+  if (!producto) {
+    return (
+      <div className="min-h-screen py-16 flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold mb-4">Producto no encontrado</h1>
+        <Button onClick={() => router.push('/tienda')}>Volver a la tienda</Button>
+      </div>
+    )
+  }
+
+  const descuento = producto.precioOferta
+    ? Math.round((1 - producto.precioOferta / producto.precio) * 100)
     : 0
 
   const mediaValoraciones = valoracionesMock.reduce((acc, v) => acc + v.puntuacion, 0) / valoracionesMock.length
@@ -160,7 +140,7 @@ export default function ProductoPage() {
             <span className="mx-2">/</span>
             <Link href="/tienda" className="hover:text-primary">Tienda</Link>
             <span className="mx-2">/</span>
-            <span className="text-foreground font-medium">{productoEjemplo.nombre}</span>
+            <span className="text-foreground font-medium">{producto.nombre}</span>
           </nav>
         </div>
 
@@ -172,26 +152,25 @@ export default function ProductoPage() {
               <CardContent className="p-0">
                 <div className="relative aspect-square bg-muted">
                   <Image
-                    src={productoEjemplo.imagenes[imagenActiva]}
-                    alt={productoEjemplo.nombre}
+                    src={producto.imagenes[imagenActiva]}
+                    alt={producto.nombre}
                     fill
                     className="object-cover"
                     priority
                   />
                   {/* Thumbnails */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 flex gap-2">
-                    {productoEjemplo.imagenes.map((_, index) => (
+                    {producto.imagenes.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setImagenActiva(index)}
-                        className={`w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${
-                          imagenActiva === index
-                            ? 'border-primary scale-105'
-                            : 'border-transparent hover:border-primary/50'
-                        }`}
+                        className={`w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${imagenActiva === index
+                          ? 'border-primary scale-105'
+                          : 'border-transparent hover:border-primary/50'
+                          }`}
                       >
                         <Image
-                          src={productoEjemplo.imagenes[index]}
+                          src={producto.imagenes[index]}
                           alt={`Vista ${index + 1}`}
                           fill
                           className="object-cover"
@@ -217,12 +196,12 @@ export default function ProductoPage() {
               <TabsContent value="descripcion" className="mt-6">
                 <Card>
                   <CardContent className="pt-6">
-                    <h3 className="text-2xl font-bold mb-4">{productoEjemplo.nombre}</h3>
+                    <h3 className="text-2xl font-bold mb-4">{producto.nombre}</h3>
                     <p className="text-lg text-muted-foreground mb-6">
-                      {productoEjemplo.descripcionCorta}
+                      {producto.descripcionCorta}
                     </p>
                     <p className="text-sm leading-relaxed text-muted-foreground">
-                      {productoEjemplo.descripcion}
+                      {producto.descripcion}
                     </p>
                   </CardContent>
                 </Card>
@@ -233,7 +212,7 @@ export default function ProductoPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(productoEjemplo.especificaciones).map(([clave, valor]) => (
+                      {Object.entries(producto.especificaciones).map(([clave, valor]) => (
                         <div key={clave} className="space-y-2">
                           <h4 className="font-semibold text-sm">{clave}</h4>
                           <p className="text-sm text-muted-foreground">{valor as string}</p>
@@ -311,11 +290,10 @@ export default function ProductoPage() {
                                   {Array.from({ length: 5 }).map((_, i) => (
                                     <Star
                                       key={i}
-                                      className={`h-4 w-4 ${
-                                        i < valoracion.puntuacion
-                                          ? 'fill-yellow-500 text-yellow-500'
-                                          : 'text-muted-foreground'
-                                      }`}
+                                      className={`h-4 w-4 ${i < valoracion.puntuacion
+                                        ? 'fill-yellow-500 text-yellow-500'
+                                        : 'text-muted-foreground'
+                                        }`}
                                     />
                                   ))}
                                 </div>
@@ -346,16 +324,16 @@ export default function ProductoPage() {
                 {/* Marca */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Marca</span>
-                  <Badge variant="outline">{productoEjemplo.marca}</Badge>
+                  <Badge variant="outline">{producto.marca}</Badge>
                 </div>
-                
+
                 {/* Precio */}
                 <div className="space-y-2">
-                  {productoEjemplo.precioOferta ? (
+                  {producto.precioOferta ? (
                     <>
                       <div className="flex items-center gap-3">
                         <span className="text-3xl font-bold text-destructive">
-                          {productoEjemplo.precioOferta.toFixed(2)}€
+                          {producto.precioOferta.toFixed(2)}€
                         </span>
                         {descuento > 0 && (
                           <Badge className="bg-destructive text-destructive-foreground">
@@ -365,13 +343,13 @@ export default function ProductoPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg text-muted-foreground line-through">
-                          {productoEjemplo.precio.toFixed(2)}€
+                          {producto.precio.toFixed(2)}€
                         </span>
                       </div>
                     </>
                   ) : (
                     <span className="text-3xl font-bold">
-                      {productoEjemplo.precio.toFixed(2)}€
+                      {producto.precio.toFixed(2)}€
                     </span>
                   )}
                 </div>
@@ -380,11 +358,11 @@ export default function ProductoPage() {
 
                 {/* Stock */}
                 <div className="space-y-2">
-                  {productoEjemplo.stock > 0 ? (
+                  {producto.stock > 0 ? (
                     <div className="flex items-center gap-2 text-green-600">
                       <Check className="h-4 w-4" />
                       <span className="font-medium">
-                        {productoEjemplo.stock} unidades disponibles
+                        {producto.stock} unidades disponibles
                       </span>
                     </div>
                   ) : (
@@ -393,7 +371,7 @@ export default function ProductoPage() {
                       <span className="font-medium">Agotado</span>
                     </div>
                   )}
-                  {productoEjemplo.stock <= 10 && productoEjemplo.stock > 0 && (
+                  {producto.stock <= 10 && producto.stock > 0 && (
                     <Badge variant="outline" className="border-destructive text-destructive">
                       ¡Últimas unidades!
                     </Badge>
@@ -419,7 +397,7 @@ export default function ProductoPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => setCantidad(cantidad + 1)}
-                      disabled={cantidad >= productoEjemplo.stock}
+                      disabled={cantidad >= producto.stock}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -430,7 +408,24 @@ export default function ProductoPage() {
 
                 {/* Botones de acción */}
                 <div className="space-y-2">
-                  <Button size="lg" className="w-full" disabled={productoEjemplo.stock === 0}>
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    disabled={producto.stock === 0}
+                    onClick={() => {
+                      addItem({
+                        id: producto.id,
+                        nombre: producto.nombre,
+                        precio: producto.precioOferta || producto.precio,
+                        imagen: producto.imagen,
+                        cantidad: cantidad
+                      });
+                      toast({
+                        title: "Producto añadido",
+                        description: `${cantidad}x ${producto.nombre} se ha añadido al carrito.`
+                      });
+                    }}
+                  >
                     <ShoppingCart className="h-5 w-5 mr-2" />
                     Añadir al Carrito
                   </Button>
@@ -466,7 +461,7 @@ export default function ProductoPage() {
                   <div>
                     <p className="font-semibold mb-1">Garantía Extendida</p>
                     <p className="text-sm text-muted-foreground">
-                      {productoEjemplo.garantiaMeses} meses de garantía oficial
+                      {producto.garantiaMeses} meses de garantía oficial
                     </p>
                   </div>
                 </div>
@@ -489,51 +484,51 @@ export default function ProductoPage() {
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6">Productos Relacionados</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {productosRelacionados.map((producto) => (
-              <Card key={producto.id} className="group hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden">
+            {productosRelacionados.map((relacionado) => (
+              <Card key={relacionado.id} className="group hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden">
                 <div className="relative aspect-square bg-muted overflow-hidden">
                   <Image
-                    src={producto.imagen}
-                    alt={producto.nombre}
+                    src={relacionado.imagen}
+                    alt={relacionado.nombre}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  {producto.precioOferta && (
+                  {relacionado.precioOferta && (
                     <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground">
-                      -{Math.round((1 - producto.precioOferta / producto.precio) * 100)}%
+                      -{Math.round((1 - relacionado.precioOferta / relacionado.precio) * 100)}%
                     </Badge>
                   )}
                 </div>
                 <CardContent className="p-4">
-                  <Link href={`/producto/${producto.id}`}>
+                  <Link href={`/producto/${relacionado.id}`}>
                     <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                      {producto.nombre}
+                      {relacionado.nombre}
                     </h3>
                   </Link>
                   <div className="flex items-center gap-1 mb-3">
                     <Star className="h-4 w-4 fill-primary text-primary" />
-                    <span className="text-sm font-medium">{producto.valoracion}</span>
+                    <span className="text-sm font-medium">{relacionado.valoracion}</span>
                   </div>
                   <div className="flex items-end gap-2">
-                    {producto.precioOferta ? (
+                    {relacionado.precioOferta ? (
                       <>
                         <span className="text-lg font-bold text-destructive">
-                          {producto.precioOferta.toFixed(2)}€
+                          {relacionado.precioOferta.toFixed(2)}€
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          {producto.precio.toFixed(2)}€
+                          {relacionado.precio.toFixed(2)}€
                         </span>
                       </>
                     ) : (
                       <span className="text-lg font-bold">
-                        {producto.precio.toFixed(2)}€
+                        {relacionado.precio.toFixed(2)}€
                       </span>
                     )}
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0 flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    Ver Detalles
+                  <Button variant="outline" size="sm" className="flex-1" asChild>
+                    <Link href={`/producto/${relacionado.id}`}>Ver Detalles</Link>
                   </Button>
                   <Button size="sm" className="flex-1">
                     <ShoppingCart className="h-4 w-4 mr-2" />

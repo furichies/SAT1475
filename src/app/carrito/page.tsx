@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,40 +18,10 @@ import {
   Plus,
   CreditCard
 } from 'lucide-react'
-
-// Mock data para demostracion
-const carritoItemsMock = [
-  {
-    id: '1',
-    producto: {
-      id: '1',
-      nombre: 'Portatil Gaming Pro X15',
-      descripcionCorta: 'Intel Core i7-13700H, RTX 4070, 32GB RAM DDR5',
-      precio: 1499,
-      precioOferta: 1299,
-      stock: 5,
-      marca: 'Asus',
-      modelo: 'ROG Strix G15',
-      imagen: '/images/producto_laptop_gaming.png'
-    },
-    cantidad: 1
-  },
-  {
-    id: '2',
-    producto: {
-      id: '3',
-      nombre: 'Memoria RAM DDR5 32GB Corsair',
-      descripcionCorta: '6000MHz CL36 RGB, baja latencia para gaming',
-      precio: 169.99,
-      precioOferta: 149.99,
-      stock: 15,
-      marca: 'Corsair',
-      modelo: 'Vengeance DDR5',
-      imagen: '/images/producto_ram.png'
-    },
-    cantidad: 2
-  }
-]
+import Image from 'next/image'
+import Link from 'next/link'
+import { useCartStore } from '@/store/use-cart-store'
+import { productosMock } from '@/lib/data/productos'
 
 const gastosEnvio = {
   standard: 0,
@@ -63,7 +33,13 @@ const impuestoIVA = 0.21
 
 export default function CarritoPage() {
   const router = useRouter()
-  const [items, setItems] = useState(carritoItemsMock)
+  // Hydration fix
+  const [isMounted, setIsMounted] = useState(false)
+  const cartItems = useCartStore((state) => state.items)
+  const removeItem = useCartStore((state) => state.removeItem)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const clearCart = useCartStore((state) => state.clearCart)
+
   const [metodoEnvio, setMetodoEnvio] = useState('standard')
 
   const [datosEnvio, setDatosEnvio] = useState({
@@ -76,10 +52,39 @@ export default function CarritoPage() {
     telefono: ''
   })
 
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Enriched items with full product details
+  const enrichedItems = cartItems.map(item => {
+    const productDetail = productosMock.find(p => p.id === item.id)
+    return {
+      ...item,
+      producto: productDetail || {
+        // Fallback if product not found in mock (shouldn't happen with sync data)
+        id: item.id,
+        nombre: item.nombre,
+        descripcionCorta: '',
+        precio: item.precio,
+        precioOferta: null,
+        stock: 99,
+        marca: 'N/A',
+        modelo: 'N/A',
+        imagenes: [item.imagen],
+        valoracion: 0,
+        totalValoraciones: 0
+      }
+    }
+  })
+
   const calcularTotal = () => {
-    const subtotal = items.reduce((sum, item) => {
-      const precio = item.producto.precioOferta || item.producto.precio
-      return sum + (precio * item.cantidad)
+    const subtotal = enrichedItems.reduce((sum, item) => {
+      // Use the price from the store (which captures the effective price at add time)
+      // or check fresh price from mock if desired. Let's stick to store price for consistency
+      // or better, verify against mock to show current offers.
+      // Re-evaluating: The store saves 'precio' which is the effective price.
+      return sum + (item.precio * item.cantidad)
     }, 0)
 
     const iva = subtotal * impuestoIVA
@@ -93,16 +98,15 @@ export default function CarritoPage() {
 
   const handleCantidadChange = (id: string, nuevaCantidad: number) => {
     if (nuevaCantidad < 1) return
+    // Optional: Check max stock
+    const product = productosMock.find(p => p.id === id)
+    if (product && nuevaCantidad > product.stock) return
 
-    setItems(items.map((item) => 
-      item.id === id 
-        ? { ...item, cantidad: nuevaCantidad }
-        : item
-    ))
+    updateQuantity(id, nuevaCantidad)
   }
 
   const handleEliminarItem = (id: string) => {
-    setItems(items.filter((item) => item.id !== id))
+    removeItem(id)
   }
 
   const handleMetodoEnvioChange = (metodo: string) => {
@@ -118,18 +122,23 @@ export default function CarritoPage() {
 
   const finalizarCompra = () => {
     console.log('Finalizando compra...', {
-      items,
+      items: enrichedItems,
       metodoEnvio,
       datosEnvio,
       total
     })
 
+    // Here we would send to API
     alert('Compra finalizada con exito (Demo)')
-
+    clearCart()
     router.push('/')
   }
 
-  if (items.length === 0) {
+  if (!isMounted) {
+    return null
+  }
+
+  if (enrichedItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/5 to-background flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
@@ -158,15 +167,17 @@ export default function CarritoPage() {
           </Button>
           <h1 className="text-3xl font-bold">Mi Carrito</h1>
           <p className="text-gray-600">
-            {items.length} {items.length === 1 ? 'articulo' : 'articulos'}
+            {enrichedItems.length} {enrichedItems.length === 1 ? 'articulo' : 'articulos'}
           </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => {
-              const precio = item.producto.precioOferta || item.producto.precio
-              const subtotal = precio * item.cantidad
+            {enrichedItems.map((item) => {
+              const subtotal = item.precio * item.cantidad
+              const producto = item.producto
+              // Safe image handling
+              const itemImage = producto.imagenes?.[0] || item.imagen || '/placeholder.png'
 
               return (
                 <Card key={item.id} className="hover:shadow-lg transition-shadow">
@@ -174,35 +185,36 @@ export default function CarritoPage() {
                     <div className="flex gap-6">
                       <div className="flex-1">
                         <div className="flex items-start gap-4">
-                          <div className="relative h-24 w-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                              <ShoppingBag className="h-12 w-12" />
-                            </div>
+                          <div className="relative h-24 w-24 bg-gray-100 rounded overflow-hidden flex-shrink-0 border">
+                            <Image
+                              src={itemImage}
+                              alt={item.nombre}
+                              fill
+                              className="object-cover"
+                            />
                           </div>
                           <div className="flex-1 space-y-2">
                             <div>
-                              {item.producto.precioOferta && (
-                                <Badge className="mb-2 bg-red-100 text-red-800">
+                              {producto.precioOferta && (
+                                <Badge className="mb-2 bg-red-100 text-red-800 hover:bg-red-100">
                                   Oferta
                                 </Badge>
                               )}
-                              <h3 className="font-semibold text-lg">{item.producto.nombre}</h3>
-                              <p className="text-sm text-gray-600">{item.producto.descripcionCorta}</p>
+                              <Link href={`/producto/${item.id}`} className="hover:underline">
+                                <h3 className="font-semibold text-lg">{item.nombre}</h3>
+                              </Link>
+                              <p className="text-sm text-gray-600">{producto.descripcionCorta}</p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 text-sm">
                               <div>
-                                <p className="text-xs text-gray-500">Marca</p>
-                                <p className="text-sm font-medium">{item.producto.marca}</p>
+                                <span className="text-gray-500 mr-1">Marca:</span>
+                                <span className="font-medium">{producto.marca}</span>
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500">Modelo</p>
-                                <p className="text-sm font-medium">{item.producto.modelo}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500">Stock</p>
-                                <p className={`text-sm font-medium ${item.producto.stock < 5 ? 'text-red-600' : 'text-green-600'}`}>
-                                  {item.producto.stock} unidades
-                                </p>
+                                <span className="text-gray-500 mr-1">Stock:</span>
+                                <span className={`font-medium ${producto.stock < 5 ? 'text-red-600' : 'text-green-600'}`}>
+                                  {producto.stock > 0 ? `${producto.stock} uds` : 'Agotado'}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -211,22 +223,22 @@ export default function CarritoPage() {
 
                       <div className="flex flex-col items-end gap-4 flex-shrink-0">
                         <div className="text-right">
-                          {item.producto.precioOferta ? (
+                          {producto.precioOferta ? (
                             <>
                               <p className="text-sm text-gray-400 line-through">
-                                {item.producto.precio.toFixed(2)}€
+                                {producto.precio.toFixed(2)}€
                               </p>
                               <p className="text-xl font-bold text-red-600">
-                                {item.producto.precioOferta.toFixed(2)}€
+                                {producto.precioOferta.toFixed(2)}€
                               </p>
                             </>
                           ) : (
                             <p className="text-xl font-bold">
-                              {item.producto.precio.toFixed(2)}€
+                              {producto.precio.toFixed(2)}€
                             </p>
                           )}
-                          <p className="text-sm text-gray-600">
-                            Subtotal: {subtotal.toFixed(2)}€
+                          <p className="text-xs text-gray-500 mt-1">
+                            {item.cantidad} x {item.precio.toFixed(2)}€
                           </p>
                         </div>
 
@@ -241,7 +253,7 @@ export default function CarritoPage() {
                           <span className="w-8 text-center font-semibold">{item.cantidad}</span>
                           <button
                             onClick={() => handleCantidadChange(item.id, item.cantidad + 1)}
-                            disabled={item.cantidad >= item.producto.stock}
+                            disabled={item.cantidad >= producto.stock}
                             className="w-8 h-8 flex items-center justify-center border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <Plus className="h-4 w-4" />
@@ -276,11 +288,10 @@ export default function CarritoPage() {
                     <button
                       type="button"
                       onClick={() => handleMetodoEnvioChange('standard')}
-                      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${
-                        metodoEnvio === 'standard'
+                      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${metodoEnvio === 'standard'
                           ? 'border-primary bg-primary/10'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <Truck className="h-5 w-5 text-gray-600" />
@@ -297,11 +308,10 @@ export default function CarritoPage() {
                     <button
                       type="button"
                       onClick={() => handleMetodoEnvioChange('express')}
-                      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${
-                        metodoEnvio === 'express'
+                      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${metodoEnvio === 'express'
                           ? 'border-primary bg-primary/10'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <Truck className="h-5 w-5 text-blue-600" />
@@ -318,11 +328,10 @@ export default function CarritoPage() {
                     <button
                       type="button"
                       onClick={() => handleMetodoEnvioChange('premium')}
-                      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${
-                        metodoEnvio === 'premium'
+                      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${metodoEnvio === 'premium'
                           ? 'border-primary bg-primary/10'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <Truck className="h-5 w-5 text-purple-600" />
@@ -495,7 +504,7 @@ export default function CarritoPage() {
                   size="lg"
                   className="w-full"
                   onClick={finalizarCompra}
-                  disabled={items.length === 0}
+                  disabled={enrichedItems.length === 0}
                 >
                   <ArrowRight className="h-5 w-5 mr-2" />
                   Finalizar Compra

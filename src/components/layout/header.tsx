@@ -15,13 +15,24 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/hooks/use-auth'
 import { ShoppingCart, User, LogOut, Settings, Ticket, Package } from 'lucide-react'
 import { UserRole } from '@prisma/client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Notification } from '@/components/ui/notification'
+import { useCartStore } from '@/store/use-cart-store'
 
 export function Header() {
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null)
+
+  // Solución para error de hidratación:
+  // El store persiste en localStorage, lo que causa un desajuste entre el renderizado del servidor (0 items)
+  // y el del cliente (n items). Usamos isMounted para renderizar el badge solo en el cliente.
+  const [isMounted, setIsMounted] = useState(false)
+  const totalItems = useCartStore((state) => state.totalItems())
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleCarritoClick = () => {
     console.log('Botón del carrito pulsado')
@@ -75,15 +86,19 @@ export function Header() {
 
           <div className="flex items-center gap-4">
             {/* Carrito - Con Link funcional */}
-            <div
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleCarritoClick}
-              className="relative p-2 cursor-pointer hover:bg-accent rounded transition-colors"
+              className="relative"
             >
               <ShoppingCart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
-                3
-              </span>
-            </div>
+              {isMounted && totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
+                  {totalItems}
+                </span>
+              )}
+            </Button>
 
             {isAuthenticated && user ? (
               <DropdownMenu>

@@ -45,6 +45,8 @@ import {
 } from 'lucide-react'
 import { ProductoTipo } from '@prisma/client'
 import Image from 'next/image'
+import { useCartStore } from '@/store/use-cart-store'
+import { useToast } from '@/hooks/use-toast'
 
 const productosMock = [
   {
@@ -273,7 +275,7 @@ export default function TiendaPage() {
 
   const productosFiltrados = productosMock.filter((producto) => {
     const matchBusqueda = producto.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                         producto.descripcionCorta?.toLowerCase().includes(busqueda.toLowerCase())
+      producto.descripcionCorta?.toLowerCase().includes(busqueda.toLowerCase())
     const matchPrecio = producto.precio <= precioMax[0]
     const matchTipo = !tipoSeleccionado || producto.tipo === tipoSeleccionado
     const matchStock = !enStock || producto.stock > 0
@@ -625,9 +627,27 @@ function FiltrosPanel({
 }
 
 function ProductCardGrid({ producto }: { producto: typeof productosMock[0] }) {
+  const addItem = useCartStore((state) => state.addItem)
+  const { toast } = useToast()
+
   const descuento = producto.precioOferta
     ? Math.round((1 - producto.precioOferta / producto.precio) * 100)
     : 0
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    addItem({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precioOferta || producto.precio,
+      imagen: producto.imagenes[0] || '',
+      cantidad: 1
+    })
+    toast({
+      title: "Producto añadido",
+      description: `${producto.nombre} se ha añadido al carrito`,
+    })
+  }
 
   return (
     <Card className="group hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden">
@@ -685,10 +705,14 @@ function ProductCardGrid({ producto }: { producto: typeof productosMock[0] }) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1">
-          Ver Detalles
+        <Button variant="outline" size="sm" className="flex-1" asChild>
+          <Link href={`/producto/${producto.id}`}>Ver Detalles</Link>
         </Button>
-        <Button size="sm" className="flex-1">
+        <Button
+          size="sm"
+          className="flex-1"
+          onClick={handleAddToCart}
+        >
           <ShoppingCart className="h-4 w-4 mr-2" />
           Añadir
         </Button>
@@ -698,9 +722,27 @@ function ProductCardGrid({ producto }: { producto: typeof productosMock[0] }) {
 }
 
 function ProductCardList({ producto }: { producto: typeof productosMock[0] }) {
+  const addItem = useCartStore((state) => state.addItem)
+  const { toast } = useToast()
+
   const descuento = producto.precioOferta
     ? Math.round((1 - producto.precioOferta / producto.precio) * 100)
     : 0
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    addItem({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precioOferta || producto.precio,
+      imagen: producto.imagenes[0] || '',
+      cantidad: 1
+    })
+    toast({
+      title: "Producto añadido",
+      description: `${producto.nombre} se ha añadido al carrito`,
+    })
+  }
 
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
@@ -762,12 +804,16 @@ function ProductCardList({ producto }: { producto: typeof productosMock[0] }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Button size="sm" className="w-full">
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={handleAddToCart}
+            >
               <ShoppingCart className="h-4 w-4 mr-2" />
               Añadir
             </Button>
-            <Button variant="outline" size="sm" className="w-full">
-              Ver Detalles
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <Link href={`/producto/${producto.id}`}>Ver Detalles</Link>
             </Button>
           </div>
         </div>

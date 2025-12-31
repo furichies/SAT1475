@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
 import {
   Plus,
   ArrowLeft,
@@ -202,11 +203,10 @@ export default function NuevoTicketPage() {
                           key={p.value}
                           type="button"
                           onClick={() => setPrioridad(p.value)}
-                          className={`p-3 rounded-lg border-2 transition-all ${
-                            prioridad === p.value
+                          className={`p-3 rounded-lg border-2 transition-all ${prioridad === p.value
                               ? p.color + ' border-current'
                               : 'bg-white border-gray-200 hover:border-primary/50'
-                          }`}
+                            }`}
                         >
                           <div className="text-sm font-medium">{p.label}</div>
                         </button>
