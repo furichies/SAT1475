@@ -8,6 +8,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Plus,
   Search,
   Edit,
@@ -118,14 +133,108 @@ const nivelesMock = [
 ]
 
 export default function AdminTecnicosPage() {
+  const [tecnicos, setTecnicos] = useState(tecnicosMock)
   const [busqueda, setBusqueda] = useState('')
   const [especialidad, setEspecialidad] = useState('todos')
   const [nivel, setNivel] = useState('todos')
   const [disponible, setDisponible] = useState('todos')
-  const [modalCrear, setModalCrear] = useState(false)
-  const [tecnicoEditando, setTecnicoEditando] = useState(null)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
+  const [tecnicoSeleccionado, setTecnicoSeleccionado] = useState<any>(null)
+  const [isEditing, setIsEditing] = useState(false)
 
-  const tecnicosFiltrados = tecnicosMock.filter(t => {
+  // Estado para el formulario
+  const [formData, setFormData] = useState({
+    nombre: '',
+    apellidos: '',
+    email: '',
+    telefono: '',
+    nivel: 'junior',
+    especialidades: [] as string[],
+    disponible: true
+  })
+
+  const resetForm = () => {
+    setFormData({
+      nombre: '',
+      apellidos: '',
+      email: '',
+      telefono: '',
+      nivel: 'junior',
+      especialidades: [],
+      disponible: true
+    })
+    setTecnicoSeleccionado(null)
+    setIsEditing(false)
+  }
+
+  const handleNuevo = () => {
+    resetForm()
+    setIsEditing(false)
+    setIsFormModalOpen(true)
+  }
+
+  const handleEditar = (tecnico: any) => {
+    setTecnicoSeleccionado(tecnico)
+    setFormData({
+      nombre: tecnico.nombre,
+      apellidos: tecnico.apellidos,
+      email: tecnico.email,
+      telefono: tecnico.telefono,
+      nivel: tecnico.nivel,
+      especialidades: [...tecnico.especialidades],
+      disponible: tecnico.disponible
+    })
+    setIsEditing(true)
+    setIsFormModalOpen(true)
+  }
+
+  const handleBorrar = (id: string) => {
+    if (confirm('¿Estás seguro de que deseas eliminar este técnico?')) {
+      setTecnicos(tecnicos.filter(t => t.id !== id))
+    }
+  }
+
+  const handleGuardar = () => {
+    if (!formData.nombre || !formData.email) {
+      alert('Por favor, rellena los campos obligatorios (*)')
+      return
+    }
+
+    if (isEditing && tecnicoSeleccionado) {
+      setTecnicos(tecnicos.map(t =>
+        t.id === tecnicoSeleccionado.id
+          ? { ...t, ...formData }
+          : t
+      ))
+    } else {
+      const nuevo = {
+        id: (tecnicos.length + 1).toString(),
+        ...formData,
+        nivelExperiencia: formData.nivel === 'junior' ? 1 : formData.nivel === 'senior' ? 5 : 10,
+        ticketsAsignados: 0,
+        ticketsResueltos: 0,
+        valoracionMedia: 5.0,
+        valoraciones: 0,
+        ultimaConexion: 'Nunca',
+        fechaCreacion: new Date().toISOString().split('T')[0]
+      }
+      setTecnicos([nuevo, ...tecnicos])
+    }
+
+    setIsFormModalOpen(false)
+    resetForm()
+  }
+
+  const toggleEspecialidad = (esp: string) => {
+    setFormData(prev => ({
+      ...prev,
+      especialidades: prev.especialidades.includes(esp)
+        ? prev.especialidades.filter(e => e !== esp)
+        : [...prev.especialidades, esp]
+    }))
+  }
+
+  const tecnicosFiltrados = tecnicos.filter(t => {
     if (busqueda && !t.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
       !t.apellidos.toLowerCase().includes(busqueda.toLowerCase()) &&
       !t.email.toLowerCase().includes(busqueda.toLowerCase())) return false
@@ -278,12 +387,23 @@ export default function AdminTecnicosPage() {
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setTecnicoEditando(tecnico)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleEditar(tecnico)}>
+                              <Edit className="h-4 w-4 mr-2" /> Editar técnico
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleBorrar(tecnico.id)} className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardHeader>
@@ -350,7 +470,7 @@ export default function AdminTecnicosPage() {
 
           {/* Botón Crear */}
           <div className="fixed bottom-8 right-8">
-            <Button onClick={() => setModalCrear(true)} className="gap-2 shadow-lg">
+            <Button onClick={handleNuevo} className="gap-2 shadow-lg">
               <Plus className="h-4 w-4" />
               Nuevo Técnico
             </Button>
@@ -358,89 +478,103 @@ export default function AdminTecnicosPage() {
         </main>
       </div>
 
-      {/* Modal de Crear Técnico */}
-      {modalCrear && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Crear Nuevo Técnico</CardTitle>
-              <Button variant="ghost" onClick={() => setModalCrear(false)}>
-                <XCircle className="h-5 w-5" />
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nombre *</Label>
-                  <Input placeholder="Carlos" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Apellido(s) *</Label>
-                  <Input placeholder="García Fernández" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input type="email" placeholder="tecnico@microinfo.es" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Teléfono *</Label>
-                  <Input type="tel" placeholder="655-123-456" />
-                </div>
+      {/* Modal de Crear/Editar Técnico */}
+      <Dialog open={isFormModalOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsFormModalOpen(open); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Editar Técnico' : 'Crear Nuevo Técnico'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombre *</Label>
+                <Input
+                  placeholder="Carlos"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
-                <Label>Contraseña *</Label>
-                <Input type="password" placeholder="••••••••" />
+                <Label>Apellido(s) *</Label>
+                <Input
+                  placeholder="García Fernández"
+                  value={formData.apellidos}
+                  onChange={(e) => setFormData({ ...formData, apellidos: e.target.value })}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nivel de Experiencia *</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {nivelesMock.map(niv => (
-                        <SelectItem key={niv.value} value={niv.value}>{niv.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Años de Experiencia *</Label>
-                  <Input type="number" placeholder="5" min="0" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Especialidades *</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {especialidadesMock.map(esp => (
-                    <div key={esp} className="flex items-center gap-2">
-                      <input type="checkbox" id={esp} />
-                      <Label htmlFor={esp} className="text-sm">{esp}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-4 pt-4">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="disponible" defaultChecked />
-                  <Label htmlFor="disponible">Disponible para asignar tickets</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="notificaciones" defaultChecked />
-                  <Label htmlFor="notificaciones">Recibir notificaciones de nuevos tickets</Label>
-                </div>
-              </div>
-            </CardContent>
-            <div className="flex justify-between p-6 border-t">
-              <Button variant="outline" onClick={() => setModalCrear(false)}>Cancelar</Button>
-              <Button>Crear Técnico</Button>
             </div>
-          </Card>
-        </div>
-      )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  placeholder="tecnico@microinfo.es"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Teléfono *</Label>
+                <Input
+                  type="tel"
+                  placeholder="655-123-456"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Nivel de Experiencia *</Label>
+              <Select
+                value={formData.nivel}
+                onValueChange={(v) => setFormData({ ...formData, nivel: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {nivelesMock.map(niv => (
+                    <SelectItem key={niv.value} value={niv.value}>{niv.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Especialidades *</Label>
+              <div className="grid grid-cols-3 gap-2 border rounded-md p-4 bg-gray-50">
+                {especialidadesMock.map(esp => (
+                  <div key={esp} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={esp}
+                      checked={formData.especialidades.includes(esp)}
+                      onChange={() => toggleEspecialidad(esp)}
+                    />
+                    <Label htmlFor={esp} className="text-sm cursor-pointer">{esp}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-4 pt-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="disponible"
+                  checked={formData.disponible}
+                  onChange={(e) => setFormData({ ...formData, disponible: e.target.checked })}
+                />
+                <Label htmlFor="disponible" className="cursor-pointer">Disponible para asignar tickets</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleGuardar}>
+              {isEditing ? 'Actualizar Técnico' : 'Crear Técnico'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
