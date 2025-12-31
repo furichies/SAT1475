@@ -8,7 +8,10 @@ import { PedidoEstado } from '@prisma/client'
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'superadmin'
+    const isTecnico = session?.user?.role === 'tecnico'
+
+    if (!session || (!isAdmin && !isTecnico)) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
     }
 
@@ -78,7 +81,10 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'superadmin'
+    const isTecnico = session?.user?.role === 'tecnico'
+
+    if (!session || (!isAdmin && !isTecnico)) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
     }
 
