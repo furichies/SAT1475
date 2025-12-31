@@ -1,227 +1,155 @@
-import { NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
-
-// Mock data para técnicos del admin
-let tecnicosAdminMock = [
-  {
-    id: 'tecnico-1',
-    nombre: 'Carlos',
-    apellidos: 'García Fernández',
-    email: 'carlos.garcia@microinfo.es',
-    telefono: '655-123-456',
-    especialidades: ['Hardware', 'Portátiles', 'SSD', 'HDD'],
-    nivel: 'experto',
-    nivelExperiencia: 10,
-    disponible: true,
-    ticketsAsignados: 3,
-    ticketsResueltos: 45,
-    valoracionMedia: 4.8,
-    valoraciones: 23,
-    ultimaConexion: '2023-12-30 09:00',
-    fechaCreacion: '2020-01-15'
-  },
-  {
-    id: 'tecnico-2',
-    nombre: 'María',
-    apellidos: 'Martínez Sánchez',
-    email: 'maria.martinez@microinfo.es',
-    telefono: '655-234-567',
-    especialidades: ['Monitores', 'Periféricos', 'Audio'],
-    nivel: 'senior',
-    nivelExperiencia: 7,
-    disponible: true,
-    ticketsAsignados: 2,
-    ticketsResueltos: 38,
-    valoracionMedia: 4.9,
-    valoraciones: 20,
-    ultimaConexion: '2023-12-30 08:30',
-    fechaCreacion: '2021-06-20'
-  },
-  {
-    id: 'tecnico-3',
-    nombre: 'Diego',
-    apellidos: 'Fernández López',
-    email: 'diego.fernandez@microinfo.es',
-    telefono: '655-345-678',
-    especialidades: ['CPU', 'GPU', 'RAM'],
-    nivel: 'senior',
-    nivelExperiencia: 5,
-    disponible: false,
-    ticketsAsignados: 5,
-    ticketsResueltos: 52,
-    valoracionMedia: 4.7,
-    valoraciones: 18,
-    ultimaConexion: '2023-12-29 16:45',
-    fechaCreacion: '2022-03-10'
-  },
-  {
-    id: 'tecnico-4',
-    nombre: 'Ana',
-    apellidos: 'Rodríguez González',
-    email: 'ana.rodriguez@microinfo.es',
-    telefono: '655-456-789',
-    especialidades: ['Almacenamiento', 'RAM'],
-    nivel: 'junior',
-    nivelExperiencia: 2,
-    disponible: true,
-    ticketsAsignados: 1,
-    ticketsResueltos: 12,
-    valoracionMedia: 4.5,
-    valoraciones: 10,
-    ultimaConexion: '2023-12-30 10:00',
-    fechaCreacion: '2023-09-01'
-  }
-]
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { hash } from 'bcryptjs'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 // GET /api/admin_tecnicos - Listar técnicos (admin)
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const especialidad = searchParams.get('especialidad') || ''
     const nivel = searchParams.get('nivel') || ''
     const disponible = searchParams.get('disponible') || ''
 
-    let tecnicosFiltrados = tecnicosAdminMock.filter(t => {
-      if (especialidad && !t.especialidades.includes(especialidad)) return false
-      if (nivel && t.nivel !== nivel) return false
-      if (disponible === 'si' && !t.disponible) return false
-      if (disponible === 'no' && t.disponible) return false
-      return true
+    const tecnicos = await db.tecnico.findMany({
+      include: {
+        usuario: {
+          select: {
+            nombre: true,
+            apellidos: true,
+            email: true,
+            telefono: true,
+            ultimoAcceso: true,
+            fechaRegistro: true
+          }
+        }
+      }
     })
+
+    // Mapear al formato esperado por el frontend
+    let filteredTecnicos = tecnicos.map(t => ({
+      id: t.id,
+      nombre: t.usuario.nombre,
+      apellidos: t.usuario.apellidos || '',
+      email: t.usuario.email,
+      telefono: t.usuario.telefono || '',
+      especialidades: t.especialidades ? JSON.parse(t.especialidades) : [],
+      nivel: t.nivel,
+      disponible: t.disponible,
+      ticketsAsignados: t.ticketsAsignados,
+      ticketsResueltos: t.ticketsResueltos,
+      valoracionMedia: t.valoracionMedia,
+      ultimaConexion: t.usuario.ultimoAcceso ? new Date(t.usuario.ultimoAcceso).toLocaleString() : 'Nunca',
+      fechaCreacion: new Date(t.fechaCreacion).toISOString().split('T')[0]
+    }))
+
+    // Aplicar filtros adicionales si es necesario (ya que Prisma no filtra JSON fácilmente)
+    if (especialidad && especialidad !== 'todos') {
+      filteredTecnicos = filteredTecnicos.filter(t => t.especialidades.includes(especialidad))
+    }
+    if (nivel && nivel !== 'todos') {
+      filteredTecnicos = filteredTecnicos.filter(t => t.nivel === nivel)
+    }
+    if (disponible === 'si') {
+      filteredTecnicos = filteredTecnicos.filter(t => t.disponible)
+    } else if (disponible === 'no') {
+      filteredTecnicos = filteredTecnicos.filter(t => !t.disponible)
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        tecnicos: tecnicosFiltrados,
-        totalTecnicos: tecnicosFiltrados.length
+        tecnicos: filteredTecnicos,
+        totalTecnicos: filteredTecnicos.length
       }
     })
   } catch (error) {
     console.error('Error en GET /api/admin_tecnicos:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Error al obtener técnicos del admin'
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Error al obtener técnicos' }, { status: 500 })
   }
 }
 
 // POST /api/admin_tecnicos - Crear técnico (admin)
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
+    }
+
     const body = await req.json()
-    const { nombre, apellidos, email, telefono, especialidades, nivel, nivelExperiencia, disponible, recibirNotificaciones } = body
+    const { nombre, apellidos, email, telefono, especialidades, nivel, disponible } = body
 
-    // Validaciones básicas
-    if (!nombre || nombre.trim().length < 2) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'El nombre debe tener al menos 2 caracteres'
-        },
-        { status: 400 }
-      )
+    if (!nombre || !email) {
+      return NextResponse.json({ success: false, error: 'Nombre y email son obligatorios' }, { status: 400 })
     }
 
-    if (!apellidos || apellidos.trim().length < 2) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Los apellidos deben tener al menos 2 caracteres'
-        },
-        { status: 400 }
-      )
+    // Verificar si el usuario ya existe
+    let usuario = await db.usuario.findUnique({ where: { email } })
+
+    if (usuario) {
+      // Si ya existe, nos aseguramos de que sea técnico o lo convertimos
+      if (usuario.rol !== 'tecnico' && usuario.rol !== 'admin' && usuario.rol !== 'superadmin') {
+        usuario = await db.usuario.update({
+          where: { id: usuario.id },
+          data: { rol: 'tecnico' }
+        })
+      }
+    } else {
+      // Crear nuevo usuario
+      const passwordHash = await hash('MicroInfo2024!', 12) // Contraseña por defecto
+      usuario = await db.usuario.create({
+        data: {
+          nombre,
+          apellidos,
+          email,
+          telefono,
+          passwordHash,
+          rol: 'tecnico'
+        }
+      })
     }
 
-    if (!email || !email.includes('@')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'El email es inválido'
-        },
-        { status: 400 }
-      )
+    // Verificar si ya tiene registro de técnico
+    const tecnicoExistente = await db.tecnico.findUnique({ where: { usuarioId: usuario.id } })
+
+    if (tecnicoExistente) {
+      return NextResponse.json({ success: false, error: 'Este usuario ya está registrado como técnico' }, { status: 400 })
     }
 
-    if (!telefono || telefono.length < 9) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'El teléfono debe tener al menos 9 caracteres'
-        },
-        { status: 400 }
-      )
-    }
-
-    if (!especialidades || especialidades.length < 1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Al menos una especialidad es requerida'
-        },
-        { status: 400 }
-      )
-    }
-
-    if (!nivel || !['junior', 'senior', 'experto'].includes(nivel)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Nivel inválido'
-        },
-        { status: 400 }
-      )
-    }
-
-    if (!nivelExperiencia || nivelExperiencia < 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Los años de experiencia deben ser un número positivo'
-        },
-        { status: 400 }
-      )
-    }
-
-    // Crear nuevo técnico mock
-    const nuevoTecnico = {
-      id: 'tecnico-' + randomUUID(),
-      nombre,
-      apellidos,
-      email,
-      telefono,
-      especialidades: especialidades || [],
-      nivel,
-      nivelExperiencia: Number(nivelExperiencia),
-      disponible: Boolean(disponible),
-      recibirNotificaciones: Boolean(recibirNotificaciones),
-      ticketsAsignados: 0,
-      ticketsResueltos: 0,
-      valoracionMedia: 0,
-      valoraciones: 0,
-      ultimaConexion: new Date().toISOString(),
-      fechaCreacion: new Date().toISOString()
-    }
-
-    tecnicosAdminMock.push(nuevoTecnico)
+    // Crear el registro de técnico
+    const nuevoTecnico = await db.tecnico.create({
+      data: {
+        usuarioId: usuario.id,
+        especialidades: JSON.stringify(especialidades || []),
+        nivel: nivel || 'junior',
+        disponible: disponible !== undefined ? disponible : true,
+      },
+      include: {
+        usuario: true
+      }
+    })
 
     return NextResponse.json({
       success: true,
       data: {
-        tecnico: nuevoTecnico,
+        tecnico: {
+          id: nuevoTecnico.id,
+          nombre: nuevoTecnico.usuario.nombre,
+          apellidos: nuevoTecnico.usuario.apellidos,
+          email: nuevoTecnico.usuario.email
+        },
         mensaje: 'Técnico creado correctamente'
       }
     }, { status: 201 })
   } catch (error) {
     console.error('Error en POST /api/admin_tecnicos:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Error al crear técnico'
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Error al crear técnico' }, { status: 500 })
   }
 }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +14,11 @@ import { signIn } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
+
   const [formData, setFormData] = useState({
+
     email: '',
     password: ''
   })
@@ -36,7 +41,7 @@ export default function LoginPage() {
       if (result?.ok) {
         setSuccess(true)
         setTimeout(() => {
-          router.push('/')
+          router.push(callbackUrl)
         }, 2000)
       } else {
         setError('Error al iniciar sesión. Por favor, verifica tus credenciales.')

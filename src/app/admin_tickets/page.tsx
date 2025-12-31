@@ -77,10 +77,24 @@ export default function AdminTicketsPage() {
   const [ticketSeleccionado, setTicketSeleccionado] = useState<any>(null)
   const [isEdicion, setIsEdicion] = useState(false)
   const [isNuevo, setIsNuevo] = useState(false)
+  const [tecnicosList, setTecnicosList] = useState<any[]>([])
 
   useEffect(() => {
     fetchTickets()
+    fetchTecnicos()
   }, [])
+
+  const fetchTecnicos = async () => {
+    try {
+      const res = await fetch('/api/admin_tecnicos')
+      const data = await res.json()
+      if (data.success) {
+        setTecnicosList(data.data.tecnicos)
+      }
+    } catch (error) {
+      console.error('Error fetching tecnicos list:', error)
+    }
+  }
 
   const fetchTickets = async () => {
     try {
@@ -218,7 +232,7 @@ export default function AdminTicketsPage() {
       !t.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (prioridad !== 'todos' && t.prioridad !== prioridad) return false
     if (tipo !== 'todos' && t.tipo !== tipo) return false
-    if (tecnico !== 'todos' && t.tecnico.toLowerCase().includes(tecnico.toLowerCase())) return false
+    if (tecnico !== 'todos' && t.tecnico !== tecnico) return false
     return true
   })
 
@@ -328,6 +342,20 @@ export default function AdminTicketsPage() {
                     <SelectItem value="consulta">Consulta</SelectItem>
                     <SelectItem value="reparacion">Reparación</SelectItem>
                     <SelectItem value="garantia">Garantía</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={tecnico} onValueChange={setTecnico}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Técnico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los técnicos</SelectItem>
+                    <SelectItem value="Sin asignar">Sin asignar</SelectItem>
+                    {tecnicosList.map((t: any) => (
+                      <SelectItem key={t.id} value={`${t.nombre} ${t.apellidos}`.trim()}>
+                        {t.nombre} {t.apellidos}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -540,9 +568,11 @@ export default function AdminTicketsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Sin asignar">Sin asignar</SelectItem>
-                      <SelectItem value="Carlos García">Carlos García</SelectItem>
-                      <SelectItem value="María Martínez">María Martínez</SelectItem>
-                      <SelectItem value="Diego Fernández">Diego Fernández</SelectItem>
+                      {tecnicosList.map((t: any) => (
+                        <SelectItem key={t.id} value={`${t.nombre} ${t.apellidos}`.trim()}>
+                          {t.nombre} {t.apellidos}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

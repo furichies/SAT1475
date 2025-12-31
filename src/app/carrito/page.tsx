@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -33,8 +34,10 @@ const impuestoIVA = 0.21
 
 export default function CarritoPage() {
   const router = useRouter()
-  // Hydration fix
+  const { data: session, status } = useSession()
   const [isMounted, setIsMounted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const cartItems = useCartStore((state) => state.items)
   const removeItem = useCartStore((state) => state.removeItem)
   const updateQuantity = useCartStore((state) => state.updateQuantity)
@@ -55,6 +58,22 @@ export default function CarritoPage() {
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Auto-fill address if user is logged in
+  useEffect(() => {
+    if (session?.user) {
+      setDatosEnvio({
+        nombre: session.user.name || '',
+        apellidos: (session.user as any).apellidos || '',
+        direccion: (session.user as any).direccion || '',
+        codigoPostal: (session.user as any).codigoPostal || '',
+        ciudad: (session.user as any).ciudad || '',
+        provincia: (session.user as any).provincia || '',
+        telefono: (session.user as any).telefono || ''
+      })
+    }
+  }, [session])
+
 
   // Enriched items with full product details
   const enrichedItems = cartItems.map(item => {
@@ -120,18 +139,49 @@ export default function CarritoPage() {
     })
   }
 
-  const finalizarCompra = () => {
-    console.log('Finalizando compra...', {
-      items: enrichedItems,
-      metodoEnvio,
-      datosEnvio,
-      total
-    })
+  const finalizarCompra = async () => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login?callbackUrl=/carrito')
+      return
+    }
 
-    // Here we would send to API
-    alert('Compra finalizada con exito (Demo)')
-    clearCart()
-    router.push('/')
+    if (!datosEnvio.nombre || !datosEnvio.direccion || !datosEnvio.codigoPostal || !datosEnvio.telefono) {
+      alert('Por favor, completa los datos de envío obligatorios.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: enrichedItems,
+          direccionEnvio: datosEnvio,
+          metodoEnvio: metodoEnvio,
+          metodoPago: 'tarjeta', // Hardcoded for simplified demo, should be a selector
+          subtotal: total.subtotal,
+          iva: total.iva,
+          gastosEnvio: total.envio,
+          total: total.total
+        })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        alert('¡Pedido realizado con éxito!')
+        clearCart()
+        router.push('/mis-pedidos')
+      } else {
+        alert('Error: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error finalizando compra:', error)
+      alert('Ha ocurrido un error al procesar tu pedido. Intentalo de nuevo.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!isMounted) {
@@ -289,8 +339,8 @@ export default function CarritoPage() {
                       type="button"
                       onClick={() => handleMetodoEnvioChange('standard')}
                       className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${metodoEnvio === 'standard'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
                         }`}
                     >
                       <div className="flex items-center gap-3">
@@ -309,8 +359,8 @@ export default function CarritoPage() {
                       type="button"
                       onClick={() => handleMetodoEnvioChange('express')}
                       className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${metodoEnvio === 'express'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
                         }`}
                     >
                       <div className="flex items-center gap-3">
@@ -329,8 +379,8 @@ export default function CarritoPage() {
                       type="button"
                       onClick={() => handleMetodoEnvioChange('premium')}
                       className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${metodoEnvio === 'premium'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
                         }`}
                     >
                       <div className="flex items-center gap-3">
@@ -502,12 +552,21 @@ export default function CarritoPage() {
               <CardFooter className="flex-col gap-3">
                 <Button
                   size="lg"
-                  className="w-full"
+                  className="w-full h-14 text-lg font-bold shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
                   onClick={finalizarCompra}
-                  disabled={enrichedItems.length === 0}
+                  disabled={enrichedItems.length === 0 || isSubmitting}
                 >
-                  <ArrowRight className="h-5 w-5 mr-2" />
-                  Finalizar Compra
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Procesando...
+                    </div>
+                  ) : (
+                    <>
+                      <ArrowRight className="h-5 w-5 mr-2" />
+                      Finalizar Compra y Pagar
+                    </>
+                  )}
                 </Button>
               </CardFooter>
             </Card>

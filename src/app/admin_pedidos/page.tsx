@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,12 +41,47 @@ export default function AdminPedidosPage() {
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState('todos')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<any>(null)
+  const [pedidos, setPedidos] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const pedidosFiltrados = pedidosMock.filter(p => {
-    if (busqueda && !p.numero.toLowerCase().includes(busqueda.toLowerCase()) && !p.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
-    if (estado !== 'todos' && p.estado !== estado) return false
-    return true
-  })
+  const fetchPedidos = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/admin_pedidos?estado=${estado !== 'todos' ? estado : ''}&busqueda=${busqueda}`)
+      const data = await res.json()
+      if (data.success) {
+        setPedidos(data.data.pedidos)
+      }
+    } catch (error) {
+      console.error('Error fetching admin pedidos:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchPedidos()
+  }, [estado, busqueda])
+
+  const handleUpdateEstado = async (id: string, nuevoEstado: string) => {
+    try {
+      const res = await fetch('/api/admin_pedidos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, estado: nuevoEstado })
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchPedidos()
+        if (pedidoSeleccionado && pedidoSeleccionado.id === id) {
+          setPedidoSeleccionado({ ...pedidoSeleccionado, estado: nuevoEstado })
+        }
+      }
+    } catch (error) {
+      console.error('Error updating status:', error)
+    }
+  }
+
 
   const getEstadoInfo = (est: string) => {
     const estados = {
@@ -122,14 +158,20 @@ export default function AdminPedidosPage() {
                 <option value="entregado">Entregado</option>
                 <option value="cancelado">Cancelado</option>
               </select>
-              <div className="text-sm text-gray-600">
-                {pedidosFiltrados.length} pedidos
+              <div className="text-sm text-gray-600 font-bold">
+                {pedidos.length} PEDIDOS ENCONTRADOS
               </div>
             </div>
           </div>
 
-          <div className="bg-white m-6">
+          <div className="bg-white m-6 min-h-[400px] relative">
+            {isLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : null}
             <div className="overflow-x-auto">
+
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-gray-50">
@@ -142,27 +184,31 @@ export default function AdminPedidosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pedidosFiltrados.map((pedido) => {
+                  {pedidos.map((pedido) => {
                     const estadoInfo = getEstadoInfo(pedido.estado)
                     return (
                       <tr key={pedido.id} className="border-b hover:bg-gray-50">
                         <td className="p-4">
-                          <div className="font-medium">{pedido.numero}</div>
+                          <div className="font-medium">{pedido.numeroPedido}</div>
                         </td>
-                        <td className="p-4">{pedido.cliente}</td>
-                        <td className="p-4 text-sm">{pedido.fecha}</td>
                         <td className="p-4">
-                          <Badge className={estadoInfo.color}>
+                          <div className="font-medium text-gray-800">{pedido.clienteNombre}</div>
+                          <div className="text-xs text-muted-foreground">{pedido.clienteEmail}</div>
+                        </td>
+                        <td className="p-4 text-sm font-medium">{new Date(pedido.fecha).toLocaleDateString()}</td>
+                        <td className="p-4">
+                          <Badge className={`${estadoInfo.color} font-bold rounded-full border-none px-3`}>
                             <div className="flex items-center gap-1">
                               {(() => {
                                 const Icon = estadoInfo.icon;
                                 return <Icon className="h-3 w-3" />;
                               })()}
-                              {estadoInfo.label}
+                              {estadoInfo.label.toUpperCase()}
                             </div>
                           </Badge>
                         </td>
-                        <td className="p-4 text-right font-bold">{pedido.total}€</td>
+                        <td className="p-4 text-right font-black text-lg">{pedido.total.toFixed(2)}€</td>
+
                         <td className="p-4">
                           <div className="flex justify-end gap-2">
                             <Button variant="ghost" size="sm" onClick={() => setPedidoSeleccionado(pedido)}>
@@ -187,9 +233,10 @@ export default function AdminPedidosPage() {
             </div>
 
             <div className="flex justify-between p-6 border-t">
-              <div className="text-sm text-gray-600">
-                Mostrando 1-{pedidosFiltrados.length} de {pedidosMock.length} pedidos
+              <div className="text-sm text-gray-600 font-medium">
+                Mostrando {pedidos.length} pedidos encontrados
               </div>
+
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">Anterior</Button>
                 <Button variant="outline" size="sm">Siguiente</Button>
@@ -214,29 +261,36 @@ export default function AdminPedidosPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Número de Pedido</p>
-                    <p className="font-medium">{pedidoSeleccionado.numero}</p>
+                    <p className="font-black text-primary text-xl tracking-tight">{pedidoSeleccionado.numeroPedido}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Estado</p>
-                    <Badge className={getEstadoInfo(pedidoSeleccionado.estado).color}>
-                      <div className="flex items-center gap-1">
-                        {React.createElement(getEstadoInfo(pedidoSeleccionado.estado).icon, { className: "h-3 w-3" })}
-                        {getEstadoInfo(pedidoSeleccionado.estado).label}
-                      </div>
-                    </Badge>
+                    <p className="text-sm text-gray-600 mb-1 font-bold uppercase text-[10px]">Cambiar Estado</p>
+                    <select
+                      className="p-1 border rounded text-sm w-full font-bold"
+                      value={pedidoSeleccionado.estado}
+                      onChange={(e) => handleUpdateEstado(pedidoSeleccionado.id, e.target.value)}
+                    >
+                      <option value="pendiente">PENDIENTE</option>
+                      <option value="procesando">PROCESANDO</option>
+                      <option value="enviado">ENVIADO</option>
+                      <option value="entregado">ENTREGADO</option>
+                      <option value="cancelado">CANCELADO</option>
+                    </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Cliente</p>
-                    <p className="font-medium">{pedidoSeleccionado.cliente}</p>
+                    <p className="font-bold">{pedidoSeleccionado.clienteNombre}</p>
+                    <p className="text-xs text-muted-foreground">{pedidoSeleccionado.clienteEmail}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Fecha</p>
-                    <p className="text-sm">{pedidoSeleccionado.fecha}</p>
+                    <p className="text-sm text-gray-600 mb-1">Fecha de Pedido</p>
+                    <p className="font-medium">{new Date(pedidoSeleccionado.fecha).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
+
 
               <div className="border-b pb-4">
                 <h3 className="text-lg font-semibold mb-3">Documentos</h3>

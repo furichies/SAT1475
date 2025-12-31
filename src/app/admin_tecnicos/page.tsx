@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -133,7 +133,7 @@ const nivelesMock = [
 ]
 
 export default function AdminTecnicosPage() {
-  const [tecnicos, setTecnicos] = useState(tecnicosMock)
+  const [tecnicos, setTecnicos] = useState<any[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [especialidad, setEspecialidad] = useState('todos')
   const [nivel, setNivel] = useState('todos')
@@ -141,6 +141,26 @@ export default function AdminTecnicosPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [tecnicoSeleccionado, setTecnicoSeleccionado] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchTecnicos = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/admin_tecnicos?especialidad=${especialidad}&nivel=${nivel}&disponible=${disponible}`)
+      const data = await res.json()
+      if (data.success) {
+        setTecnicos(data.data.tecnicos)
+      }
+    } catch (error) {
+      console.error('Error fetching tecnicos:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTecnicos()
+  }, [especialidad, nivel, disponible])
 
   // Estado para el formulario
   const [formData, setFormData] = useState({
@@ -194,35 +214,36 @@ export default function AdminTecnicosPage() {
     }
   }
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (!formData.nombre || !formData.email) {
       alert('Por favor, rellena los campos obligatorios (*)')
       return
     }
 
-    if (isEditing && tecnicoSeleccionado) {
-      setTecnicos(tecnicos.map(t =>
-        t.id === tecnicoSeleccionado.id
-          ? { ...t, ...formData }
-          : t
-      ))
-    } else {
-      const nuevo = {
-        id: (tecnicos.length + 1).toString(),
-        ...formData,
-        nivelExperiencia: formData.nivel === 'junior' ? 1 : formData.nivel === 'senior' ? 5 : 10,
-        ticketsAsignados: 0,
-        ticketsResueltos: 0,
-        valoracionMedia: 5.0,
-        valoraciones: 0,
-        ultimaConexion: 'Nunca',
-        fechaCreacion: new Date().toISOString().split('T')[0]
-      }
-      setTecnicos([nuevo, ...tecnicos])
-    }
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/admin_tecnicos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+      const data = await res.json()
 
-    setIsFormModalOpen(false)
-    resetForm()
+      if (data.success) {
+        await fetchTecnicos()
+        setIsFormModalOpen(false)
+        resetForm()
+      } else {
+        alert('Error: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error saving tecnico:', error)
+      alert('Error de conexión al guardar')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const toggleEspecialidad = (esp: string) => {
@@ -361,112 +382,119 @@ export default function AdminTecnicosPage() {
           </div>
 
           {/* Grid de Técnicos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {tecnicosFiltrados.map((tecnico) => {
-              const nivelInfo = getNivelInfo(tecnico.nivel)
-              return (
-                <Card key={tecnico.id} className="hover:shadow-lg transition-all">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
-                          {tecnico.nombre.charAt(0)}
+          {isLoading ? (
+            <div className="flex justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {tecnicosFiltrados.map((tecnico) => {
+                const nivelInfo = getNivelInfo(tecnico.nivel)
+                return (
+                  <Card key={tecnico.id} className="hover:shadow-lg transition-all">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
+                            {tecnico.nombre.charAt(0)}
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">{tecnico.nombre} {tecnico.apellidos}</CardTitle>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className={nivelInfo.color}>
+                                {nivelInfo.label}
+                              </Badge>
+                              {tecnico.disponible ? (
+                                <Badge className="bg-green-100 text-green-800">Disponible</Badge>
+                              ) : (
+                                <Badge className="bg-gray-100 text-gray-800">No disponible</Badge>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="text-lg">{tecnico.nombre} {tecnico.apellidos}</CardTitle>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className={nivelInfo.color}>
-                              {nivelInfo.label}
+                        <div className="flex gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleEditar(tecnico)}>
+                                <Edit className="h-4 w-4 mr-2" /> Editar técnico
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleBorrar(tecnico.id)} className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-600">{tecnico.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-600">{tecnico.telefono}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm text-gray-600 mb-2">Especialidades:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {tecnico.especialidades.map((esp, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {esp}
                             </Badge>
-                            {tecnico.disponible ? (
-                              <Badge className="bg-green-100 text-green-800">Disponible</Badge>
-                            ) : (
-                              <Badge className="bg-gray-100 text-gray-800">No disponible</Badge>
-                            )}
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4 pt-2 border-t">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="text-xs text-gray-600">Resueltos</span>
+                          </div>
+                          <div className="font-bold text-lg">{tecnico.ticketsResueltos}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <Clock className="h-4 w-4 text-blue-600" />
+                            <span className="text-xs text-gray-600">Asignados</span>
+                          </div>
+                          <div className="font-bold text-lg">{tecnico.ticketsAsignados}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <Award className="h-4 w-4 text-purple-600" />
+                            <span className="text-xs text-gray-600">Valoración</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-1">
+                            {getEstrellas(tecnico.valoracionMedia)}
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleEditar(tecnico)}>
-                              <Edit className="h-4 w-4 mr-2" /> Editar técnico
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleBorrar(tecnico.id)} className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{tecnico.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{tecnico.telefono}</span>
-                      </div>
-                    </div>
 
-                    <div>
-                      <div className="text-sm text-gray-600 mb-2">Especialidades:</div>
-                      <div className="flex flex-wrap gap-1">
-                        {tecnico.especialidades.map((esp, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {esp}
-                          </Badge>
-                        ))}
+                      <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
+                        <Calendar className="h-3 w-3" />
+                        <span>Última conexión: {tecnico.ultimaConexion}</span>
+                        <span>•</span>
+                        <span>Miembro desde: {tecnico.fechaCreacion}</span>
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
 
-                    <div className="grid grid-cols-3 gap-4 pt-2 border-t">
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="text-xs text-gray-600">Resueltos</span>
-                        </div>
-                        <div className="font-bold text-lg">{tecnico.ticketsResueltos}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          <span className="text-xs text-gray-600">Asignados</span>
-                        </div>
-                        <div className="font-bold text-lg">{tecnico.ticketsAsignados}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Award className="h-4 w-4 text-purple-600" />
-                          <span className="text-xs text-gray-600">Valoración</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-1">
-                          {getEstrellas(tecnico.valoracionMedia)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
-                      <Calendar className="h-3 w-3" />
-                      <span>Última conexión: {tecnico.ultimaConexion}</span>
-                      <span>•</span>
-                      <span>Miembro desde: {tecnico.fechaCreacion}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
 
           {/* Botón Crear */}
           <div className="fixed bottom-8 right-8">

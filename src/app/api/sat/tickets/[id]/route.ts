@@ -70,12 +70,27 @@ export async function PATCH(
         if (tecnico === 'Sin asignar') {
             tecnicoId = null
         } else if (tecnico) {
-            const tech = await db.tecnico.findFirst({
-                where: { usuario: { nombre: { contains: tecnico } } }
+            // Buscar técnico por nombre completo o parcial
+            const techRecord = await db.tecnico.findFirst({
+                where: {
+                    OR: [
+                        { usuario: { nombre: { contains: tecnico } } },
+                        { usuario: { apellidos: { contains: tecnico } } },
+                        {
+                            usuario: {
+                                AND: [
+                                    { nombre: { contains: tecnico.split(' ')[0] } },
+                                    { apellidos: { contains: tecnico.split(' ').slice(1).join(' ') } }
+                                ]
+                            }
+                        }
+                    ]
+                }
             })
-            if (tech) tecnicoId = tech.id
+            if (techRecord) {
+                tecnicoId = techRecord.id
+            }
         }
-
         const updated = await db.ticket.update({
             where: { id },
             data: {
