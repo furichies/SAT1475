@@ -1,0 +1,446 @@
+'use client'
+
+import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  User,
+  Star,
+  Calendar,
+  Mail,
+  Phone,
+  Award,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Settings,
+  LayoutDashboard,
+  Menu,
+  Package,
+  ShoppingCart,
+  MessageSquare,
+  FileText,
+  ShoppingBag,
+  ChevronRight,
+  MoreHorizontal
+} from 'lucide-react'
+import Link from 'next/link'
+
+const tecnicosMock = [
+  {
+    id: '1',
+    nombre: 'Carlos García',
+    apellidos: 'García Fernández',
+    email: 'carlos.garcia@microinfo.es',
+    telefono: '655-123-456',
+    especialidades: ['Hardware', 'Portátiles', 'SSD', 'HDD'],
+    nivel: 'experto',
+    nivelExperiencia: 10,
+    disponible: true,
+    ticketsAsignados: 3,
+    ticketsResueltos: 45,
+    valoracionMedia: 4.8,
+    valoraciones: 23,
+    ultimaConexion: '2023-12-30 09:00',
+    fechaCreacion: '2020-01-15'
+  },
+  {
+    id: '2',
+    nombre: 'María Martínez',
+    apellidos: 'Martínez Sánchez',
+    email: 'maria.martinez@microinfo.es',
+    telefono: '655-234-567',
+    especialidades: ['Monitores', 'Periféricos', 'Audio'],
+    nivel: 'senior',
+    nivelExperiencia: 7,
+    disponible: true,
+    ticketsAsignados: 2,
+    ticketsResueltos: 38,
+    valoracionMedia: 4.9,
+    valoraciones: 20,
+    ultimaConexion: '2023-12-30 08:30',
+    fechaCreacion: '2021-06-20'
+  },
+  {
+    id: '3',
+    nombre: 'Diego Fernández',
+    apellidos: 'Fernández López',
+    email: 'diego.fernandez@microinfo.es',
+    telefono: '655-345-678',
+    especialidades: ['CPU', 'GPU', 'RAM'],
+    nivel: 'senior',
+    nivelExperiencia: 5,
+    disponible: false,
+    ticketsAsignados: 5,
+    ticketsResueltos: 52,
+    valoracionMedia: 4.7,
+    valoraciones: 18,
+    ultimaConexion: '2023-12-29 16:45',
+    fechaCreacion: '2022-03-10'
+  },
+  {
+    id: '4',
+    nombre: 'Ana Rodríguez',
+    apellidos: 'Rodríguez González',
+    email: 'ana.rodriguez@microinfo.es',
+    telefono: '655-456-789',
+    especialidades: ['Almacenamiento', 'RAM'],
+    nivel: 'junior',
+    nivelExperiencia: 2,
+    disponible: true,
+    ticketsAsignados: 1,
+    ticketsResueltos: 12,
+    valoracionMedia: 4.5,
+    valoraciones: 10,
+    ultimaConexion: '2023-12-30 10:00',
+    fechaCreacion: '2023-09-01'
+  }
+]
+
+const especialidadesMock = [
+  'Hardware', 'Portátiles', 'SSD', 'HDD', 'RAM',
+  'CPU', 'GPU', 'Monitores', 'Periféricos', 'Audio',
+  'Almacenamiento', 'Software', 'Redes', 'Impresoras'
+]
+
+const nivelesMock = [
+  { value: 'junior', label: 'Junior (1-3 años)' },
+  { value: 'senior', label: 'Senior (4-7 años)' },
+  { value: 'experto', label: 'Experto (8+ años)' }
+]
+
+export default function AdminTecnicosPage() {
+  const [busqueda, setBusqueda] = useState('')
+  const [especialidad, setEspecialidad] = useState('todos')
+  const [nivel, setNivel] = useState('todos')
+  const [disponible, setDisponible] = useState('todos')
+  const [modalCrear, setModalCrear] = useState(false)
+  const [tecnicoEditando, setTecnicoEditando] = useState(null)
+  
+  const tecnicosFiltrados = tecnicosMock.filter(t => {
+    if (busqueda && !t.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
+        !t.apellidos.toLowerCase().includes(busqueda.toLowerCase()) &&
+        !t.email.toLowerCase().includes(busqueda.toLowerCase())) return false
+    if (especialidad !== 'todos' && !t.especialidades.includes(especialidad)) return false
+    if (nivel !== 'todos' && t.nivel !== nivel) return false
+    if (disponible === 'si' && !t.disponible) return false
+    if (disponible === 'no' && t.disponible) return false
+    return true
+  })
+
+  const getNivelInfo = (niv: string) => {
+    const niveles = {
+      junior: { label: 'Junior', color: 'bg-blue-100 text-blue-800' },
+      senior: { label: 'Senior', color: 'bg-purple-100 text-purple-800' },
+      experto: { label: 'Experto', color: 'bg-green-100 text-green-800' }
+    }
+    return niveles[niv as keyof typeof niveles] || niveles.junior
+  }
+
+  const getEstrellas = (valoracion: number) => {
+    const estrellas = Math.round(valoracion)
+    return Array(5).fill(0).map((_, idx) => (
+      <Star key={idx} className={`h-4 w-4 ${idx < estrellas ? 'fill-current text-yellow-500' : 'text-gray-300'}`} />
+    ))
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white border-r min-h-screen p-4 fixed left-0 top-0 z-10 hidden lg:block">
+          <div className="flex items-center gap-2 mb-8">
+            <ShoppingBag className="h-8 w-8 text-primary" />
+            <span className="text-xl font-bold">MicroInfo Admin</span>
+          </div>
+          <nav className="space-y-2">
+            <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+              <LayoutDashboard className="h-5 w-5" />
+              Dashboard
+            </Link>
+            <Link href="/admin/productos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+              <Package className="h-5 w-5" />
+              Productos
+            </Link>
+            <Link href="/admin/pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+              <ShoppingCart className="h-5 w-5" />
+              Pedidos
+            </Link>
+            <Link href="/admin/tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+              <MessageSquare className="h-5 w-5" />
+              Tickets SAT
+            </Link>
+            <Link href="/admin/tecnicos" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
+              <User className="h-5 w-5" />
+              Técnicos
+            </Link>
+            <Link href="/admin/conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+              <Settings className="h-5 w-5" />
+              Base de Conocimiento
+            </Link>
+          </nav>
+          <div className="mt-8 pt-8 border-t">
+            <p className="text-xs text-gray-500 mb-2">Administrador</p>
+            <p className="text-sm font-semibold">Admin Principal</p>
+            <p className="text-xs text-gray-500">admin@microinfo.es</p>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 lg:ml-64 p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Gestión de Técnicos</h1>
+            <p className="text-gray-600">
+              Administra el equipo de técnicos: crear, editar, ver estadísticas y disponibilidad.
+            </p>
+          </div>
+
+          {/* Buscar y Filtrar */}
+          <div className="bg-white border-b p-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nombre, apellido o email..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <select
+                className="p-2 border rounded w-40"
+                value={especialidad}
+                onChange={(e) => setEspecialidad(e.target.value)}
+              >
+                <option value="todos">Todas las especialidades</option>
+                {especialidadesMock.map(esp => (
+                  <option key={esp} value={esp}>{esp}</option>
+                ))}
+              </select>
+              <select
+                className="p-2 border rounded w-40"
+                value={nivel}
+                onChange={(e) => setNivel(e.target.value)}
+              >
+                <option value="todos">Todos los niveles</option>
+                {nivelesMock.map(niv => (
+                  <option key={niv.value} value={niv.value}>{niv.label}</option>
+                ))}
+              </select>
+              <select
+                className="p-2 border rounded w-40"
+                value={disponible}
+                onChange={(e) => setDisponible(e.target.value)}
+              >
+                <option value="todos">Disponibilidad</option>
+                <option value="si">Disponible</option>
+                <option value="no">No disponible</option>
+              </select>
+              <div className="text-sm text-gray-600">
+                {tecnicosFiltrados.length} técnicos
+              </div>
+            </div>
+          </div>
+
+          {/* Grid de Técnicos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {tecnicosFiltrados.map((tecnico) => {
+              const nivelInfo = getNivelInfo(tecnico.nivel)
+              return (
+                <Card key={tecnico.id} className="hover:shadow-lg transition-all">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
+                          {tecnico.nombre.charAt(0)}
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{tecnico.nombre} {tecnico.apellidos}</CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className={nivelInfo.color}>
+                              {nivelInfo.label}
+                            </Badge>
+                            {tecnico.disponible ? (
+                              <Badge className="bg-green-100 text-green-800">Disponible</Badge>
+                            ) : (
+                              <Badge className="bg-gray-100 text-gray-800">No disponible</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setTecnicoEditando(tecnico)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-600">{tecnico.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-600">{tecnico.telefono}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-gray-600 mb-2">Especialidades:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {tecnico.especialidades.map((esp, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {esp}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 pt-2 border-t">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-xs text-gray-600">Resueltos</span>
+                        </div>
+                        <div className="font-bold text-lg">{tecnico.ticketsResueltos}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          <span className="text-xs text-gray-600">Asignados</span>
+                        </div>
+                        <div className="font-bold text-lg">{tecnico.ticketsAsignados}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Award className="h-4 w-4 text-purple-600" />
+                          <span className="text-xs text-gray-600">Valoración</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-1">
+                          {getEstrellas(tecnico.valoracionMedia)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
+                      <Calendar className="h-3 w-3" />
+                      <span>Última conexión: {tecnico.ultimaConexion}</span>
+                      <span>•</span>
+                      <span>Miembro desde: {tecnico.fechaCreacion}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+
+          {/* Botón Crear */}
+          <div className="fixed bottom-8 right-8">
+            <Button onClick={() => setModalCrear(true)} className="gap-2 shadow-lg">
+              <Plus className="h-4 w-4" />
+              Nuevo Técnico
+            </Button>
+          </div>
+        </main>
+      </div>
+
+      {/* Modal de Crear Técnico */}
+      {modalCrear && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-2xl">
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle>Crear Nuevo Técnico</CardTitle>
+              <Button variant="ghost" onClick={() => setModalCrear(false)}>
+                <XCircle className="h-5 w-5" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre *</Label>
+                  <Input placeholder="Carlos" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Apellido(s) *</Label>
+                  <Input placeholder="García Fernández" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input type="email" placeholder="tecnico@microinfo.es" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Teléfono *</Label>
+                  <Input type="tel" placeholder="655-123-456" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Contraseña *</Label>
+                <Input type="password" placeholder="••••••••" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nivel de Experiencia *</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nivelesMock.map(niv => (
+                        <SelectItem key={niv.value} value={niv.value}>{niv.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Años de Experiencia *</Label>
+                  <Input type="number" placeholder="5" min="0" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Especialidades *</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {especialidadesMock.map(esp => (
+                    <div key={esp} className="flex items-center gap-2">
+                      <input type="checkbox" id={esp} />
+                      <Label htmlFor={esp} className="text-sm">{esp}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="disponible" defaultChecked />
+                  <Label htmlFor="disponible">Disponible para asignar tickets</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="notificaciones" defaultChecked />
+                  <Label htmlFor="notificaciones">Recibir notificaciones de nuevos tickets</Label>
+                </div>
+              </div>
+            </CardContent>
+            <div className="flex justify-between p-6 border-t">
+              <Button variant="outline" onClick={() => setModalCrear(false)}>Cancelar</Button>
+              <Button>Crear Técnico</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
