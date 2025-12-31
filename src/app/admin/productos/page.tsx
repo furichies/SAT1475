@@ -8,8 +8,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Edit, Trash2, Package, Filter, MoreHorizontal, Image as ImageIcon, DollarSign, Settings, LayoutDashboard, Menu, ShoppingBag, ChevronRight, Upload, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Package, Filter, MoreHorizontal, Image as ImageIcon, DollarSign, Settings, LayoutDashboard, Menu, ShoppingBag, ChevronRight, Upload, AlertTriangle, X } from 'lucide-react'
 import Link from 'next/link'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 // Mock data simplificado
 const productosMock = [
@@ -24,10 +39,98 @@ const productosMock = [
 export default function AdminProductosPage() {
   const [busqueda, setBusqueda] = useState('')
   const [categoria, setCategoria] = useState('todos')
-  const [mostrarCrear, setMostrarCrear] = useState(false)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [productos, setProductos] = useState(productosMock)
+  const [productoSeleccionado, setProductoSeleccionado] = useState<any>(null)
+  const [isEditing, setIsEditing] = useState(false)
 
-  const productosFiltrados = productosMock.filter(p => {
+  // Estado para el formulario
+  const [formData, setFormData] = useState({
+    sku: '',
+    nombre: '',
+    precio: '',
+    stock: '',
+    categoria: 'componentes',
+    marca: '',
+    destacado: false,
+    enOferta: false
+  })
+
+  const resetForm = () => {
+    setFormData({
+      sku: '',
+      nombre: '',
+      precio: '',
+      stock: '',
+      categoria: 'componentes',
+      marca: '',
+      destacado: false,
+      enOferta: false
+    })
+    setProductoSeleccionado(null)
+    setIsEditing(false)
+  }
+
+  const handleNuevo = () => {
+    resetForm()
+    setIsEditing(false)
+    setIsFormModalOpen(true)
+  }
+
+  const handleEditar = (producto: any) => {
+    setProductoSeleccionado(producto)
+    setFormData({
+      sku: producto.sku,
+      nombre: producto.nombre,
+      precio: producto.precio.toString(),
+      stock: producto.stock.toString(),
+      categoria: producto.categoria,
+      marca: producto.marca,
+      destacado: !!producto.destacado,
+      enOferta: !!producto.enOferta
+    })
+    setIsEditing(true)
+    setIsFormModalOpen(true)
+  }
+
+  const handleBorrar = (id: string) => {
+    if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+      setProductos(productos.filter(p => p.id !== id))
+    }
+  }
+
+  const handleGuardar = () => {
+    if (!formData.nombre || !formData.sku || !formData.precio) {
+      alert('Por favor, rellena los campos obligatorios (*)')
+      return
+    }
+
+    const itemData = {
+      ...formData,
+      precio: parseFloat(formData.precio),
+      stock: parseInt(formData.stock) || 0,
+      imagen: '/images/placeholder.png'
+    }
+
+    if (isEditing && productoSeleccionado) {
+      setProductos(productos.map(p =>
+        p.id === productoSeleccionado.id
+          ? { ...p, ...itemData }
+          : p
+      ))
+    } else {
+      const nuevo = {
+        id: Date.now().toString(),
+        ...itemData
+      }
+      setProductos([nuevo, ...productos])
+    }
+
+    setIsFormModalOpen(false)
+    resetForm()
+  }
+
+  const productosFiltrados = productos.filter(p => {
     if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase()) && !p.sku.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (categoria !== 'todos' && p.categoria !== categoria) return false
     return true
@@ -84,7 +187,7 @@ export default function AdminProductosPage() {
                   <Filter className="h-4 w-4" />
                   Filtrar
                 </Button>
-                <Button onClick={() => setMostrarCrear(true)} className="gap-2">
+                <Button onClick={handleNuevo} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Nuevo Producto
                 </Button>
@@ -174,9 +277,24 @@ export default function AdminProductosPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm" onClick={() => handleStockUpdate(producto.id, 1)} disabled={producto.stock >= 999}>+</Button>
                           <Button variant="ghost" size="sm" onClick={() => handleStockUpdate(producto.id, -1)} disabled={producto.stock <= 0}>-</Button>
-                          <Button variant="outline" size="sm"><Edit className="h-4 w-4" /></Button>
-                          <Button variant="outline" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleEditar(producto)}>
+                                <Edit className="h-4 w-4 mr-2" /> Editar producto
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600" onClick={() => handleBorrar(producto.id)}>
+                                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -185,100 +303,117 @@ export default function AdminProductosPage() {
               </table>
             </div>
 
-            {/* Modal de crear producto (simplificado) */}
-            {mostrarCrear && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <Card className="w-full max-w-2xl">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Nuevo Producto</CardTitle>
-                      <Button variant="ghost" size="sm" onClick={() => setMostrarCrear(false)}>
-                        <Upload className="h-4 w-4" />
-                      </Button>
+            {/* Modal de Crear/Editar Producto */}
+            <Dialog open={isFormModalOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsFormModalOpen(open); }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{isEditing ? 'Editar Producto' : 'Crear Nuevo Producto'}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>SKU *</Label>
+                      <Input
+                        placeholder="Ej: LAP-GAM-X15"
+                        value={formData.sku}
+                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                      />
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>SKU *</Label>
-                        <Input placeholder="Ej: LAP-GAM-X15" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Nombre *</Label>
-                        <Input placeholder="Nombre del producto" />
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Nombre *</Label>
+                      <Input
+                        placeholder="Nombre del producto"
+                        value={formData.nombre}
+                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                      />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Precio *</Label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input type="number" placeholder="0.00" className="pl-10" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Stock *</Label>
-                        <Input type="number" placeholder="0" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Categoría</Label>
-                        <Select>
-                          <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ordenadores">Ordenadores</SelectItem>
-                            <SelectItem value="componentes">Componentes</SelectItem>
-                            <SelectItem value="almacenamiento">Almacenamiento</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Marca</Label>
-                        <Select>
-                          <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Asus">Asus</SelectItem>
-                            <SelectItem value="Samsung">Samsung</SelectItem>
-                            <SelectItem value="Intel">Intel</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-4 pt-4 border-t">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="oferta" />
-                          <Label htmlFor="oferta">En Oferta</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="destacado" />
-                          <Label htmlFor="destacado">Destacado</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="activo" defaultChecked />
-                          <Label htmlFor="activo">Activo</Label>
-                        </div>
-                      </div>
-                      <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                        <ImageIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                        <p className="text-sm font-medium mb-2">Subir Imagen</p>
-                        <p className="text-xs text-gray-500 mb-4">
-                          Arrastra la imagen aquí o haz clic para seleccionar
-                        </p>
-                        <Button variant="outline" size="sm">
-                          Seleccionar Archivo
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <div className="flex justify-between p-6 border-t">
-                    <Button variant="outline" onClick={() => setMostrarCrear(false)}>Cancelar</Button>
-                    <Button>Crear Producto</Button>
                   </div>
-                </Card>
-              </div>
-            )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Precio (€) *</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          className="pl-10"
+                          value={formData.precio}
+                          onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Stock *</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={formData.stock}
+                        onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Categoría</Label>
+                      <Select
+                        value={formData.categoria}
+                        onValueChange={(v) => setFormData({ ...formData, categoria: v })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ordenadores">Ordenadores</SelectItem>
+                          <SelectItem value="componentes">Componentes</SelectItem>
+                          <SelectItem value="almacenamiento">Almacenamiento</SelectItem>
+                          <SelectItem value="ram">RAM</SelectItem>
+                          <SelectItem value="perifericos">Periféricos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Marca</Label>
+                      <Input
+                        placeholder="Ej: Asus, Samsung..."
+                        value={formData.marca}
+                        onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-4 pt-4 border-t">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="oferta"
+                          checked={formData.enOferta}
+                          onCheckedChange={(checked) => setFormData({ ...formData, enOferta: !!checked })}
+                        />
+                        <Label htmlFor="oferta" className="cursor-pointer">En Oferta</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="destacado"
+                          checked={formData.destacado}
+                          onCheckedChange={(checked) => setFormData({ ...formData, destacado: !!checked })}
+                        />
+                        <Label htmlFor="destacado" className="cursor-pointer">Destacado</Label>
+                      </div>
+                    </div>
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center bg-gray-50/50">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <p className="text-sm font-medium mb-1">Imagen del Producto</p>
+                      <p className="text-xs text-gray-500">
+                        {isEditing ? 'Haz clic para cambiar la imagen actual' : 'Haz clic para subir una imagen'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleGuardar}>
+                    {isEditing ? 'Actualizar Producto' : 'Crear Producto'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Paginación */}
             <div className="flex items-center justify-between p-6 border-t">
