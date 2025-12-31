@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ShoppingBag, AlertCircle, Lock, ArrowRight } from 'lucide-react'
 import { Notification } from '@/components/ui/notification'
+import { signIn } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,20 +27,19 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/[...nextauth]/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false
       })
 
-      if (response.ok) {
+      if (result?.ok) {
         setSuccess(true)
         setTimeout(() => {
           router.push('/')
         }, 2000)
       } else {
-        const data = await response.json()
-        setError(data.error || 'Error al iniciar sesión. Por favor, verifica tus credenciales.')
+        setError('Error al iniciar sesión. Por favor, verifica tus credenciales.')
       }
     } catch (err) {
       setError('Error de conexión con el servidor. Por favor, intenta de nuevo.')
@@ -51,7 +51,7 @@ export default function LoginPage() {
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/5 to-background flex items-center justify-center p-4">
-        <Notification 
+        <Notification
           message="¡Login exitoso! Redirigiendo a la página principal..."
           type="success"
           duration={2000}
@@ -63,7 +63,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/5 to-background flex items-center justify-center p-4">
       {error && (
-        <Notification 
+        <Notification
           message={error}
           type="error"
           onClose={() => setError('')}

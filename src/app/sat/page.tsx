@@ -129,15 +129,15 @@ export default function SatPage() {
   const [soloPendientes, setSoloPendientes] = useState(false)
 
   const ticketsFiltrados = ticketsMock.filter((ticket) => {
-    const matchBusqueda = !busqueda || 
+    const matchBusqueda = !busqueda ||
       ticket.asunto.toLowerCase().includes(busqueda.toLowerCase()) ||
       ticket.numeroTicket.toLowerCase().includes(busqueda.toLowerCase())
-    
-    const matchTipo = !tipoFiltro || ticket.tipo === tipoFiltro
-    const matchPrioridad = !prioridadFiltro || ticket.prioridad === prioridadFiltro
-    const matchEstado = !estadoFiltro || ticket.estado === estadoFiltro
+
+    const matchTipo = !tipoFiltro || tipoFiltro === 'all' || ticket.tipo === tipoFiltro
+    const matchPrioridad = !prioridadFiltro || prioridadFiltro === 'all' || ticket.prioridad === prioridadFiltro
+    const matchEstado = !estadoFiltro || estadoFiltro === 'all' || ticket.estado === estadoFiltro
     const matchPendiente = !soloPendientes || (ticket.estado !== 'resuelto' && ticket.estado !== 'cancelado')
-    
+
     return matchBusqueda && matchTipo && matchPrioridad && matchEstado && matchPendiente
   })
 
@@ -200,7 +200,7 @@ export default function SatPage() {
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {tipos.map((tipo) => (
                       <SelectItem key={tipo.value} value={tipo.value}>
                         {tipo.label}
@@ -218,7 +218,7 @@ export default function SatPage() {
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas</SelectItem>
+                    <SelectItem value="all">Todas</SelectItem>
                     {prioridades.map((prio) => (
                       <SelectItem key={prio.value} value={prio.value}>
                         {prio.label}
@@ -236,7 +236,7 @@ export default function SatPage() {
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {Object.entries(estados).map(([key, val]) => (
                       <SelectItem key={key} value={key}>
                         {val.label}
@@ -312,7 +312,7 @@ export default function SatPage() {
                     <CardDescription className="line-clamp-2 text-base">
                       {ticket.descripcion}
                     </CardDescription>
-                    
+
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1">

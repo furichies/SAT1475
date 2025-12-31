@@ -44,26 +44,26 @@ export function useHasAnyRole(roles: UserRole[]) {
  * Hook to check if user is admin or superadmin
  */
 export function useIsAdmin() {
-  return useHasAnyRole([UserRole.ADMIN, UserRole.SUPERADMIN])
+  return useHasAnyRole([UserRole.admin, UserRole.superadmin])
 }
 
 /**
  * Hook to check if user is staff (tecnico, admin or superadmin)
  */
 export function useIsStaff() {
-  return useHasAnyRole([UserRole.TECNICO, UserRole.ADMIN, UserRole.SUPERADMIN])
+  return useHasAnyRole([UserRole.tecnico, UserRole.admin, UserRole.superadmin])
 }
 
 /**
  * Hook to check if user is cliente
  */
 export function useIsCliente() {
-  return useHasRole(UserRole.CLIENTE)
+  return useHasRole(UserRole.cliente)
 }
 
 /**
  * Hook to check if user is tecnico
  */
 export function useIsTecnico() {
-  return useHasRole(UserRole.TECNICO)
+  return useHasRole(UserRole.tecnico)
 }

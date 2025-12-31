@@ -90,9 +90,9 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.imagen || ''} alt={user.nombre || 'Usuario'} />
+                      <AvatarImage src={user.image || ''} alt={user.name || 'Usuario'} />
                       <AvatarFallback>
-                        {getInitials(user.nombre || user.email || 'U')}
+                        {getInitials(user.name || user.email || 'U')}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -100,7 +100,7 @@ export function Header() {
                 <DropdownMenuContent align="end" className="w-56" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.nombre} {user.apellidos}</p>
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
                       <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
@@ -124,7 +124,7 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
 
-                  {(user.role === UserRole.ADMIN || user.role === UserRole.SUPERADMIN) && (
+                  {(user.role === UserRole.admin || user.role === UserRole.superadmin) && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>

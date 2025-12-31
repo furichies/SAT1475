@@ -16,16 +16,19 @@ export default function RegisterPage() {
     nombre: '',
     apellidos: '',
     email: '',
-    password: ''
+    password: '',
+    passwordConfirm: ''
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setFieldErrors({})
     setSuccess(false)
 
     try {
@@ -43,6 +46,9 @@ export default function RegisterPage() {
           router.push('/auth/login')
         }, 3000)
       } else {
+        if (data.errors) {
+          setFieldErrors(data.errors)
+        }
         setError(data.error || 'Error al registrar usuario')
       }
     } catch (err) {
@@ -55,7 +61,7 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/5 to-background flex items-center justify-center p-4">
-        <Notification 
+        <Notification
           message="¡Registro exitoso! Tu cuenta ha sido creada. Redirigiendo a la página de login..."
           type="success"
           duration={3000}
@@ -67,7 +73,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/5 to-background flex items-center justify-center p-4">
       {error && (
-        <Notification 
+        <Notification
           message={error}
           type="error"
           onClose={() => setError('')}
@@ -104,6 +110,9 @@ export default function RegisterPage() {
                   required
                   disabled={isLoading}
                 />
+                {fieldErrors.nombre && (
+                  <p className="text-xs text-destructive">{fieldErrors.nombre[0]}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -117,6 +126,9 @@ export default function RegisterPage() {
                   required
                   disabled={isLoading}
                 />
+                {fieldErrors.apellidos && (
+                  <p className="text-xs text-destructive">{fieldErrors.apellidos[0]}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -131,6 +143,9 @@ export default function RegisterPage() {
                   disabled={isLoading}
                   autoComplete="email"
                 />
+                {fieldErrors.email && (
+                  <p className="text-xs text-destructive">{fieldErrors.email[0]}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -146,6 +161,29 @@ export default function RegisterPage() {
                   disabled={isLoading}
                   autoComplete="new-password"
                 />
+                {fieldErrors.password && (
+                  <p className="text-xs text-destructive">{fieldErrors.password[0]}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="passwordConfirm">Confirmar Contraseña *</Label>
+                <Input
+                  id="passwordConfirm"
+                  type="password"
+                  placeholder="•••••••"
+                  value={formData.passwordConfirm}
+                  onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
+                  required
+                  disabled={isLoading}
+                  autoComplete="new-password"
+                />
+                {fieldErrors.passwordConfirm && (
+                  <p className="text-xs text-destructive">{fieldErrors.passwordConfirm[0]}</p>
+                )}
               </div>
 
               <Button

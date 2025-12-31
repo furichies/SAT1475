@@ -52,8 +52,7 @@ export async function POST(req: Request) {
         direccion,
         codigoPostal,
         ciudad,
-        provincia,
-        rol: UserRole.CLIENTE
+        provincia
       }
     })
 
@@ -78,7 +77,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Error al registrar usuario'
+        error: 'Error al registrar usuario: ' + (error instanceof Error ? error.message : String(error))
       },
       { status: 500 }
     )
