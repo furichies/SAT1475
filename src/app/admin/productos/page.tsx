@@ -26,7 +26,7 @@ export default function AdminProductosPage() {
   const [categoria, setCategoria] = useState('todos')
   const [mostrarCrear, setMostrarCrear] = useState(false)
   const [productos, setProductos] = useState(productosMock)
-  
+
   const productosFiltrados = productosMock.filter(p => {
     if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase()) && !p.sku.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (categoria !== 'todos' && p.categoria !== categoria) return false
@@ -61,7 +61,7 @@ export default function AdminProductosPage() {
               <Package className="h-5 w-5" />
               Productos
             </Link>
-            <Link href="/admin/pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <Settings className="h-5 w-5" />
               Pedidos
             </Link>

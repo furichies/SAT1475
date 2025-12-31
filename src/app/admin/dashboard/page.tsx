@@ -150,7 +150,7 @@ export default function AdminDashboardPage() {
             <ShoppingBag className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold">MicroInfo Admin</span>
           </div>
-          
+
           <nav className="space-y-2">
             <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded-lg font-medium">
               <LayoutDashboard className="h-5 w-5" />
@@ -160,19 +160,19 @@ export default function AdminDashboardPage() {
               <Package className="h-5 w-5" />
               Productos
             </Link>
-            <Link href="/admin/pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
               <ShoppingCart className="h-5 w-5" />
               Pedidos
             </Link>
-            <Link href="/admin/tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+            <Link href="/admin_tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
               <MessageSquare className="h-5 w-5" />
               Tickets SAT
             </Link>
-            <Link href="/admin/tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+            <Link href="/admin_tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
               <Users className="h-5 w-5" />
               Técnicos
             </Link>
-            <Link href="/admin/conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+            <Link href="/admin_conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
               <Settings className="h-5 w-5" />
               Base de Conocimiento
             </Link>
@@ -236,9 +236,8 @@ export default function AdminDashboardPage() {
                       {kpi.valor.toLocaleString()}
                       {kpi.porcentaje && '%'}
                     </div>
-                    <div className={`flex items-center text-sm ${
-                      kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <div className={`flex items-center text-sm ${kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                      }`}>
                       {kpi.trend === 'up' ? (
                         <TrendingUp className="h-4 w-4" />
                       ) : (
@@ -376,7 +375,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>Pedidos Recientes</CardTitle>
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin/pedidos">
+                  <Link href="/admin_pedidos">
                     Ver todos
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Link>

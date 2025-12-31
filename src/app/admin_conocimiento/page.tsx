@@ -146,11 +146,11 @@ export default function AdminConocimientoPage() {
   const [autor, setAutor] = useState('todos')
   const [modalCrear, setModalCrear] = useState(false)
   const [articuloEditando, setArticuloEditando] = useState(null)
-  
+
   const articulosFiltrados = articulosMock.filter(a => {
     if (busqueda && !a.titulo.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !a.contenido.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !a.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))) return false
+      !a.contenido.toLowerCase().includes(busqueda.toLowerCase()) &&
+      !a.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))) return false
     if (categoria !== 'todos' && a.categoria !== categoria) return false
     if (estado !== 'todos' && a.estado !== estado) return false
     if (autor !== 'todos' && a.autor.toLowerCase() !== autor.toLowerCase()) return false
@@ -175,19 +175,19 @@ export default function AdminConocimientoPage() {
               <Package className="h-5 w-5" />
               Productos
             </Link>
-            <Link href="/admin/pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <ShoppingCart className="h-5 w-5" />
               Pedidos
             </Link>
-            <Link href="/admin/tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <MessageIcon className="h-5 w-5" />
               Tickets SAT
             </Link>
-            <Link href="/admin/tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <User className="h-5 w-5" />
               Técnicos
             </Link>
-            <Link href="/admin/conocimiento" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
+            <Link href="/admin_conocimiento" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
               <Settings className="h-5 w-5" />
               Base de Conocimiento
             </Link>
@@ -222,7 +222,7 @@ export default function AdminConocimientoPage() {
                   className="pl-10"
                 />
               </div>
-              <select 
+              <select
                 className="w-40 p-2 border rounded"
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}

@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Monitor, 
-  Cpu, 
-  HardDrive, 
-  MemoryStick, 
-  Keyboard, 
+import {
+  Monitor,
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  Keyboard,
   Mouse,
   Headphones,
   ArrowRight,
@@ -291,12 +291,16 @@ export default function HomePage() {
             Nuestro equipo de técnicos expertos está listo para ayudarte con cualquier problema en tu equipo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="text-foreground">
-              Crear Ticket SAT
-              <ArrowRight className="ml-2 h-5 w-5" />
+            <Button size="lg" variant="secondary" className="text-foreground" asChild>
+              <Link href="/sat">
+                Crear Ticket SAT
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
-            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
-              Ver Base de Conocimiento
+            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10" asChild>
+              <Link href="/admin_conocimiento">
+                Ver Base de Conocimiento
+              </Link>
             </Button>
           </div>
         </div>
@@ -307,7 +311,7 @@ export default function HomePage() {
 
 // Componente de tarjeta de producto con imágenes reales
 function ProductCard({ producto }: { producto: typeof featuredProducts[0] }) {
-  const descuento = producto.precioOferta 
+  const descuento = producto.precioOferta
     ? Math.round((1 - producto.precioOferta / producto.precio) * 100)
     : 0
 

@@ -67,7 +67,7 @@ export function Header() {
               <Link href="/sat" className="text-sm font-medium transition-colors hover:text-primary">
                 SAT
               </Link>
-              <Link href="/conocimiento" className="text-sm font-medium transition-colors hover:text-primary">
+              <Link href="/admin_conocimiento" className="text-sm font-medium transition-colors hover:text-primary">
                 Base de Conocimiento
               </Link>
             </nav>
@@ -75,7 +75,7 @@ export function Header() {
 
           <div className="flex items-center gap-4">
             {/* Carrito - Con Link funcional */}
-            <div 
+            <div
               onClick={handleCarritoClick}
               className="relative p-2 cursor-pointer hover:bg-accent rounded transition-colors"
             >

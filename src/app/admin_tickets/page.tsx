@@ -70,11 +70,11 @@ export default function AdminTicketsPage() {
   const [tipo, setTipo] = useState('todos')
   const [tecnico, setTecnico] = useState('todos')
   const [ticketSeleccionado, setTicketSeleccionado] = useState(null)
-  
+
   const ticketsFiltrados = ticketsMock.filter(t => {
-    if (busqueda && !t.asunto.toLowerCase().includes(busqueda.toLowerCase()) && 
-        !t.numero.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !t.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
+    if (busqueda && !t.asunto.toLowerCase().includes(busqueda.toLowerCase()) &&
+      !t.numero.toLowerCase().includes(busqueda.toLowerCase()) &&
+      !t.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (prioridad !== 'todos' && t.prioridad !== prioridad) return false
     if (tipo !== 'todos' && t.tipo !== tipo) return false
     if (tecnico !== 'todos' && t.tecnico.toLowerCase().includes(tecnico.toLowerCase())) return false
@@ -107,19 +107,19 @@ export default function AdminTicketsPage() {
               <Package className="h-5 w-5" />
               Productos
             </Link>
-            <Link href="/admin/pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <ShoppingCart className="h-5 w-5" />
               Pedidos
             </Link>
-            <Link href="/admin/tickets" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
+            <Link href="/admin_tickets" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
               <MessageSquare className="h-5 w-5" />
               Tickets SAT
             </Link>
-            <Link href="/admin/tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <User className="h-5 w-5" />
               Técnicos
             </Link>
-            <Link href="/admin/conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <Settings className="h-5 w-5" />
               Base de Conocimiento
             </Link>

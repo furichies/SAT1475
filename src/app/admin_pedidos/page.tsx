@@ -39,7 +39,7 @@ export default function AdminPedidosPage() {
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState('todos')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
-  
+
   const pedidosFiltrados = pedidosMock.filter(p => {
     if (busqueda && !p.numero.toLowerCase().includes(busqueda.toLowerCase()) && !p.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (estado !== 'todos' && p.estado !== estado) return false
@@ -74,11 +74,11 @@ export default function AdminPedidosPage() {
               <Package className="h-5 w-5" />
               Productos
             </Link>
-            <Link href="/admin/pedidos" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
+            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
               <ShoppingCart className="h-5 w-5" />
               Pedidos
             </Link>
-            <Link href="/admin/tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
+            <Link href="/admin_tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
               <FileText className="h-5 w-5" />
               Tickets SAT
             </Link>
@@ -109,7 +109,7 @@ export default function AdminPedidosPage() {
                   className="pl-10"
                 />
               </div>
-              <select 
+              <select
                 className="w-40 p-2 border rounded"
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
