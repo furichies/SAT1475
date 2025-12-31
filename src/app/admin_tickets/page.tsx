@@ -45,6 +45,8 @@ const estados = {
   abierto: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
   asignado: { label: 'Asignado', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: User },
   en_progreso: { label: 'En Progreso', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Package },
+  pendiente_cliente: { label: 'Pendiente Cliente', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: Clock },
+  pendiente_pieza: { label: 'Esperando Pieza', color: 'bg-indigo-100 text-indigo-800 border-indigo-200', icon: Package },
   resuelto: { label: 'Resuelto', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle }
 }
 
@@ -81,10 +83,16 @@ export default function AdminTicketsPage() {
 
   const fetchTickets = async () => {
     try {
-      const res = await fetch('/api/sat/tickets')
+      // Usar un timestamp para evitar el caché de Next.js/Browser
+      const res = await fetch(`/api/sat/tickets?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      })
       const data = await res.json()
       if (data.success) {
-        // Mapear los datos de la DB al formato que espera el componente admin
         const mappedTickets = data.tickets.map((t: any) => ({
           id: t.id,
           numero: t.numeroTicket,
@@ -98,9 +106,12 @@ export default function AdminTicketsPage() {
           descripcion: t.descripcion
         }))
         setTickets(mappedTickets)
+      } else {
+        alert('Error al cargar tickets: ' + (data.error || 'error desconocido'))
       }
     } catch (error) {
       console.error('Error fetching admin tickets:', error)
+      alert('Error de conexión al cargar tickets')
     } finally {
       setIsLoading(false)
     }
@@ -117,26 +128,28 @@ export default function AdminTicketsPage() {
   })
 
   const handleGuardar = async () => {
+    const backupTickets = [...tickets];
     setIsLoading(true)
     try {
-      if (isNuevo) {
-        const res = await fetch('/api/sat/tickets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formTicket)
-        })
-        if (res.ok) fetchTickets()
-      } else if (isEdicion && ticketSeleccionado) {
-        const res = await fetch(`/api/sat/tickets/${ticketSeleccionado.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formTicket)
-        })
-        if (res.ok) fetchTickets()
+      const res = await fetch(isNuevo ? '/api/sat/tickets' : `/api/sat/tickets/${ticketSeleccionado.id}`, {
+        method: isNuevo ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formTicket)
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        // Forzamos actualización inmediata
+        await fetchTickets()
+      } else {
+        alert('Error al guardar: ' + data.error)
+        setTickets(backupTickets)
       }
       closeModals()
     } catch (error) {
       console.error('Error saving ticket:', error)
+      alert('Error de conexión al guardar')
+      setTickets(backupTickets)
     } finally {
       setIsLoading(false)
     }
@@ -297,7 +310,7 @@ export default function AdminTicketsPage() {
             </div>
 
             {/* Kanban Board */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {Object.entries(estados).map(([key, info]) => (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-4 px-2">

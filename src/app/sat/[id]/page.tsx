@@ -36,6 +36,7 @@ export default function TicketDetailPage() {
         if (!id) return
         try {
             const res = await fetch(`/api/sat/tickets/${id}`)
+            if (!res.ok) throw new Error('Failed to fetch')
             const data = await res.json()
             if (data.success) {
                 setTicket(data.ticket)
@@ -114,6 +115,8 @@ export default function TicketDetailPage() {
             abierto: { label: 'Abierto', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
             asignado: { label: 'Asignado', color: 'bg-blue-100 text-blue-800', icon: User },
             en_progreso: { label: 'En Progreso', color: 'bg-purple-100 text-purple-800', icon: Package },
+            pendiente_cliente: { label: 'Pendiente Cliente', color: 'bg-orange-100 text-orange-800', icon: Clock },
+            pendiente_pieza: { label: 'Esperando Pieza', color: 'bg-indigo-100 text-indigo-800', icon: Package },
             resuelto: { label: 'Resuelto', color: 'bg-green-100 text-green-800', icon: CheckCircle },
             cancelado: { label: 'Cancelado', color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
         }
