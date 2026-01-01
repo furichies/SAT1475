@@ -87,46 +87,87 @@ export async function POST(req: NextRequest) {
       })
 
       // B. Crear detalles y actualizar stock de productos
+      let notasAdicionales = ''
+
       for (const item of items) {
-        // Verificar stock antes
-        const product = await tx.producto.findUnique({
-          where: { id: item.id }
-        })
+        let currentProductoId = item.id
 
-        console.log(`[CHECKOUT] Item ID: ${item.id}, Name: ${item.nombre}, Qty: ${item.cantidad}, DB Found: ${!!product}, DB Stock: ${product?.stock ?? 'N/A'}`)
+        // Manejo especial para Configuraciones Personalizadas (Packs)
+        if (item.id.startsWith('custom-pc-')) {
+          // Buscamos o creamos el producto genérico para configuraciones
+          let genericProduct = await tx.producto.findFirst({
+            where: { sku: 'CONFIG-CUSTOM' }
+          })
 
-        if (!product) {
-          throw new Error(`Producto no encontrado en el catálogo: ${item.nombre} (ID: ${item.id})`)
-        }
+          if (!genericProduct) {
+            genericProduct = await tx.producto.create({
+              data: {
+                sku: 'CONFIG-CUSTOM',
+                nombre: 'Configuración Personalizada Micro1475',
+                descripcion: 'Pack de componentes configurado a medida por el usuario.',
+                precio: 0,
+                stock: 9999,
+                tipo: 'equipo_completo',
+                activo: true,
+                marca: 'Micro1475',
+                modelo: 'Custom Build'
+              }
+            })
+          }
 
-        if (product.stock < item.cantidad) {
-          throw new Error(`Stock insuficiente para ${item.nombre}. Disponible: ${product.stock}, Solicitado: ${item.cantidad}`)
+          currentProductoId = genericProduct.id
+          notasAdicionales += `\n--- DETALLE PACK CUSTOM PC ---\n${item.nombre}\nDetalles: ${item.descripcion}\n------------------------------\n`
+
+          // No descontamos stock de este producto genérico (o lo hacemos de forma simbólica)
+        } else {
+          // Proceso normal para productos del catálogo
+          const product = await tx.producto.findUnique({
+            where: { id: item.id }
+          })
+
+          if (!product) {
+            throw new Error(`Producto no encontrado en el catálogo: ${item.nombre} (ID: ${item.id})`)
+          }
+
+          if (product.stock < item.cantidad) {
+            throw new Error(`Stock insuficiente para ${item.nombre}. Disponible: ${product.stock}, Solicitado: ${item.cantidad}`)
+          }
+
+          // Descontar stock solo de productos reales
+          await tx.producto.update({
+            where: { id: item.id },
+            data: {
+              stock: {
+                decrement: item.cantidad
+              }
+            }
+          })
         }
 
         // Crear detalle del pedido
         await tx.detallePedido.create({
           data: {
             pedidoId: pedido.id,
-            productoId: item.id,
+            productoId: currentProductoId,
             cantidad: item.cantidad,
             precioUnitario: Number(item.precio),
-            descuento: 0, // Podría calcularse si hay oferta
+            descuento: 0,
             subtotal: Number(item.precio) * item.cantidad
-          }
-        })
-
-        // Descontar stock
-        await tx.producto.update({
-          where: { id: item.id },
-          data: {
-            stock: {
-              decrement: item.cantidad
-            }
           }
         })
       }
 
-      // C. Opcional: Actualizar datos del usuario si se desea persistir la dirección
+      // C. Actualizar notas del pedido si hubo items custom
+      if (notasAdicionales) {
+        await tx.pedido.update({
+          where: { id: pedido.id },
+          data: {
+            notas: (notas || '') + notasAdicionales
+          }
+        })
+      }
+
+      // D. Opcional: Actualizar datos del usuario if se desea persistir la dirección
       if (direccionEnvio) {
         await tx.usuario.update({
           where: { id: session.user.id },

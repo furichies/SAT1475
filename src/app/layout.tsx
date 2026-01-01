@@ -41,20 +41,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Layout con SessionProvider pero sin sesión inicial para evitar error de auth
-  // Cuando el servidor reinicie, se puede agregar lógica de sesión real
+  const session = await getServerSession(authOptions);
 
   return (
     <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
-        <SessionProvider session={null}>
+        <SessionProvider session={session}>
           <Header />
           <main className="flex-1">
             {children}
