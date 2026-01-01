@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Columna 1: Logo y descripción */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold">Micro1475</h3>
+            <img src="/logo.png" alt="Micro1475 Logo" className="h-16 w-auto object-contain mb-2" />
             <p className="text-sm text-muted-foreground">
               Tu tienda de confianza para equipos informáticos, componentes y servicio técnico especializado.
             </p>
