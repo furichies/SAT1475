@@ -24,6 +24,12 @@ Sistema completo de gestión para tienda de informática con servicio técnico i
 powershell -c "irm bun.sh/install.ps1 | iex"
 ```
 
+#### Instalación de bcrypt (Requerido)
+El sistema utiliza bcrypt para la seguridad de las contraseñas. Asegúrate de tenerlo instalado:
+```bash
+bun add bcrypt
+```
+
 **Linux (Debian/Ubuntu):**
 ```bash
 # Usando curl
@@ -54,11 +60,23 @@ bun install
 ### Configuración de la Base de Datos
 
 1. **Crear el archivo de configuración:**
+*Nota: No existe archivo .env.example en este repositorio. Debes crearlo manualmente.*
+
+**Linux/macOS:**
 ```bash
-cp .env.example .env
+cat > .env << EOF
+DATABASE_URL="file:./prisma/dev.db"
+NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro"
+NEXTAUTH_URL="http://localhost:3000"
+EOF
 ```
 
-2. **Editar `.env` con tus configuraciones:**
+**Windows (Notepad):**
+```cmd
+notepad .env
+```
+
+2. **Contenido base para `.env`:**
 ```env
 DATABASE_URL="file:./prisma/dev.db"
 NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro"
@@ -77,7 +95,8 @@ bun run db:push
 
 5. **Poblar la base de datos con datos iniciales:**
 ```bash
-node seed-simple.js
+bun scripts/seed-productos.ts
+bun scripts/seed-tecnicos.ts
 ```
 
 Esto creará:
@@ -160,7 +179,9 @@ bun run start
 │       └── use-cart-store.ts  # Store del carrito
 │
 ├── .env                       # Variables de entorno (no incluido en git)
-├── .env.example               # Ejemplo de variables de entorno
+├── scripts/                   # Scripts de utilidad y seeding
+│   ├── seed-productos.ts      # Seed de catálogo y categorías
+│   └── seed-tecnicos.ts       # Seed de personal técnico/admin
 ├── package.json               # Dependencias del proyecto
 ├── tsconfig.json              # Configuración de TypeScript
 ├── next.config.js             # Configuración de Next.js
