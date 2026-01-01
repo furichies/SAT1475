@@ -1,76 +1,146 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, TecnicoNivel } from '@prisma/client'
 import bcrypt from 'bcrypt'
 
 const db = new PrismaClient()
 
+const tecnicosRaw = [
+    "BEMBIBRE GONZALEZ, DAVID",
+    "BERMEJO ORDORICA, JULIO",
+    "BRAÑUELAS CASTELLANO, PABLO",
+    "BUCARITO VÁSQUEZ, JAHIR",
+    "DOMINGO PLATERO, JOSÉ IGNACIO",
+    "ESCALERAS BARRAGAN, LILIA",
+    "GRADILLAS PEÑA, CARLA",
+    "GUZMÁN GONZÁLEZ, GONZALO",
+    "HERNÁNDEZ GARCÍA, JULÍAN",
+    "LARA REMARTINEZ, MIGUEL",
+    "MARTÍN MARTÍN , IVÁN",
+    "MARTÍNEZ BOZA, ANDRÉS",
+    "OLMOS FERNÁNDEZ, JOSÉ RICARDO",
+    "ROMERO SÁNCHEZ, DANIEL",
+    "TKACHUK KOLTSOVA, NELIA"
+]
+
+const NIVELES: TecnicoNivel[] = ['junior', 'senior', 'experto']
+
+const ESPECIALIDADES_LIST = [
+    'Hardware', 'Software', 'Redes', 'Seguridad', 'Servidores',
+    'Recuperación de Datos', 'Cloud', 'Virtualización', 'Móviles', 'Impresoras'
+]
+
+function normalizeString(str: string) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
+}
+
+function generateEmail(nombreCompleto: string) {
+    // Formato expects: "APELLIDO1 APELLIDO2, NOMBRE"
+    const [apellidos, nombre] = nombreCompleto.split(',').map(s => s.trim())
+
+    // Safety check in case split fails or structure is different
+    if (!nombre) return `${normalizeString(apellidos.replace(/\s+/g, '.'))}@microinfo.es`
+
+    const primerNombre = nombre.split(' ')[0]
+    const primerApellido = apellidos.split(' ')[0]
+
+    return `${normalizeString(primerNombre)}.${normalizeString(primerApellido)}@microinfo.es`
+}
+
+function getRandomItem<T>(arr: T[]): T {
+    return arr[Math.floor(Math.random() * arr.length)]
+}
+
+function getRandomSpecialities() {
+    // Pick 1 to 3 random specialities
+    const num = Math.floor(Math.random() * 3) + 1
+    const shuffled = [...ESPECIALIDADES_LIST].sort(() => 0.5 - Math.random())
+    return shuffled.slice(0, num)
+}
+
+function parseName(nombreCompleto: string) {
+    const parts = nombreCompleto.split(',')
+
+    let nombre = ""
+    let apellidos = ""
+
+    if (parts.length === 2) {
+        apellidos = parts[0].trim()
+        nombre = parts[1].trim()
+    } else {
+        // Fallback for names not in "SURNAME, NAME" format
+        const words = nombreCompleto.split(' ')
+        nombre = words.pop() || ""
+        apellidos = words.join(' ')
+    }
+
+    // Capitalize properly
+    const format = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+
+    // Handle composite names/surnames roughly
+    const formattedNombre = nombre.split(' ').map(format).join(' ')
+    const formattedApellidos = apellidos.split(' ').map(format).join(' ')
+
+    return { nombre: formattedNombre, apellidos: formattedApellidos }
+}
+
 async function main() {
     console.log('🚀 Iniciando seed de técnicos...')
 
-    // Contraseña estándar para técnicos de prueba
+    // 0. Eliminar técnicos preexistentes (y sus usuarios asociados si son solo técnicos)
+    console.log('🗑️  Eliminando técnicos existentes...')
+
+    // Primero obtenemos los IDs de usuarios que son técnicos
+    const usuariosTecnicos = await db.usuario.findMany({
+        where: { rol: 'tecnico' },
+        select: { id: true }
+    })
+
+    const ids = usuariosTecnicos.map(u => u.id)
+
+    if (ids.length > 0) {
+        // Borramos perfiles de técnico primero
+        await db.tecnico.deleteMany({
+            where: { usuarioId: { in: ids } }
+        })
+
+        // Borramos los usuarios
+        await db.usuario.deleteMany({
+            where: { id: { in: ids } }
+        })
+        console.log(`✅ Eliminados ${ids.length} técnicos anteriores.`)
+    }
+
+    // Contraseña estándar
     const passwordHash = await bcrypt.hash('tecnico123', 10)
 
-    const technicians = [
-        {
-            nombre: 'Carlos García',
-            email: 'tecnico@microinfo.es',
-            apellidos: 'Especialista Hardware',
-            nivel: 'experto' as const,
-            especialidades: ['Portátiles', 'Servidores']
-        },
-        {
-            nombre: 'María Martínez',
-            email: 'maria@microinfo.es',
-            apellidos: 'Soporte Software',
-            nivel: 'senior' as const,
-            especialidades: ['Windows', 'Recuperación de Datos']
-        },
-        {
-            nombre: 'Diego Fernández',
-            email: 'diego@microinfo.es',
-            apellidos: 'Redes y Seguridad',
-            nivel: 'senior' as const,
-            especialidades: ['Redes', 'Seguridad WiFi']
-        }
-    ]
+    for (const nombreRaw of tecnicosRaw) {
+        const { nombre, apellidos } = parseName(nombreRaw)
+        const email = generateEmail(nombreRaw)
+        const nivel = getRandomItem(NIVELES)
+        const especialidades = getRandomSpecialities()
 
-    for (const tech of technicians) {
-        // 1. Buscar o crear el Usuario
-        let user = await db.usuario.findUnique({ where: { email: tech.email } })
+        console.log(`👤 Creando: ${nombre} ${apellidos} (${email}) - ${nivel}`)
 
-        if (!user) {
-            user = await db.usuario.create({
+        try {
+            const user = await db.usuario.create({
                 data: {
-                    email: tech.email,
-                    nombre: tech.nombre,
-                    apellidos: tech.apellidos,
-                    passwordHash: passwordHash,
+                    email,
+                    nombre,
+                    apellidos,
+                    passwordHash,
                     rol: 'tecnico'
                 }
             })
-            console.log(`✅ Usuario creado: ${tech.email}`)
-        } else {
-            // Asegurar que tenga el rol correcto si ya existe
-            user = await db.usuario.update({
-                where: { id: user.id },
-                data: { rol: 'tecnico', apellidos: tech.apellidos }
-            })
-        }
 
-        // 2. Buscar o crear el Perfil de Técnico
-        const tecnicoProfile = await db.tecnico.findUnique({ where: { usuarioId: user.id } })
-
-        if (!tecnicoProfile) {
             await db.tecnico.create({
                 data: {
                     usuarioId: user.id,
-                    nivel: tech.nivel,
-                    especialidades: JSON.stringify(tech.especialidades),
+                    nivel: nivel,
+                    especialidades: JSON.stringify(especialidades),
                     disponible: true
                 }
             })
-            console.log(`⭐ Perfil de técnico vinculado a: ${tech.nombre}`)
-        } else {
-            console.log(`ℹ️ El técnico ${tech.nombre} ya tenía perfil vinculado.`)
+        } catch (error) {
+            console.error(`❌ Error creando ${email}:`, error)
         }
     }
 

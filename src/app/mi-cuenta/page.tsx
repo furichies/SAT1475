@@ -1,46 +1,150 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ShoppingBag, User, MapPin, Phone, Mail } from 'lucide-react'
+import { ShoppingBag, User, MapPin, Phone, Mail, Loader2, Save } from 'lucide-react'
+import { toast } from 'sonner'
+import { signOut, useSession } from 'next-auth/react'
+
+interface UserProfile {
+  nombre: string
+  apellidos: string
+  email: string
+  telefono: string
+  direccion: string
+  codigoPostal: string
+  ciudad: string
+  provincia: string
+}
 
 export default function MiCuentaPage() {
-  const [datos, setDatos] = useState({
-    nombre: 'Juan',
-    apellidos: 'Pérez',
-    email: 'juan.perez@email.com',
-    telefono: '+34 600 123 456',
-    direccion: 'Calle Mayor 123',
-    codigoPostal: '28001',
-    ciudad: 'Madrid',
-    provincia: 'Madrid'
-  })
+  const { data: session } = useSession()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+
+  const [datos, setDatos] = useState<UserProfile>({
+    nombre: '',
+    apellidos: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    codigoPostal: '',
+    ciudad: '',
+    provincia: ''
+  })
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch('/api/auth/profile')
+        const data = await res.json()
+
+        if (data.success && data.data.user) {
+          setDatos({
+            nombre: data.data.user.nombre || '',
+            apellidos: data.data.user.apellidos || '',
+            email: data.data.user.email || '',
+            telefono: data.data.user.telefono || '',
+            direccion: data.data.user.direccion || '',
+            codigoPostal: data.data.user.codigoPostal || '',
+            ciudad: data.data.user.ciudad || '',
+            provincia: data.data.user.provincia || ''
+          })
+        } else {
+          toast.error('No se pudieron cargar los datos del perfil')
+        }
+      } catch (error) {
+        toast.error('Error al cargar el perfil')
+        console.error(error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (session) {
+      fetchProfile()
+    } else {
+      // If no session locally yet, wait a bit or let middleware handle it. 
+      // But if session is null/loading, useEffect dependency will trigger when loaded.
+    }
+  }, [session])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      // Remove email from payload as it shouldn't be updated here
+      const { email, ...updateData } = datos
+
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        toast.success('Perfil actualizado correctamente')
+        setIsEditing(false)
+      } else {
+        if (data.errors) {
+          // Show first validation error
+          const firstError = Object.values(data.errors).flat()[0] as string
+          toast.error(firstError || 'Error de validación')
+        } else {
+          toast.error(data.error || 'Error al guardar cambios')
+        }
+      }
+    } catch (error) {
+      toast.error('Error de conexión')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    // Reloading the page is a safe bet for a full revert:
+    window.location.reload()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen py-8 bg-muted/30">
-      <div className="container max-w-4xl">
+      <div className="container max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8">Mi Cuenta</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Columna Izquierda: Menú lateral */}
           <div className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start">
+            <Button variant="ghost" className="w-full justify-start bg-white shadow-sm hover:bg-gray-50">
               <User className="h-4 w-4 mr-2" />
               Mis Datos
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button variant="ghost" className="w-full justify-start hover:bg-gray-50">
               <ShoppingBag className="h-4 w-4 mr-2" />
               Mis Pedidos
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button variant="ghost" className="w-full justify-start hover:bg-gray-50">
               <ShoppingBag className="h-4 w-4 mr-2" />
               Mis Tickets
             </Button>
-            <Button variant="ghost" className="w-full justify-start text-destructive">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+              onClick={() => signOut({ callbackUrl: '/' })}
+            >
               Cerrar Sesión
             </Button>
           </div>
@@ -51,13 +155,35 @@ export default function MiCuentaPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Datos Personales</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditing(!isEditing)}
-                  >
-                    {isEditing ? 'Cancelar' : 'Editar'}
-                  </Button>
+                  {!isEditing ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Editar
+                    </Button>
+                  ) : (
+                    <div className='flex gap-2'>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancel}
+                        disabled={saving}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving}
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                        Guardar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -66,7 +192,7 @@ export default function MiCuentaPage() {
                     <Label>Nombre</Label>
                     <Input
                       value={datos.nombre}
-                      onChange={(e) => !isEditing && setDatos({...datos, nombre: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, nombre: e.target.value })}
                       disabled={!isEditing}
                     />
                   </div>
@@ -74,7 +200,7 @@ export default function MiCuentaPage() {
                     <Label>Apellidos</Label>
                     <Input
                       value={datos.apellidos}
-                      onChange={(e) => !isEditing && setDatos({...datos, apellidos: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, apellidos: e.target.value })}
                       disabled={!isEditing}
                     />
                   </div>
@@ -87,11 +213,11 @@ export default function MiCuentaPage() {
                     <Input
                       className="pl-10"
                       value={datos.email}
-                      onChange={(e) => !isEditing && setDatos({...datos, email: e.target.value})}
                       disabled
                       type="email"
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">El email no se puede cambiar.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -101,9 +227,10 @@ export default function MiCuentaPage() {
                     <Input
                       className="pl-10"
                       value={datos.telefono}
-                      onChange={(e) => !isEditing && setDatos({...datos, telefono: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, telefono: e.target.value })}
                       disabled={!isEditing}
                       type="tel"
+                      placeholder="+34 600 000 000"
                     />
                   </div>
                 </div>
@@ -122,7 +249,7 @@ export default function MiCuentaPage() {
                     <Input
                       className="pl-10"
                       value={datos.direccion}
-                      onChange={(e) => !isEditing && setDatos({...datos, direccion: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, direccion: e.target.value })}
                       disabled={!isEditing}
                     />
                   </div>
@@ -133,7 +260,7 @@ export default function MiCuentaPage() {
                     <Label>Código Postal</Label>
                     <Input
                       value={datos.codigoPostal}
-                      onChange={(e) => !isEditing && setDatos({...datos, codigoPostal: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, codigoPostal: e.target.value })}
                       disabled={!isEditing}
                     />
                   </div>
@@ -141,7 +268,7 @@ export default function MiCuentaPage() {
                     <Label>Ciudad</Label>
                     <Input
                       value={datos.ciudad}
-                      onChange={(e) => !isEditing && setDatos({...datos, ciudad: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, ciudad: e.target.value })}
                       disabled={!isEditing}
                     />
                   </div>
@@ -149,22 +276,13 @@ export default function MiCuentaPage() {
                     <Label>Provincia</Label>
                     <Input
                       value={datos.provincia}
-                      onChange={(e) => !isEditing && setDatos({...datos, provincia: e.target.value})}
+                      onChange={(e) => isEditing && setDatos({ ...datos, provincia: e.target.value })}
                       disabled={!isEditing}
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {isEditing && (
-              <div className="flex gap-4">
-                <Button className="flex-1">Guardar Cambios</Button>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  Cancelar
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </div>

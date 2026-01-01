@@ -26,11 +26,26 @@ import {
   Menu,
   ShoppingBag,
   XCircle,
-  CheckCircle
+  CheckCircle,
+  Wrench,
+  ThumbsUp
 } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts'
 
 // Mock data para métricas
 const kpiMock = [
@@ -121,22 +136,32 @@ const kpiMock = [
 ]
 
 const ventasPorDiaMock = [
-  { dia: 'Lun', valor: 4520, progreso: 75 },
-  { dia: 'Mar', valor: 6230, progreso: 100 },
-  { dia: 'Mie', valor: 5180, progreso: 85 },
-  { dia: 'Jue', valor: 4890, progreso: 80 },
-  { dia: 'Vie', valor: 5780, progreso: 92 },
-  { dia: 'Sáb', valor: 4120, progreso: 68 },
-  { dia: 'Dom', valor: 3890, progreso: 64 }
+  { dia: 'Lun', valor: 4520, progreso: 75, pedidos: 12 },
+  { dia: 'Mar', valor: 6230, progreso: 100, pedidos: 18 },
+  { dia: 'Mie', valor: 5180, progreso: 85, pedidos: 15 },
+  { dia: 'Jue', valor: 4890, progreso: 80, pedidos: 14 },
+  { dia: 'Vie', valor: 5780, progreso: 92, pedidos: 20 },
+  { dia: 'Sáb', valor: 4120, progreso: 68, pedidos: 10 },
+  { dia: 'Dom', valor: 3890, progreso: 64, pedidos: 8 }
 ]
 
-const ventasPorMesMock = [
-  { mes: 'Jul', ventas: 32450 },
-  { mes: 'Ago', ventas: 35120 },
-  { mes: 'Sep', ventas: 38450 },
-  { mes: 'Oct', ventas: 36890 },
-  { mes: 'Nov', ventas: 42100 },
-  { mes: 'Dic', ventas: 45678 }
+// Mock data para tickets y técnicos
+const ticketsStatusData = [
+  { name: 'Abierto', value: 15, color: '#EF4444' }, // red
+  { name: 'En Progreso', value: 25, color: '#3B82F6' }, // blue
+  { name: 'Esperando Pieza', value: 10, color: '#F59E0B' }, // yellow
+  { name: 'Resuelto', value: 45, color: '#10B981' }, // green
+  { name: 'Cerrado', value: 30, color: '#6B7280' }, // gray
+]
+
+const tecnicoPerformanceData = [
+  { name: 'Bembibre D.', asignados: 25, resueltos: 22, satisfaccion: 4.8 },
+  { name: 'Bermejo J.', asignados: 30, resueltos: 28, satisfaccion: 4.9 },
+  { name: 'Brañuelas P.', asignados: 18, resueltos: 15, satisfaccion: 4.5 },
+  { name: 'Bucarito J.', asignados: 22, resueltos: 20, satisfaccion: 4.7 },
+  { name: 'Domingo J.I.', asignados: 28, resueltos: 25, satisfaccion: 4.6 },
+  { name: 'Escaleras L.', asignados: 20, resueltos: 19, satisfaccion: 4.9 },
+  { name: 'Guzmán G.', asignados: 15, resueltos: 12, satisfaccion: 4.2 },
 ]
 
 export default function AdminDashboardPage() {
@@ -145,7 +170,6 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
-        {/* Sidebar de navegación */}
         {/* Sidebar de navegación */}
         <AdminSidebar />
 
@@ -221,32 +245,33 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          {/* Gráficos y widgets */}
+          {/* Gráficos y widgets existentes */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Ventas por día */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Ventas por Día</CardTitle>
+                  <CardTitle>Ventas vs Pedidos</CardTitle>
                   <BarChart3 className="h-5 w-5 text-gray-400" />
                 </div>
                 <CardDescription className="mt-2">
-                  Tendencia de ventas diarias de la última semana
+                  Comparativa diaria de facturación y volumen de pedidos
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {ventasPorDiaMock.map((item, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{item.dia}</span>
-                        <span className="text-gray-600 font-semibold">
-                          {item.valor.toLocaleString()}€
-                        </span>
-                      </div>
-                      <Progress value={item.progreso} className="h-2" />
-                    </div>
-                  ))}
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={ventasPorDiaMock}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="dia" />
+                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                      <RechartsTooltip />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="valor" name="Ventas (€)" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="right" dataKey="pedidos" name="Pedidos" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
@@ -286,8 +311,104 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
 
+          {/* NUEVA SECCIÓN: Estadísticas de Soporte Técnico */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+              <Wrench className="h-6 w-6 text-primary" />
+              Rendimiento de Soporte Técnico
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Estado de los Tickets */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Estado de Tickets</CardTitle>
+                  <CardDescription>Distribución actual de tickets por estado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={ticketsStatusData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {ticketsStatusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                        <Legend />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Rendimiento por Técnico */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Rendimiento por Técnico</CardTitle>
+                  <CardDescription>Tickets asignados vs. resueltos por técnico</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={tecnicoPerformanceData}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                        <RechartsTooltip />
+                        <Legend />
+                        <Bar dataKey="asignados" name="Asignados" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="resueltos" name="Resueltos" fill="#10B981" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Satisfacción del Cliente por Técnico */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <ThumbsUp className="h-5 w-5 text-blue-500" />
+                      Satisfacción Media por Técnico
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {tecnicoPerformanceData.map((tech, idx) => (
+                      <div key={idx} className="bg-white border rounded-lg p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start">
+                          <span className="font-semibold text-gray-800">{tech.name}</span>
+                          <Badge variant={tech.satisfaccion >= 4.5 ? "default" : "secondary"}>
+                            {tech.satisfaccion} / 5
+                          </Badge>
+                        </div>
+                        <Progress value={(tech.satisfaccion / 5) * 100} className="h-2 mt-1" />
+                        <p className="text-xs text-gray-500 mt-1">Based on {tech.resueltos} tickets</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
           {/* Widget de alertas */}
-          <Card>
+          <Card className="mb-8">
             <CardHeader className="flex items-center justify-between">
               <CardTitle>Alertas y Notificaciones</CardTitle>
               <Badge variant="destructive">4 nuevas</Badge>
@@ -340,7 +461,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>Pedidos Recientes</CardTitle>
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin_pedidos">
+                  <Link href="/admin/pedidos">
                     Ver todos
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Link>
