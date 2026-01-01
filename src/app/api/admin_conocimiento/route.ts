@@ -2,7 +2,26 @@ import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 
 // Mock data para artículos de la base de conocimiento del admin
-let articulosAdminMock = [
+interface ArticuloMock {
+  id: string
+  titulo: string
+  contenido: string
+  categoria: string
+  tags: string[]
+  imagen?: string
+  autor: string
+  autorId: string
+  autorRol: string
+  estado: string
+  vistas: number
+  likes: number
+  comentarios: number
+  fechaCreacion: string
+  fechaActualizacion: string
+  fechaProgramacion?: string
+}
+
+let articulosAdminMock: ArticuloMock[] = [
   {
     id: '1',
     titulo: 'Cómo instalar un SSD NVMe en portátil',
@@ -112,9 +131,9 @@ export async function GET(req: Request) {
 
     // Filtrar artículos
     let articulosFiltrados = articulosAdminMock.filter(a => {
-      if (busqueda && !a.titulo.toLowerCase().includes(busqueda.toLowerCase()) && 
-          !a.contenido.toLowerCase().includes(busqueda.toLowerCase()) &&
-          !a.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))) return false
+      if (busqueda && !a.titulo.toLowerCase().includes(busqueda.toLowerCase()) &&
+        !a.contenido.toLowerCase().includes(busqueda.toLowerCase()) &&
+        !a.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))) return false
       if (categoria && a.categoria !== categoria) return false
       if (estado && a.estado !== estado) return false
       if (autor && a.autor.toLowerCase() !== autor.toLowerCase()) return false
@@ -259,16 +278,15 @@ export async function POST(req: Request) {
   }
 }
 
-// PUT /api/admin_conocimiento/[id] - Actualizar artículo (admin)
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+// PUT /api/admin_conocimiento - Actualizar artículo (admin)
+export async function PUT(req: Request) {
   try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
     const body = await req.json()
     const { titulo, contenido, categoria, tags, imagen, estado, programarFecha, fechaProgramada, archivar } = body
 
-    const articulo = articulosAdminMock.find(a => a.id === params.id)
+    const articulo = articulosAdminMock.find(a => a.id === id)
 
     if (!articulo) {
       return NextResponse.json(
@@ -340,13 +358,13 @@ export async function PUT(
   }
 }
 
-// DELETE /api/admin_conocimiento/[id] - Eliminar artículo (admin)
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+// DELETE /api/admin_conocimiento - Eliminar artículo (admin)
+export async function DELETE(req: Request) {
   try {
-    const articulo = articulosAdminMock.find(a => a.id === params.id)
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+
+    const articulo = articulosAdminMock.find(a => a.id === id)
 
     if (!articulo) {
       return NextResponse.json(

@@ -31,13 +31,13 @@ let pedidosPDFMock = [
   }
 ]
 
-// GET /api/admin_factura/[pedidoId] - Generar factura en PDF (admin)
-export async function GET(
-  req: Request,
-  { params }: { params: { pedidoId: string } }
-) {
+// GET /api/admin_factura - Generar factura en PDF (admin)
+export async function GET(req: Request) {
   try {
-    const pedido = pedidosPDFMock.find(p => p.id === params.pedidoId)
+    const { searchParams } = new URL(req.url)
+    const pedidoId = searchParams.get('pedidoId')
+
+    const pedido = pedidosPDFMock.find(p => p.id === pedidoId)
 
     if (!pedido) {
       return NextResponse.json(
@@ -66,13 +66,13 @@ Dirección: ${pedido.direccion}
 DATOS DEL PEDIDO
 -----------------
 Número de pedido: ${pedido.numeroPedido}
-Fecha: ${new Date(pedido.fecha).toLocaleString('es-ES', { 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+Fecha: ${new Date(pedido.fecha).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}
 Estado: ${pedido.estado}
 Método de pago: ${pedido.metodoPago}
 Método de envío: ${pedido.metodoEnvio}

@@ -2,7 +2,33 @@ import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 
 // Mock data para tickets SAT del admin
-let ticketsAdminMock = [
+interface TicketMock {
+  id: string
+  numeroTicket: string
+  clienteId: string
+  clienteNombre: string
+  tecnicoId: string | null
+  tecnicoNombre: string | null
+  prioridad: string
+  tipo: string
+  asunto: string
+  descripcion: string
+  categoria: string
+  estado: string
+  notasInternas: any[]
+  seguimientos: any[]
+  diagnostico?: string
+  solucion?: string | null
+  fechaCreacion: string
+  fechaAsignacion: string | null
+  fechaResolucion: string | null
+  satisfaccion: number | null
+  valoracion: string | null
+  tiempoEstimado: number
+  tiempoReal: number | null
+}
+
+let ticketsAdminMock: TicketMock[] = [
   {
     id: '1',
     numeroTicket: 'SAT-2023-0045',
@@ -33,7 +59,7 @@ let ticketsAdminMock = [
         tecnicoId: null,
         tipo: 'cambio_estado',
         contenido: 'Ticket creado. Estado: Pendiente',
-        esInterno: false,
+        esInterna: false,
         fechaCreacion: '2023-12-30T08:00:00Z'
       }
     ],
@@ -195,165 +221,111 @@ export async function GET(req: Request) {
   }
 }
 
-// PUT /api/admin_tickets/[id] - Asignar técnico a ticket (admin)
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+// PUT /api/admin_tickets - Asignar técnico o cambiar estado
+export async function PUT(req: Request) {
   try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
     const body = await req.json()
-    const { tecnicoId, notaInterna } = body
+    const { tecnicoId, notaInterna, estado, diagnostico, solucion, motivo } = body
 
-    if (!tecnicoId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'El ID del técnico es requerido'
-        },
-        { status: 400 }
-      )
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'ID es requerido' }, { status: 400 })
     }
 
-    const ticket = ticketsAdminMock.find(t => t.id === params.id)
+    const ticket = ticketsAdminMock.find(t => t.id === id)
 
     if (!ticket) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Ticket no encontrado'
-        },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: 'Ticket no encontrado' }, { status: 404 })
     }
 
-    const tecnico = tecnicosAdminMock.find(t => t.id === tecnicoId)
+    // LOGICA ASIGNAR TECNICO
+    if (tecnicoId) {
+      const tecnico = tecnicosAdminMock.find(t => t.id === tecnicoId)
+      if (!tecnico) {
+        return NextResponse.json({ success: false, error: 'Técnico no encontrado' }, { status: 404 })
+      }
 
-    if (!tecnico) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Técnico no encontrado'
-        },
-        { status: 404 }
-      )
-    }
+      // Actualizar ticket
+      ticket.tecnicoId = tecnicoId
+      ticket.tecnicoNombre = tecnico.nombre + ' ' + tecnico.apellidos
+      ticket.estado = ticket.estado === 'pendiente' ? 'asignado' : ticket.estado
+      ticket.fechaAsignacion = new Date().toISOString()
 
-    // Actualizar ticket
-    ticket.tecnicoId = tecnicoId
-    ticket.tecnicoNombre = tecnico.nombre + ' ' + tecnico.apellidos
-    ticket.estado = ticket.estado === 'pendiente' ? 'asignado' : ticket.estado
-    ticket.fechaAsignacion = new Date().toISOString()
+      // Crear nota interna
+      if (notaInterna) {
+        ticket.notasInternas.push({
+          id: 'n' + randomUUID(),
+          tecnicoId,
+          tecnicoNombre: tecnico.nombre + ' ' + tecnico.apellidos,
+          nota: `Asignación de técnico: ${notaInterna}`,
+          fecha: new Date().toISOString(),
+          esInterna: true
+        })
+      }
 
-    // Crear nota interna
-    if (notaInterna) {
-      ticket.notasInternas.push({
-        id: 'n' + randomUUID(),
+      // Crear seguimiento de asignación
+      ticket.seguimientos.push({
+        id: 's' + randomUUID(),
+        usuarioId: tecnicoId,
         tecnicoId,
-        tecnicoNombre: tecnico.nombre + ' ' + tecnico.apellidos,
-        nota: `Asignación de técnico: ${notaInterna}`,
-        fecha: new Date().toISOString(),
-        esInterna: true
+        tipo: 'asignacion',
+        contenido: `Técnico asignado: ${tecnico.nombre} ${tecnico.apellidos}. Estado: ${ticket.estado}`,
+        esInterna: true,
+        fechaCreacion: new Date().toISOString()
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          ticket,
+          tecnico,
+          mensaje: 'Técnico asignado correctamente'
+        }
       })
     }
 
-    // Crear seguimiento de asignación
-    ticket.seguimientos.push({
-      id: 's' + randomUUID(),
-      usuarioId: tecnicoId,
-      tecnicoId,
-      tipo: 'asignacion',
-      contenido: `Técnico asignado: ${tecnico.nombre} ${tecnico.apellidos}. Estado: ${ticket.estado}`,
-      esInterna: true,
-      fechaCreacion: new Date().toISOString()
-    })
+    // LOGICA CAMBIAR ESTADO
+    if (estado) {
+      // Actualizar ticket
+      ticket.estado = estado
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ticket,
-        tecnico,
-        mensaje: 'Técnico asignado correctamente'
+      if (diagnostico) {
+        ticket.diagnostico = diagnostico
       }
-    })
+
+      if (solucion) {
+        ticket.solucion = solucion
+      }
+
+      if (motivo) {
+        ticket.descripcion += `\n\nMotivo de cambio de estado: ${motivo}`
+      }
+
+      // Calcular tiempo real si el ticket se resuelve
+      if (estado === 'resuelto') {
+        const tiempoReal = Math.round((Date.now() - new Date(ticket.fechaCreacion).getTime()) / (1000 * 60 * 60))
+        ticket.tiempoReal = tiempoReal
+        ticket.fechaResolucion = new Date().toISOString()
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          ticket,
+          mensaje: 'Estado del ticket actualizado correctamente'
+        }
+      })
+    }
+
+    return NextResponse.json({ success: false, error: 'Solicitud inválida: falta tecnicoId o estado' }, { status: 400 })
+
   } catch (error) {
-    console.error('Error en PUT /api/admin_tickets/[id]:', error)
+    console.error('Error en PUT /api/admin_tickets:', error)
     return NextResponse.json(
       {
         success: false,
-        error: 'Error al asignar técnico',
-        datos: process.env.NODE_ENV === 'development' ? String(error) : undefined
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// PUT /api/admin_tickets/[id]/estado - Cambiar estado de ticket (admin)
-export async function PUT_ESTADO(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const body = await req.json()
-    const { estado, diagnostico, solucion, motivo } = body
-
-    if (!estado) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'El estado es requerido'
-        },
-        { status: 400 }
-      )
-    }
-
-    const ticket = ticketsAdminMock.find(t => t.id === params.id)
-
-    if (!ticket) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Ticket no encontrado'
-        },
-        { status: 404 }
-      )
-    }
-
-    // Actualizar ticket
-    ticket.estado = estado
-
-    if (diagnostico) {
-      ticket.diagnostico = diagnostico
-    }
-
-    if (solucion) {
-      ticket.solucion = solucion
-    }
-
-    if (motivo) {
-      ticket.descripcion += `\n\nMotivo de cambio de estado: ${motivo}`
-    }
-
-    // Calcular tiempo real si el ticket se resuelve
-    if (estado === 'resuelto') {
-      const tiempoReal = Math.round((Date.now() - new Date(ticket.fechaCreacion).getTime()) / (1000 * 60 * 60))
-      ticket.tiempoReal = tiempoReal
-      ticket.fechaResolucion = new Date().toISOString()
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ticket,
-        mensaje: 'Estado del ticket actualizado correctamente'
-      }
-    })
-  } catch (error) {
-    console.error('Error en PUT /api/admin_tickets/[id]/estado:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Error al cambiar estado del ticket',
+        error: 'Error al actualizar ticket',
         datos: process.env.NODE_ENV === 'development' ? String(error) : undefined
       },
       { status: 500 }

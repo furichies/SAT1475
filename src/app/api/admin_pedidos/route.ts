@@ -28,7 +28,11 @@ export async function GET(req: NextRequest) {
             email: true
           }
         },
-        detalles: true
+        detalles: {
+          include: {
+            producto: true
+          }
+        }
       },
       orderBy: { fechaPedido: 'desc' }
     })
@@ -48,7 +52,9 @@ export async function GET(req: NextRequest) {
       total: p.total,
       metodoPago: p.metodoPago,
       // La dirección se guarda como JSON string en el pedido
-      direccion: p.direccionEnvio
+      direccion: p.direccionEnvio,
+      detalles: p.detalles,
+      notas: p.notas
     }))
 
     // Filtrado adicional si es necesario
@@ -89,16 +95,18 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { id, estado } = body
+    const { id, estado, direccionEnvio, notas } = body
 
-    if (!id || !estado) {
-      return NextResponse.json({ success: false, error: 'ID y estado son requeridos' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'ID es requerido' }, { status: 400 })
     }
 
     const updated = await db.pedido.update({
       where: { id },
       data: {
-        estado: estado as PedidoEstado,
+        ...(estado ? { estado: estado as PedidoEstado } : {}),
+        ...(direccionEnvio ? { direccionEnvio: typeof direccionEnvio === 'string' ? direccionEnvio : JSON.stringify(direccionEnvio) } : {}),
+        ...(notas !== undefined ? { notas } : {}),
         ...(estado === PedidoEstado.enviado ? { fechaEnvio: new Date() } : {}),
         ...(estado === PedidoEstado.entregado ? { fechaEntrega: new Date() } : {})
       }

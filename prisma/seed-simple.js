@@ -24,11 +24,12 @@ async function main() {
     await prisma.categoria.create({ data: { id: 'ram', nombre: 'Memoria RAM' } });
     await prisma.categoria.create({ data: { id: 'perifericos', nombre: 'Periféricos' } });
 
-    // Usuarios estándar
+    // Usuarios estándar (Contraseña: admin123 para el nuevo admin)
     const usuarios = [
         { id: 'cliente-1', email: 'juan.perez@email.com', nombre: 'Juan', passwordHash: 'hashed', rol: 'cliente' },
         { id: 'cliente-demo', email: 'cliente@test.com', nombre: 'Cliente Demo', passwordHash: 'demo123', rol: 'cliente' },
         { id: 'admin-1', email: 'admin@microinfo.es', nombre: 'Admin', passwordHash: 'hashed', rol: 'admin' },
+        { id: 'admin-res', email: 'admin@res.es', nombre: 'Admin Res', passwordHash: '$2b$10$pNfCAhTwG81BxAJZ9INdZuAoxYvyOtw9Kzl9/d8CFA5NrZwPJpMna', rol: 'admin' }, // Password: admin123
     ];
     for (const u of usuarios) await prisma.usuario.create({ data: u });
 

@@ -17,21 +17,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MicroInfo - Tienda de Informática y Servicio Técnico",
+  title: "Micro1475 - Tienda de Informática y Servicio Técnico",
   description: "Tienda online de informática con servicio técnico especializado. Equipos, componentes, reparaciones y soporte técnico profesional.",
   keywords: ["informática", "ordenadores", "componentes", "reparaciones", "SAT", "servicio técnico"],
-  authors: [{ name: "MicroInfo Team" }],
+  authors: [{ name: "Micro1475 Team" }],
   icons: {
-    icon: "/logo.svg",
+    icon: [
+      { url: '/icon.png', type: 'image/png' },
+      { url: '/favicon.ico' } // Fallback
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/icon.png',
   },
   openGraph: {
-    title: "MicroInfo - Tienda de Informática y SAT",
+    title: "Micro1475 - Tienda de Informática y SAT",
     description: "Tu tienda de confianza para equipos informáticos y servicio técnico",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MicroInfo - Tienda de Informática",
+    title: "Micro1475 - Tienda de Informática",
     description: "Equipos, componentes y servicio técnico profesional",
   },
 };
@@ -43,7 +48,7 @@ export default function RootLayout({
 }>) {
   // Layout con SessionProvider pero sin sesión inicial para evitar error de auth
   // Cuando el servidor reinicie, se puede agregar lógica de sesión real
-  
+
   return (
     <html lang="es" suppressHydrationWarning>
       <body

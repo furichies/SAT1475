@@ -18,7 +18,8 @@ let ticketsMock = [
     tiempoReal: 48,
     costeReparacion: 0,
     fechaCierre: new Date('2023-12-26T16:30:00Z'),
-    satisfaccion: null
+    satisfaccion: null,
+    fechaCreacion: new Date('2023-12-24T10:00:00Z')
   }
 ]
 
@@ -70,7 +71,7 @@ export async function PUT(req: Request) {
     // Actualizar ticket
     ticket.satisfaccion = puntuacion
     ticket.estado = 'cerrado'
-    
+
     // Calcular tiempo real si no estaba establecido
     if (!ticket.tiempoReal) {
       const tiempoReal = Math.round((Date.now() - new Date(ticket.fechaCreacion).getTime()) / (1000 * 60 * 60 * 24))
@@ -97,61 +98,4 @@ export async function PUT(req: Request) {
   }
 }
 
-// PUT /api/sat_close - Cerrar ticket
-export async function PUT_CLOSE(req: Request) {
-  try {
-    const body = await req.json()
-    const { ticketId, motivo } = body
 
-    if (!ticketId) {
-      return NextResponse.json(
-        { success: false, error: 'ID de ticket requerido' },
-        { status: 400 }
-      )
-    }
-
-    const ticket = ticketsMock.find(t => t.id === ticketId)
-
-    if (!ticket) {
-      return NextResponse.json(
-        { success: false, error: 'Ticket no encontrado' },
-        { status: 404 }
-      )
-    }
-
-    // Verificar que el ticket esté resuelto
-    if (ticket.estado !== 'resuelto') {
-      return NextResponse.json(
-        { success: false, error: 'Solo se pueden cerrar tickets resueltos' },
-        { status: 400 }
-      )
-    }
-
-    // Actualizar ticket
-    ticket.estado = 'cerrado'
-    ticket.fechaCierre = new Date()
-    
-    // Guardar motivo si se proporcionó
-    if (motivo) {
-      ticket.descripcion += `\n\nMotivo de cierre: ${motivo}`
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ticket,
-        mensaje: 'Ticket cerrado correctamente'
-      }
-    })
-  } catch (error) {
-    console.error('Error en PUT /api/sat_close:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Error al cerrar ticket',
-        datos: process.env.NODE_ENV === 'development' ? String(error) : undefined
-      },
-      { status: 500 }
-    )
-  }
-}

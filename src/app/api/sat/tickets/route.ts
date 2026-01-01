@@ -48,16 +48,36 @@ export async function POST(req: NextRequest) {
         let numeroTicket = generarNumeroTicket()
 
         // Verificar que sea único (aunque es muy improbable que se repita)
-        const existente = await db.ticket.findUnique({
+        let existente = await db.ticket.findUnique({
             where: { numeroTicket }
         })
 
         while (existente) {
             numeroTicket = generarNumeroTicket()
-            const existsAgain = await db.ticket.findUnique({
+            existente = await db.ticket.findUnique({
                 where: { numeroTicket }
             })
-            if (!existsAgain) break
+        }
+
+        // Resolver pedidoId si se proporciona (puede ser ID o NumeroPedido)
+        let resolvedPedidoId = null
+        if (pedidoId) {
+            const pedido = await db.pedido.findFirst({
+                where: {
+                    OR: [
+                        { id: pedidoId },
+                        { numeroPedido: pedidoId }
+                    ]
+                }
+            })
+
+            if (!pedido) {
+                return NextResponse.json(
+                    { success: false, error: 'El número de pedido indicado no existe' },
+                    { status: 400 }
+                )
+            }
+            resolvedPedidoId = pedido.id
         }
 
         // Crear el ticket en la base de datos
@@ -70,7 +90,7 @@ export async function POST(req: NextRequest) {
                 descripcion,
                 estado: 'abierto',
                 usuarioId: session.user.id,
-                pedidoId: pedidoId || null,
+                pedidoId: resolvedPedidoId,
                 productoId: productoId || null,
                 numeroSerieProducto: numeroSerie || null,
                 // Los adjuntos se manejarían con un sistema de archivos separado

@@ -58,8 +58,8 @@ const pedidosMock = [
 // GET /api/pedidos_detalle/[id] - Obtener detalle de pedido
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = await params
-    
+    const { id } = await params
+
     const pedido = pedidosMock.find(p => p.id === id)
 
     if (!pedido) {

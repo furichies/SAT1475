@@ -61,21 +61,4 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Para obtener el detalle de un producto
-export async function GETProductoDetail(id: string) {
-  try {
-    const producto = await db.producto.findUnique({
-      where: { id },
-      include: { categoria: true }
-    })
 
-    if (!producto) return null
-
-    return {
-      ...producto,
-      imagenes: producto.imagenes ? JSON.parse(producto.imagenes) : []
-    }
-  } catch (error) {
-    return null
-  }
-}

@@ -2,7 +2,18 @@ import { NextResponse } from 'next/server'
 import { PedidoEstado, MetodoPago } from '@prisma/client'
 
 // Mock data en memoria para carrito
-let carritoMock = {
+interface CartItem {
+  id: string
+  productoId: string
+  cantidad: number
+  precioUnitario: number
+  descuento: number
+  subtotal: number
+  producto: any
+  fechaAgregado?: Date
+}
+
+let carritoMock: { items: CartItem[], usuarioId: string | null } = {
   items: [],
   usuarioId: null
 }
@@ -13,7 +24,7 @@ const pedidosMock = [
     id: '1',
     numeroPedido: 'PED-2023-0001',
     usuarioId: 'demo-user-1',
-    estado: PedidoEstado.ENTREGADO,
+    estado: 'entregado' as PedidoEstado, // Fix Enum usage
     subtotal: 2778.96,
     iva: 583.58,
     gastosEnvio: 0,
@@ -27,7 +38,7 @@ const pedidosMock = [
       provincia: 'Madrid',
       telefono: '+34 600 123 456'
     },
-    metodoPago: MetodoPago.TARJETA,
+    metodoPago: 'tarjeta' as MetodoPago, // Fix Enum usage
     referenciaPago: 'TXN-20231230-001',
     notas: '',
     fechaPedido: new Date('2023-12-15T10:30:00Z'),
@@ -127,7 +138,7 @@ export async function POST(req: Request) {
 
     // Mock: Obtener producto (en producción vendría de la base de datos)
     const productosMock = await getProductsMock()
-    const producto = productosMock.find(p => p.id === productoId)
+    const producto = productosMock.find((p: any) => p.id === productoId)
 
     if (!producto) {
       return NextResponse.json(
@@ -217,7 +228,7 @@ export async function GET() {
 // PUT /api/carrito/items/[id] - Actualizar cantidad de item
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = await params
+    const { id } = await params
     const body = await req.json()
     const { cantidad } = body
 
@@ -281,43 +292,43 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 // DELETE /api/carrito/items/[id] - Eliminar item del carrito
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const id = await params
-
-    const itemIndex = carritoMock.items.findIndex(i => i.id === id)
-
-    if (itemIndex === -1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Item no encontrado en el carrito'
-        },
-        { status: 404 }
-      )
-    }
-
-    carritoMock.items.splice(itemIndex, 1)
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        carrito: carritoMock,
-        mensaje: 'Item eliminado del carrito'
-      }
-    })
-  } catch (error) {
-    console.error('Error en DELETE /api/carrito/items/[id]:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Error al eliminar item del carrito',
-        datos: process.env.NODE_ENV === 'development' ? String(error) : undefined
-      },
-      { status: 500 }
-    )
-  }
-}
+// export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+//   try {
+//     const id = await params
+//
+//     const itemIndex = carritoMock.items.findIndex(i => i.id === id)
+//
+//     if (itemIndex === -1) {
+//       return NextResponse.json(
+//         {
+//           success: false,
+//           error: 'Item no encontrado en el carrito'
+//         },
+//         { status: 404 }
+//       )
+//     }
+//
+//     carritoMock.items.splice(itemIndex, 1)
+//
+//     return NextResponse.json({
+//       success: true,
+//       data: {
+//         carrito: carritoMock,
+//         mensaje: 'Item eliminado del carrito'
+//       }
+//     })
+//   } catch (error) {
+//     console.error('Error en DELETE /api/carrito/items/[id]:', error)
+//     return NextResponse.json(
+//       {
+//         success: false,
+//         error: 'Error al eliminar item del carrito',
+//         datos: process.env.NODE_ENV === 'development' ? String(error) : undefined
+//       },
+//       { status: 500 }
+//     )
+//   }
+// }
 
 // DELETE /api/carrito - Vaciar carrito
 export async function DELETE() {

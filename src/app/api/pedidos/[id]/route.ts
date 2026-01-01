@@ -5,11 +5,11 @@ import { authOptions } from '@/lib/auth'
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions)
-        const id = params.id
+        const { id } = await params
 
         if (!session || !session.user) {
             return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })

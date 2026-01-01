@@ -100,13 +100,13 @@ let ticketsReparacionMock = [
   }
 ]
 
-// GET /api/admin_informe_reparacion/[ticketId] - Generar informe de reparación en PDF (admin)
-export async function GET(
-  req: Request,
-  { params }: { params: { ticketId: string } }
-) {
+// GET /api/admin_informe_reparacion - Generar informe de reparación en PDF (admin)
+export async function GET(req: Request) {
   try {
-    const ticket = ticketsReparacionMock.find(t => t.id === params.ticketId)
+    const { searchParams } = new URL(req.url)
+    const ticketId = searchParams.get('ticketId')
+
+    const ticket = ticketsReparacionMock.find(t => t.id === ticketId)
 
     if (!ticket) {
       return NextResponse.json(

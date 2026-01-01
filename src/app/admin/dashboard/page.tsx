@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
 // Mock data para métricas
 const kpiMock = [
@@ -145,45 +146,9 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         {/* Sidebar de navegación */}
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-screen p-4 fixed left-0 top-0 z-10 hidden lg:block">
-          <div className="flex items-center gap-2 mb-8">
-            <ShoppingBag className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">MicroInfo Admin</span>
-          </div>
+        {/* Sidebar de navegación */}
+        <AdminSidebar />
 
-          <nav className="space-y-2">
-            <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded-lg font-medium">
-              <LayoutDashboard className="h-5 w-5" />
-              Dashboard
-            </Link>
-            <Link href="/admin/productos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-              <Package className="h-5 w-5" />
-              Productos
-            </Link>
-            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-              <ShoppingCart className="h-5 w-5" />
-              Pedidos
-            </Link>
-            <Link href="/admin_tickets" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-              <MessageSquare className="h-5 w-5" />
-              Tickets SAT
-            </Link>
-            <Link href="/admin_tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-              <Users className="h-5 w-5" />
-              Técnicos
-            </Link>
-            <Link href="/admin_conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-              <Settings className="h-5 w-5" />
-              Base de Conocimiento
-            </Link>
-          </nav>
-
-          <div className="mt-8 pt-8 border-t">
-            <p className="text-xs text-gray-500 mb-2">Administrador</p>
-            <p className="text-sm font-semibold">Admin Principal</p>
-            <p className="text-xs text-gray-500">admin@microinfo.es</p>
-          </div>
-        </aside>
 
         {/* Contenido principal */}
         <main className="flex-1 lg:ml-64 p-8">
@@ -208,7 +173,7 @@ export default function AdminDashboardPage() {
 
           {/* Selector de periodo */}
           <div className="mb-8">
-            <Tabs value={periodo} onValueChange={setPeriodo}>
+            <Tabs value={periodo} onValueChange={(v) => setPeriodo(v as '7d' | '30d' | '90d')}>
               <TabsList>
                 <TabsTrigger value="7d">Últimos 7 días</TabsTrigger>
                 <TabsTrigger value="30d">Últimos 30 días</TabsTrigger>

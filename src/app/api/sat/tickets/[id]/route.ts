@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions)
@@ -17,7 +17,7 @@ export async function GET(
             )
         }
 
-        const { id } = params
+        const { id } = await params
         const ticket = await db.ticket.findUnique({
             where: { id },
             include: {
@@ -48,7 +48,7 @@ export async function GET(
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions)
@@ -64,7 +64,7 @@ export async function PATCH(
 
         const body = await req.json()
         const { estado, prioridad, tecnico, tipo, descripcion, asunto } = body
-        const { id } = params
+        const { id } = await params
 
         let tecnicoId: string | null | undefined = undefined
         if (tecnico === 'Sin asignar') {
@@ -113,7 +113,7 @@ export async function PATCH(
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions)
@@ -127,7 +127,7 @@ export async function DELETE(
             return NextResponse.json({ success: false, error: 'Privilegios insuficientes' }, { status: 403 })
         }
 
-        const { id } = params
+        const { id } = await params
         await db.ticket.delete({
             where: { id }
         })

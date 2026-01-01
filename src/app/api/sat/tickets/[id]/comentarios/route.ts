@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions)
@@ -14,7 +14,7 @@ export async function POST(
             return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
         }
 
-        const { id } = params
+        const { id } = await params
         const body = await req.json()
         const { contenido } = body
 

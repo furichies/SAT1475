@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Columna 1: Logo y descripción */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold">MicroInfo</h3>
+            <h3 className="text-lg font-bold">Micro1475</h3>
             <p className="text-sm text-muted-foreground">
               Tu tienda de confianza para equipos informáticos, componentes y servicio técnico especializado.
             </p>
@@ -86,7 +86,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} MicroInfo. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Micro1475. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

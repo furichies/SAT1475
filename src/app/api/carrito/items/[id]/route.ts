@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server'
 // GET /api/carrito/items/[id] - Obtener item específico del carrito
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = await params
+    const { id } = await params
 
     // Mock: Simular obtención de carrito
     // En producción, vendría de la base de datos con el userId de la sesión
-    const cartItems = [] // Mock: { id, productoId, cantidad, ... }
+    const cartItems: any[] = [] // Mock: { id, productoId, cantidad, ... }
 
     const item = cartItems.find((i) => i.id === id)
 

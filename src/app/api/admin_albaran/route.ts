@@ -63,12 +63,11 @@ let pedidosAlbaranMock = [
 ]
 
 // GET /api/admin_albaran/[pedidoId] - Generar albarán en PDF (admin)
-export async function GET(
-  req: Request,
-  { params }: { params: { pedidoId: string } }
-) {
+export async function GET(req: Request) {
   try {
-    const pedido = pedidosAlbaranMock.find(p => p.id === params.pedidoId)
+    const { searchParams } = new URL(req.url)
+    const pedidoId = searchParams.get('pedidoId')
+    const pedido = pedidosAlbaranMock.find(p => p.id === pedidoId)
 
     if (!pedido) {
       return NextResponse.json(
@@ -101,13 +100,13 @@ DATOS DE ENVÍO
 ---------------
 Transportista: ${pedido.transportista}
 Tracking: ${pedido.tracking}
-Fecha de envío: ${new Date(pedido.fecha).toLocaleString('es-ES', { 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+Fecha de envío: ${new Date(pedido.fecha).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}
 Estado del pedido: ${pedido.estado === 'enviado' ? 'Enviado' : 'Entregado'}
 
 DATOS DEL CLIENTE

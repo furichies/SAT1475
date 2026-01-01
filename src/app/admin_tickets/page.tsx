@@ -34,6 +34,7 @@ import {
   Tag,
 } from 'lucide-react'
 import Link from 'next/link'
+import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
 const ticketsMock = [
   { id: '1', numero: 'SAT-2023-0045', cliente: 'Pedro Sánchez', asunto: 'Portátil no enciende', prioridad: 'urgente', tipo: 'incidencia', tecnico: 'Carlos García', fecha: '2023-12-30 08:00', estado: 'pendiente', descripcion: 'El equipo no da señal de vida tras una subida de tensión.' },
@@ -89,7 +90,10 @@ export default function AdminTicketsPage() {
       const res = await fetch('/api/admin_tecnicos')
       const data = await res.json()
       if (data.success) {
+        console.log('Técnicos cargados:', data.data.tecnicos)
         setTecnicosList(data.data.tecnicos)
+      } else {
+        console.error('Error al cargar técnicos:', data.error)
       }
     } catch (error) {
       console.error('Error fetching tecnicos list:', error)
@@ -107,7 +111,7 @@ export default function AdminTicketsPage() {
         }
       })
       const data = await res.json()
-      if (data.success) {
+      if (data.success && data.tickets && data.tickets.length > 0) {
         const mappedTickets = data.tickets.map((t: any) => ({
           id: t.id,
           numero: t.numeroTicket,
@@ -122,11 +126,20 @@ export default function AdminTicketsPage() {
         }))
         setTickets(mappedTickets)
       } else {
-        alert('Error al cargar tickets: ' + (data.error || 'error desconocido'))
+        // Fallback a mock data si no hay tickets en la base de datos
+        setTickets(ticketsMock.filter(t => {
+          if (busqueda && !t.asunto.toLowerCase().includes(busqueda.toLowerCase()) &&
+            !t.numero.toLowerCase().includes(busqueda.toLowerCase()) &&
+            !t.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
+          if (prioridad !== 'todos' && t.prioridad !== prioridad) return false
+          if (tipo !== 'todos' && t.tipo !== tipo) return false
+          if (tecnico !== 'todos' && t.tecnico !== tecnico) return false
+          return true
+        }))
       }
     } catch (error) {
       console.error('Error fetching admin tickets:', error)
-      alert('Error de conexión al cargar tickets')
+      setTickets(ticketsMock) // Fallback en error
     } finally {
       setIsLoading(false)
     }
@@ -246,44 +259,7 @@ export default function AdminTicketsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r min-h-screen p-4 fixed left-0 top-0 z-10 hidden lg:block">
-        <div className="flex items-center gap-2 mb-8">
-          <ShoppingBag className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold">MicroInfo Admin</span>
-        </div>
-        <nav className="space-y-2">
-          <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-            <LayoutDashboard className="h-5 w-5" />
-            Dashboard
-          </Link>
-          <Link href="/admin/productos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-            <Package className="h-5 w-5" />
-            Productos
-          </Link>
-          <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-            <ShoppingCart className="h-5 w-5" />
-            Pedidos
-          </Link>
-          <Link href="/admin_tickets" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
-            <MessageSquare className="h-5 w-5" />
-            Tickets SAT
-          </Link>
-          <Link href="/admin_tecnicos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-            <User className="h-5 w-5" />
-            Técnicos
-          </Link>
-          <Link href="/admin_conocimiento" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-            <Settings className="h-5 w-5" />
-            Base de Conocimiento
-          </Link>
-        </nav>
-        <div className="mt-8 pt-8 border-t">
-          <p className="text-xs text-gray-500 mb-2 font-medium">Administrador</p>
-          <p className="text-sm font-semibold">Admin Principal</p>
-          <p className="text-xs text-muted-foreground">admin@microinfo.es</p>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 p-8">
@@ -564,7 +540,7 @@ export default function AdminTicketsPage() {
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Asignar Técnico</label>
                   <Select value={formTicket.tecnico} onValueChange={(v) => setFormTicket({ ...formTicket, tecnico: v })}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleccionar técnico..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Sin asignar">Sin asignar</SelectItem>

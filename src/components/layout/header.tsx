@@ -68,7 +68,7 @@ export function Header() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center space-x-2">
-              <span className="text-2xl font-bold">MicroInfo</span>
+              <span className="text-2xl font-bold">Micro1475</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">
@@ -121,19 +121,19 @@ export function Header() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/cuenta" className="cursor-pointer">
+                    <Link href="/mi-cuenta" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
                       <span>Mi Cuenta</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/cuenta/pedidos" className="cursor-pointer">
+                    <Link href="/mis-pedidos" className="cursor-pointer">
                       <Package className="mr-2 h-4 w-4" />
                       <span>Mis Pedidos</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/cuenta/tickets" className="cursor-pointer">
+                    <Link href="/sat" className="cursor-pointer">
                       <Ticket className="mr-2 h-4 w-4" />
                       <span>Mis Tickets</span>
                     </Link>

@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
 // Mock data simplificado
 const productosMock = [
@@ -182,26 +183,9 @@ export default function AdminProductosPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r min-h-screen p-4 hidden lg:block">
-          <div className="flex items-center gap-2 mb-8">
-            <ShoppingBag className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">MicroInfo Admin</span>
-          </div>
-          <nav className="space-y-2">
-            <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-              <LayoutDashboard className="h-5 w-5" />
-              Dashboard
-            </Link>
-            <Link href="/admin/productos" className="flex items-center gap-3 px-4 py-2 bg-primary text-white rounded">
-              <Package className="h-5 w-5" />
-              Productos
-            </Link>
-            <Link href="/admin_pedidos" className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">
-              <Settings className="h-5 w-5" />
-              Pedidos
-            </Link>
-          </nav>
-        </aside>
+        {/* Sidebar */}
+        <AdminSidebar />
+
 
         {/* Main */}
         <main className="flex-1 lg:ml-64">
