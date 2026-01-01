@@ -19,8 +19,13 @@ import {
     CheckCircle,
     Package,
     Calendar,
-    Tag
+    Tag,
+    QrCode,
+    Download
 } from 'lucide-react'
+import QRCode from 'qrcode'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 export default function TicketDetailPage() {
     const params = useParams()
@@ -31,6 +36,7 @@ export default function TicketDetailPage() {
     const [nuevoComentario, setNuevoComentario] = useState('')
     const [isLoading, setIsLoading] = useState(true)
     const [isSending, setIsSending] = useState(false)
+    const [qrCodeUrl, setQrCodeUrl] = useState('')
 
     const fetchTicket = async () => {
         if (!id) return
@@ -40,6 +46,21 @@ export default function TicketDetailPage() {
             const data = await res.json()
             if (data.success) {
                 setTicket(data.ticket)
+                // Generar código QR con la URL del ticket
+                const ticketUrl = `${window.location.origin}/sat/${id}`
+                try {
+                    const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
+                        width: 256,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#FFFFFF'
+                        }
+                    })
+                    setQrCodeUrl(qrDataUrl)
+                } catch (qrError) {
+                    console.error('Error generating QR code:', qrError)
+                }
             }
         } catch (error) {
             console.error('Error fetching ticket:', error)
@@ -77,6 +98,132 @@ export default function TicketDetailPage() {
         } finally {
             setIsSending(false)
         }
+    }
+
+    const generateTicketPDF = async () => {
+        if (!ticket) return
+
+        const doc = new jsPDF()
+
+        // Header
+        doc.setFontSize(22)
+        doc.setTextColor(0, 48, 135)
+        doc.text('MICRO1475 SAT', 14, 22)
+
+        doc.setFontSize(12)
+        doc.setTextColor(100)
+        doc.text('Resumen de Ticket de Soporte', 14, 30)
+        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 150, 30)
+
+        // Separator line
+        doc.setDrawColor(200)
+        doc.line(14, 35, 196, 35)
+
+        // Ticket Info
+        doc.setFontSize(14)
+        doc.setTextColor(0)
+        doc.text(`Número de Ticket: ${ticket.numeroTicket}`, 14, 45)
+
+        const estadoInfo = getEstadoInfo(ticket.estado)
+        doc.text(`Estado: ${estadoInfo.label.toUpperCase()}`, 14, 52)
+
+        // Client and Priority Info
+        doc.setFontSize(12)
+        doc.text('INFORMACIÓN DEL TICKET', 14, 65)
+        doc.setFontSize(10)
+        doc.text(`Cliente: ${ticket.usuario?.nombre || 'N/A'}`, 14, 72)
+        doc.text(`Email: ${ticket.usuario?.email || 'N/A'}`, 14, 78)
+        doc.text(`Prioridad: ${ticket.prioridad.toUpperCase()}`, 14, 84)
+        doc.text(`Tipo: ${ticket.tipo}`, 14, 90)
+
+        // Technician info (right side)
+        if (ticket.tecnico) {
+            doc.text('TÉCNICO ASIGNADO:', 110, 65)
+            doc.text(`${ticket.tecnico.usuario.nombre}`, 110, 72)
+            doc.text(`Nivel: ${ticket.tecnico.nivel}`, 110, 78)
+        }
+
+        // Subject and Description
+        doc.setFontSize(12)
+        doc.text('ASUNTO:', 14, 105)
+        doc.setFontSize(10)
+        const asuntoLines = doc.splitTextToSize(ticket.asunto, 180)
+        doc.text(asuntoLines, 14, 112)
+
+        let currentY = 112 + (asuntoLines.length * 5) + 8
+
+        doc.setFontSize(12)
+        doc.text('DESCRIPCIÓN:', 14, currentY)
+        currentY += 7
+        doc.setFontSize(10)
+        const descripcionLines = doc.splitTextToSize(ticket.descripcion, 180)
+        doc.text(descripcionLines, 14, currentY)
+
+        currentY += (descripcionLines.length * 5) + 10
+
+        // Serial number if exists
+        if (ticket.numeroSerieProducto) {
+            doc.setFontSize(12)
+            doc.text('NÚMERO DE SERIE:', 14, currentY)
+            currentY += 7
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'bold')
+            doc.text(ticket.numeroSerieProducto, 14, currentY)
+            doc.setFont('helvetica', 'normal')
+            currentY += 10
+        }
+
+        // Seguimiento table
+        if (ticket.seguimientos && ticket.seguimientos.length > 0) {
+            const seguimientoData = ticket.seguimientos.slice(0, 5).map((seg: any) => [
+                new Date(seg.fechaCreacion).toLocaleString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                seg.usuario?.nombre || 'Sistema',
+                seg.contenido.substring(0, 60) + (seg.contenido.length > 60 ? '...' : '')
+            ])
+
+            autoTable(doc, {
+                startY: currentY,
+                head: [['Fecha', 'Usuario', 'Comentario']],
+                body: seguimientoData,
+                theme: 'grid',
+                headStyles: { fillColor: [0, 48, 135] },
+                styles: { fontSize: 9 }
+            })
+
+            currentY = (doc as any).lastAutoTable.finalY + 10
+        }
+
+        // QR Code
+        if (qrCodeUrl) {
+            // Add QR code to PDF
+            const qrSize = 40
+            const qrX = 14
+            const qrY = currentY
+
+            doc.setFontSize(10)
+            doc.text('Escanea para seguimiento:', qrX, qrY)
+            doc.addImage(qrCodeUrl, 'PNG', qrX, qrY + 5, qrSize, qrSize)
+
+            doc.setFontSize(8)
+            doc.setTextColor(100)
+            const ticketUrl = `${window.location.origin}/sat/${id}`
+            doc.text(ticketUrl, qrX + qrSize + 5, qrY + 20, { maxWidth: 130 })
+        }
+
+        // Footer
+        const pageHeight = doc.internal.pageSize.height
+        doc.setFontSize(8)
+        doc.setTextColor(150)
+        doc.text('Micro1475 - Servicio Técnico Profesional', 14, pageHeight - 10)
+        doc.text(`Generado el ${new Date().toLocaleString()}`, 150, pageHeight - 10)
+
+        // Save PDF
+        doc.save(`Ticket_${ticket.numeroTicket}.pdf`)
     }
 
     if (status === 'loading' || isLoading) {
@@ -141,12 +288,23 @@ export default function TicketDetailPage() {
                                     <span className="text-sm font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
                                         {ticket.numeroTicket}
                                     </span>
-                                    <Badge className={`${estadoInfo.color} border-none shadow-sm px-4 py-1 rounded-full`}>
-                                        <div className="flex items-center gap-1.5 font-bold">
-                                            <estadoInfo.icon className="h-3.5 w-3.5" />
-                                            {estadoInfo.label.toUpperCase()}
-                                        </div>
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={generateTicketPDF}
+                                            className="gap-2"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                            Descargar PDF
+                                        </Button>
+                                        <Badge className={`${estadoInfo.color} border-none shadow-sm px-4 py-1 rounded-full`}>
+                                            <div className="flex items-center gap-1.5 font-bold">
+                                                <estadoInfo.icon className="h-3.5 w-3.5" />
+                                                {estadoInfo.label.toUpperCase()}
+                                            </div>
+                                        </Badge>
+                                    </div>
                                 </div>
                                 <CardTitle className="text-4xl font-extrabold tracking-tight text-foreground">{ticket.asunto}</CardTitle>
                                 <CardDescription className="pt-6 text-lg leading-relaxed text-foreground/70 font-medium">
@@ -180,8 +338,8 @@ export default function TicketDetailPage() {
                                         ticket.seguimientos.map((seg: any) => (
                                             <div key={seg.id} className={`flex ${seg.usuarioId === session?.user?.id ? 'justify-end' : 'justify-start'}`}>
                                                 <div className={`max-w-[85%] rounded-3xl p-5 shadow-sm relative group ${seg.usuarioId === session?.user?.id
-                                                        ? 'bg-primary text-primary-foreground rounded-tr-none ml-12'
-                                                        : 'bg-white text-foreground rounded-tl-none mr-12 border'
+                                                    ? 'bg-primary text-primary-foreground rounded-tr-none ml-12'
+                                                    : 'bg-white text-foreground rounded-tl-none mr-12 border'
                                                     }`}>
                                                     <div className={`flex items-center justify-between gap-8 mb-3 pb-2 border-b ${seg.usuarioId === session?.user?.id ? 'border-white/20' : 'border-muted'
                                                         }`}>
@@ -290,6 +448,35 @@ export default function TicketDetailPage() {
                                 )}
                             </CardContent>
                         </Card>
+
+                        {qrCodeUrl && (
+                            <Card className="shadow-xl border-none overflow-hidden rounded-3xl">
+                                <div className="h-2 bg-gradient-to-r from-primary to-primary/60 w-full" />
+                                <CardHeader className="bg-muted/5 pb-2">
+                                    <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
+                                        <QrCode className="h-5 w-5 text-primary" />
+                                        CÓDIGO QR
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 pt-4">
+                                    <div className="flex justify-center p-4 bg-white rounded-2xl border-2 border-dashed border-primary/20">
+                                        <img
+                                            src={qrCodeUrl}
+                                            alt="QR Code para seguimiento"
+                                            className="w-48 h-48"
+                                        />
+                                    </div>
+                                    <div className="text-center space-y-2">
+                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                            Escanea para seguimiento rápido
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                            Comparte este código QR para acceder directamente al estado de tu ticket desde cualquier dispositivo.
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         <Card className="bg-gradient-to-br from-primary/10 to-transparent border-none shadow-none p-1 rounded-3xl">
                             <div className="bg-white/80 backdrop-blur-sm rounded-[22px] p-6 space-y-4">
