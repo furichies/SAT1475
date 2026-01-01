@@ -80,7 +80,7 @@ export default function TiendaPage() {
 
   useEffect(() => {
     fetchProductos()
-  }, [pagina, busqueda, tipoSeleccionado, enStock, enOferta, ordenar])
+  }, [pagina, busqueda, tipoSeleccionado, enStock, enOferta, ordenar, precioMax])
 
   const fetchProductos = async () => {
     setLoading(true)
@@ -91,6 +91,7 @@ export default function TiendaPage() {
         busqueda,
         tipo: tipoSeleccionado,
         ordenar,
+        precioMax: precioMax[0].toString(),
         ...(enStock ? { enStock: 'true' } : {}),
         ...(enOferta ? { enOferta: 'true' } : {}),
       })

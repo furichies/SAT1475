@@ -11,11 +11,13 @@ export async function GET(req: NextRequest) {
     const enStock = searchParams.get('enStock') === 'true'
     const enOferta = searchParams.get('enOferta') === 'true'
     const ordenar = searchParams.get('ordenar') || 'novedad'
+    const precioMax = parseFloat(searchParams.get('precioMax') || '999999')
     const pagina = parseInt(searchParams.get('pagina') || '1')
     const porPagina = parseInt(searchParams.get('porPagina') || '12')
 
     const where: any = {
-      activo: true
+      activo: true,
+      precio: { lte: precioMax }
     }
 
     if (busqueda) {
