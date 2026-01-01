@@ -84,6 +84,9 @@ export function Header() {
               <Link href="/quienes-somos" className="text-sm font-medium transition-colors hover:text-primary underline decoration-primary/30 underline-offset-4">
                 ¿Quiénes somos?
               </Link>
+              <Link href="/configurador" className="text-sm font-medium px-3 py-1 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all border border-primary/20">
+                Configurador
+              </Link>
             </nav>
           </div>
 
