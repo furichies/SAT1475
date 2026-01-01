@@ -126,3 +126,17 @@
 .container {
   @apply mx-auto px-6 md:px-12 lg:px-16;
 }
+
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-progress {
+  animation: progress linear forwards;
+}

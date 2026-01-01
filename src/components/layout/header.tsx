@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -81,9 +82,6 @@ export function Header() {
               </Link>
               <Link href="/sat" className="text-sm font-medium transition-colors hover:text-primary">
                 SAT
-              </Link>
-              <Link href="/admin_conocimiento" className="text-sm font-medium transition-colors hover:text-primary">
-                Base de Conocimiento
               </Link>
               <Link href="/quienes-somos" className="text-sm font-medium transition-colors hover:text-primary underline decoration-primary/30 underline-offset-4">
                 ¿Quiénes somos?
@@ -165,9 +163,9 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-destructive focus:text-destructive"
-                    onClick={() => {
-                      localStorage.removeItem('token')
-                      router.push('/auth/login')
+                    onClick={async () => {
+                      await signOut({ redirect: false })
+                      router.push('/')
                     }}
                   >
                     <LogOut className="mr-2 h-4 w-4" />

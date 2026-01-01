@@ -45,7 +45,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/admin_conocimiento" className="hover:text-primary transition-colors">
+                <Link href="/admin/conocimiento" className="hover:text-primary transition-colors">
                   Base de Conocimiento
                 </Link>
               </li>

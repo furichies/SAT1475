@@ -16,11 +16,11 @@ import {
 const menuItems = [
     { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/admin/productos', icon: Package, label: 'Productos' },
-    { href: '/admin_pedidos', icon: ShoppingCart, label: 'Pedidos' },
-    { href: '/admin/clientes', icon: Users, label: 'Clientes' }, // New Item
-    { href: '/admin_tickets', icon: MessageSquare, label: 'Tickets SAT' },
-    { href: '/admin_tecnicos', icon: Users, label: 'Técnicos' },
-    { href: '/admin_conocimiento', icon: Settings, label: 'Base de Conocimiento' },
+    { href: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos' },
+    { href: '/admin/clientes', icon: Users, label: 'Clientes' },
+    { href: '/admin/tickets', icon: MessageSquare, label: 'Tickets SAT' },
+    { href: '/admin/tecnicos', icon: Users, label: 'Técnicos' },
+    { href: '/admin/conocimiento', icon: Settings, label: 'Base de Conocimiento' },
 ]
 
 export function AdminSidebar() {
@@ -41,8 +41,8 @@ export function AdminSidebar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive
-                                    ? 'bg-primary text-white'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-primary text-white'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
                             <item.icon className="h-5 w-5" />
