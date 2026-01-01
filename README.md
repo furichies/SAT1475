@@ -1,141 +1,290 @@
-# 🚀 Welcome to Z.ai Code Scaffold
+# Micro1475 - Sistema de Gestión de Tienda y SAT
 
-A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
+Sistema completo de gestión para tienda de informática con servicio técnico integrado (SAT). Desarrollado con Next.js 15, Prisma, SQLite y Bun.
 
-## ✨ Technology Stack
+## 📋 Características Principales
 
-This scaffold provides a robust foundation built with:
+- 🛒 **Tienda Online**: Catálogo de productos con filtros avanzados, carrito de compras y gestión de pedidos
+- 🔧 **Sistema SAT**: Gestión completa de tickets de soporte técnico con seguimiento en tiempo real
+- 👥 **Gestión de Usuarios**: Sistema de autenticación con roles (cliente, técnico, admin, superadmin)
+- 📊 **Panel de Administración**: Dashboard completo para gestión de productos, pedidos, tickets y clientes
+- 📄 **Generación de PDFs**: Informes de pedidos y tickets con códigos QR para seguimiento
+- 📱 **Diseño Responsive**: Interfaz moderna y adaptable a todos los dispositivos
+- 🔐 **Autenticación Segura**: Sistema de login con NextAuth.js y bcrypt
 
-### 🎯 Core Framework
-- **⚡ Next.js 15** - The React framework for production with App Router
-- **📘 TypeScript 5** - Type-safe JavaScript for better developer experience
-- **🎨 Tailwind CSS 4** - Utility-first CSS framework for rapid UI development
+## 🚀 Instalación
 
-### 🧩 UI Components & Styling
-- **🧩 shadcn/ui** - High-quality, accessible components built on Radix UI
-- **🎯 Lucide React** - Beautiful & consistent icon library
-- **🌈 Framer Motion** - Production-ready motion library for React
-- **🎨 Next Themes** - Perfect dark mode in 2 lines of code
+### Requisitos Previos
 
-### 📋 Forms & Validation
-- **🎣 React Hook Form** - Performant forms with easy validation
-- **✅ Zod** - TypeScript-first schema validation
+#### Instalación de Bun
 
-### 🔄 State Management & Data Fetching
-- **🐻 Zustand** - Simple, scalable state management
-- **🔄 TanStack Query** - Powerful data synchronization for React
-- **🌐 Fetch** - Promise-based HTTP request
+**Windows:**
+```powershell
+# Usando PowerShell
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
 
-### 🗄️ Database & Backend
-- **🗄️ Prisma** - Next-generation TypeScript ORM
-- **🔐 NextAuth.js** - Complete open-source authentication solution
+**Linux (Debian/Ubuntu):**
+```bash
+# Usando curl
+curl -fsSL https://bun.sh/install | bash
 
-### 🎨 Advanced UI Features
-- **📊 TanStack Table** - Headless UI for building tables and datagrids
-- **🖱️ DND Kit** - Modern drag and drop toolkit for React
-- **📊 Recharts** - Redefined chart library built with React and D3
-- **🖼️ Sharp** - High performance image processing
+# Recargar el shell
+source ~/.bashrc
+```
 
-### 🌍 Internationalization & Utilities
-- **🌍 Next Intl** - Internationalization library for Next.js
-- **📅 Date-fns** - Modern JavaScript date utility library
-- **🪝 ReactUse** - Collection of essential React hooks for modern development
+Verifica la instalación:
+```bash
+bun --version
+```
 
-## 🎯 Why This Scaffold?
-
-- **🏎️ Fast Development** - Pre-configured tooling and best practices
-- **🎨 Beautiful UI** - Complete shadcn/ui component library with advanced interactions
-- **🔒 Type Safety** - Full TypeScript configuration with Zod validation
-- **📱 Responsive** - Mobile-first design principles with smooth animations
-- **🗄️ Database Ready** - Prisma ORM configured for rapid backend development
-- **🔐 Auth Included** - NextAuth.js for secure authentication flows
-- **📊 Data Visualization** - Charts, tables, and drag-and-drop functionality
-- **🌍 i18n Ready** - Multi-language support with Next Intl
-- **🚀 Production Ready** - Optimized build and deployment settings
-- **🤖 AI-Friendly** - Structured codebase perfect for AI assistance
-
-## 🚀 Quick Start
+### Clonar el Repositorio
 
 ```bash
-# Install dependencies
+git clone <URL_DEL_REPOSITORIO>
+cd <NOMBRE_DEL_PROYECTO>
+```
+
+### Instalación de Dependencias
+
+```bash
 bun install
+```
 
-# Start development server
+### Configuración de la Base de Datos
+
+1. **Crear el archivo de configuración:**
+```bash
+cp .env.example .env
+```
+
+2. **Editar `.env` con tus configuraciones:**
+```env
+DATABASE_URL="file:./prisma/dev.db"
+NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+3. **Generar el cliente de Prisma:**
+```bash
+bun run db:generate
+```
+
+4. **Crear la base de datos:**
+```bash
+bun run db:push
+```
+
+5. **Poblar la base de datos con datos iniciales:**
+```bash
+node seed-simple.js
+```
+
+Esto creará:
+- 12 productos de ejemplo (equipos completos, componentes y periféricos)
+- Productos con ofertas y stock
+- Estructura completa de la base de datos
+
+### Ejecutar el Proyecto
+
+**Modo Desarrollo:**
+```bash
 bun run dev
+```
 
-# Build for production
+La aplicación estará disponible en: `http://localhost:3000`
+
+**Modo Producción:**
+```bash
+# Construir
 bun run build
 
-# Start production server
-bun start
+# Ejecutar
+bun run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
-
-## 🤖 Powered by Z.ai
-
-This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
-
-- **💻 Code Generation** - Generate components, pages, and features instantly
-- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
-- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
-- **📝 Documentation** - Auto-generate comprehensive documentation
-- **🚀 Optimization** - Performance improvements and best practices
-
-Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
-
-## 📁 Project Structure
+## 📁 Estructura del Proyecto
 
 ```
-src/
-├── app/                 # Next.js App Router pages
-├── components/          # Reusable React components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-└── lib/                # Utility functions and configurations
+├── prisma/
+│   ├── schema.prisma          # Esquema de la base de datos
+│   ├── dev.db                 # Base de datos SQLite
+│   └── seed-productos.ts      # Script de seed (TypeScript)
+│
+├── public/
+│   ├── favicon.ico            # Icono de la aplicación
+│   └── images/                # Imágenes de productos y recursos
+│
+├── src/
+│   ├── app/                   # Rutas y páginas de Next.js
+│   │   ├── admin/             # Panel de administración
+│   │   │   ├── clientes/      # Gestión de clientes
+│   │   │   ├── dashboard/     # Dashboard principal
+│   │   │   └── productos/     # Gestión de productos
+│   │   ├── admin_conocimiento/ # Base de conocimiento
+│   │   ├── admin_pedidos/     # Gestión de pedidos
+│   │   ├── admin_tecnicos/    # Gestión de técnicos
+│   │   ├── admin_tickets/     # Gestión de tickets SAT
+│   │   ├── api/               # API Routes de Next.js
+│   │   │   ├── auth/          # Autenticación
+│   │   │   ├── productos/     # CRUD de productos
+│   │   │   ├── pedidos/       # Gestión de pedidos
+│   │   │   ├── sat/           # Sistema de tickets
+│   │   │   └── carrito/       # Carrito de compras
+│   │   ├── auth/              # Páginas de autenticación
+│   │   │   ├── login/         # Inicio de sesión
+│   │   │   └── register/      # Registro de usuarios
+│   │   ├── carrito/           # Página del carrito
+│   │   ├── legal/             # Páginas legales
+│   │   ├── mi-cuenta/         # Perfil de usuario
+│   │   ├── mis-pedidos/       # Pedidos del usuario
+│   │   ├── producto/          # Detalle de producto
+│   │   ├── sat/               # Sistema de tickets (cliente)
+│   │   │   ├── [id]/          # Detalle de ticket
+│   │   │   └── nuevo/         # Crear ticket
+│   │   ├── tienda/            # Catálogo de productos
+│   │   ├── layout.tsx         # Layout principal
+│   │   └── page.tsx           # Página de inicio
+│   │
+│   ├── components/            # Componentes reutilizables
+│   │   ├── admin/             # Componentes de administración
+│   │   ├── layout/            # Header, Footer, etc.
+│   │   └── ui/                # Componentes UI (shadcn/ui)
+│   │
+│   ├── lib/                   # Utilidades y configuraciones
+│   │   ├── auth.ts            # Configuración de NextAuth
+│   │   ├── db.ts              # Cliente de Prisma
+│   │   └── utils.ts           # Funciones auxiliares
+│   │
+│   └── store/                 # Estado global (Zustand)
+│       └── use-cart-store.ts  # Store del carrito
+│
+├── .env                       # Variables de entorno (no incluido en git)
+├── .env.example               # Ejemplo de variables de entorno
+├── package.json               # Dependencias del proyecto
+├── tsconfig.json              # Configuración de TypeScript
+├── next.config.js             # Configuración de Next.js
+├── tailwind.config.ts         # Configuración de Tailwind CSS
+└── README.md                  # Este archivo
 ```
 
-## 🎨 Available Features & Components
+## 🗄️ Base de Datos
 
-This scaffold includes a comprehensive set of modern web development tools:
+El proyecto utiliza **SQLite** con **Prisma ORM**. El esquema incluye:
 
-### 🧩 UI Components (shadcn/ui)
-- **Layout**: Card, Separator, Aspect Ratio, Resizable Panels
-- **Forms**: Input, Textarea, Select, Checkbox, Radio Group, Switch
-- **Feedback**: Alert, Toast (Sonner), Progress, Skeleton
-- **Navigation**: Breadcrumb, Menubar, Navigation Menu, Pagination
-- **Overlay**: Dialog, Sheet, Popover, Tooltip, Hover Card
-- **Data Display**: Badge, Avatar, Calendar
+- **Usuario**: Clientes, técnicos y administradores
+- **Producto**: Catálogo de productos con categorías
+- **Pedido**: Gestión de pedidos y detalles
+- **Ticket**: Sistema de soporte técnico (SAT)
+- **Carrito**: Carrito de compras temporal
+- **Valoracion**: Reseñas de productos
+- **BaseConocimiento**: Artículos de ayuda
+- **Documento**: Facturas, albaranes, informes
 
-### 📊 Advanced Data Features
-- **Tables**: Powerful data tables with sorting, filtering, pagination (TanStack Table)
-- **Charts**: Beautiful visualizations with Recharts
-- **Forms**: Type-safe forms with React Hook Form + Zod validation
+### Comandos Útiles de Base de Datos
 
-### 🎨 Interactive Features
-- **Animations**: Smooth micro-interactions with Framer Motion
-- **Drag & Drop**: Modern drag-and-drop functionality with DND Kit
-- **Theme Switching**: Built-in dark/light mode support
+```bash
+# Generar cliente de Prisma
+bun run db:generate
 
-### 🔐 Backend Integration
-- **Authentication**: Ready-to-use auth flows with NextAuth.js
-- **Database**: Type-safe database operations with Prisma
-- **API Client**: HTTP requests with Fetch + TanStack Query
-- **State Management**: Simple and scalable with Zustand
+# Aplicar cambios al esquema
+bun run db:push
 
-### 🌍 Production Features
-- **Internationalization**: Multi-language support with Next Intl
-- **Image Optimization**: Automatic image processing with Sharp
-- **Type Safety**: End-to-end TypeScript with Zod validation
-- **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
+# Crear una migración
+bun run db:migrate
 
-## 🤝 Get Started with Z.ai
+# Resetear la base de datos
+bun run db:reset
+```
 
-1. **Clone this scaffold** to jumpstart your project
-2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
-3. **Start building** with intelligent code generation and assistance
-4. **Deploy with confidence** using the production-ready setup
+## 👤 Usuarios de Prueba
+
+Después de ejecutar el seed, puedes usar:
+
+**Cliente:**
+- Email: `cliente@microinfo.es`
+- Contraseña: `cliente123`
+
+**Administrador:**
+- Crear desde: `/create-admin`
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Framework**: Next.js 15 (App Router)
+- **Runtime**: Bun
+- **Base de Datos**: SQLite + Prisma ORM
+- **Autenticación**: NextAuth.js
+- **UI**: React 19, Tailwind CSS, shadcn/ui
+- **Estado**: Zustand
+- **Generación PDF**: jsPDF + jspdf-autotable
+- **Códigos QR**: qrcode
+- **Validación**: Zod
+- **Iconos**: Lucide React
+
+## 📝 Scripts Disponibles
+
+```bash
+# Desarrollo
+bun run dev              # Inicia el servidor de desarrollo
+
+# Producción
+bun run build            # Construye la aplicación
+bun run start            # Inicia el servidor de producción
+
+# Base de Datos
+bun run db:generate      # Genera el cliente de Prisma
+bun run db:push          # Aplica cambios al esquema
+bun run db:migrate       # Crea una migración
+bun run db:reset         # Resetea la base de datos
+
+# Calidad de Código
+bun run lint             # Ejecuta ESLint
+```
+
+## 🔒 Seguridad
+
+- Contraseñas hasheadas con bcrypt
+- Sesiones seguras con NextAuth.js
+- Protección CSRF
+- Validación de datos con Zod
+- Sanitización de inputs
+- Roles y permisos por usuario
+
+## 📄 Licencia
+
+Este proyecto está licenciado bajo la **GNU General Public License v3.0 (GPLv3)**.
+
+Esto significa que:
+- ✅ Puedes usar, modificar y distribuir este software libremente
+- ✅ Debes mantener la misma licencia GPLv3 en trabajos derivados
+- ✅ Debes proporcionar el código fuente si distribuyes el software
+- ✅ Debes documentar los cambios realizados
+
+Para más información, consulta el archivo [LICENSE](LICENSE) o visita: https://www.gnu.org/licenses/gpl-3.0.html
+
+## 🤝 Contribuir
+
+Las contribuciones son bienvenidas. Por favor:
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📧 Soporte
+
+Para reportar bugs o solicitar nuevas características, por favor abre un issue en el repositorio.
+
+## 🎯 Roadmap
+
+- [ ] Integración con pasarelas de pago
+- [ ] Sistema de notificaciones por email
+- [ ] Chat en tiempo real para soporte
+- [ ] App móvil con React Native
+- [ ] Integración con sistemas de envío
+- [ ] Analytics y reportes avanzados
 
 ---
 
-Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+**Desarrollado con ❤️ usando Next.js y Bun**
