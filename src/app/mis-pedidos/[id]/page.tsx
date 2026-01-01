@@ -18,6 +18,9 @@ import {
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { toast } from 'sonner'
 
 export default function DetallePedidoPage() {
     const { id } = useParams()
@@ -75,6 +78,109 @@ export default function DetallePedidoPage() {
     ]
 
     const currentStepIndex = pasos.findIndex(p => p.key === pedido.estado)
+
+    const generatePDF = () => {
+        try {
+            const doc = new jsPDF() as any
+
+            // Header - Logo y Título
+            doc.setFontSize(22)
+            doc.setTextColor(20, 50, 150) // Azul Micro1475
+            doc.text('MICRO1475 - RESISTENCIA TÉCNICA', 14, 22)
+
+            doc.setFontSize(10)
+            doc.setTextColor(100)
+            doc.text('Soluciones tecnológicas y Servicio Técnico Especializado', 14, 28)
+            doc.text('Calle Arcas del Agua, 2 (Sector 3), 28905 Getafe, Madrid', 14, 33)
+            doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 150, 28)
+
+            // Línea divisoria
+            doc.setDrawColor(230)
+            doc.line(14, 38, 196, 38)
+
+            // Información del Pedido
+            doc.setFontSize(14)
+            doc.setTextColor(0)
+            doc.text(`FACTURA: ${pedido.numeroPedido}`, 14, 48)
+            doc.setFontSize(10)
+            doc.text(`Estado del Pedido: ${pedido.estado.toUpperCase()}`, 14, 55)
+            doc.text(`Método de Pago: ${pedido.metodoPago.toUpperCase()}`, 14, 61)
+
+            // Datos del Cliente y Envío
+            doc.setFillColor(245, 245, 245)
+            doc.rect(14, 68, 182, 35, 'F')
+
+            doc.setFontSize(11)
+            doc.setTextColor(0)
+            doc.text('DATOS DE FACTURACIÓN Y ENVÍO', 20, 75)
+            doc.setFontSize(9)
+            doc.setTextColor(80)
+            doc.text(`Cliente: ${direccion.nombre} ${direccion.apellidos || ''}`, 20, 82)
+            doc.text(`Dirección: ${direccion.direccion}`, 20, 87)
+            doc.text(`${direccion.codigoPostal}, ${direccion.ciudad} (${direccion.provincia})`, 20, 92)
+            doc.text(`Teléfono: ${direccion.telefono}`, 140, 82)
+
+            // Tabla de Productos
+            const tableData = (pedido.detalles || []).map((d: any) => [
+                d.producto?.nombre || 'Producto / Pack Personalizado',
+                `${d.cantidad} ud`,
+                `${d.precioUnitario.toFixed(2)}€`,
+                `${(d.cantidad * d.precioUnitario).toFixed(2)}€`
+            ])
+
+            autoTable(doc, {
+                startY: 110,
+                head: [['Descripción del Artículo', 'Cant.', 'Precio Ud.', 'Subtotal']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [20, 50, 150], fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 4 },
+                columnStyles: {
+                    0: { cellWidth: 100 },
+                    1: { halign: 'center' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' }
+                }
+            })
+
+            const finalY = (doc as any).lastAutoTable.finalY || 150
+
+            // Resumen de Totales
+            const marginX = 140
+            doc.setFontSize(10)
+            doc.setTextColor(100)
+            doc.text('Subtotal:', marginX, finalY + 15)
+            doc.text(`${pedido.subtotal.toFixed(2)}€`, 185, finalY + 15, { align: 'right' })
+
+            doc.text('IVA (21%):', marginX, finalY + 22)
+            doc.text(`${pedido.iva.toFixed(2)}€`, 185, finalY + 22, { align: 'right' })
+
+            doc.text('Gastos de Envío:', marginX, finalY + 29)
+            doc.text(`${pedido.gastosEnvio.toFixed(2)}€`, 185, finalY + 29, { align: 'right' })
+
+            // Línea de Total
+            doc.setDrawColor(20, 50, 150)
+            doc.setLineWidth(0.5)
+            doc.line(marginX, finalY + 34, 196, finalY + 34)
+
+            doc.setFontSize(14)
+            doc.setTextColor(20, 50, 150)
+            doc.text('TOTAL:', marginX, finalY + 42)
+            doc.text(`${pedido.total.toFixed(2)}€`, 185, finalY + 42, { align: 'right' })
+
+            // Pie de página
+            doc.setFontSize(8)
+            doc.setTextColor(150)
+            doc.text('Gracias por confiar en Micro1475. Este documento sirve como comprobante de compra oficial.', 105, 280, { align: 'center' })
+            doc.text('Micro1475 - Resistencia Técnica ante la Obsolescencia Programada.', 105, 285, { align: 'center' })
+
+            doc.save(`Factura_Micro1475_${pedido.numeroPedido}.pdf`)
+            toast.success("Factura generada y descargada con éxito")
+        } catch (error) {
+            console.error("Error generating PDF:", error)
+            toast.error("No se pudo generar la factura")
+        }
+    }
 
     return (
         <div className="min-h-screen bg-gray-50/50 py-12 px-4">
@@ -228,7 +334,10 @@ export default function DetallePedidoPage() {
                                         <p className="font-bold capitalize">{pedido.metodoPago}</p>
                                     </div>
                                 </div>
-                                <Button className="w-full bg-white text-gray-900 hover:bg-gray-100 font-black rounded-2xl h-14">
+                                <Button
+                                    className="w-full bg-white text-gray-900 hover:bg-gray-100 font-black rounded-2xl h-14"
+                                    onClick={generatePDF}
+                                >
                                     DESCARGAR FACTURA
                                 </Button>
                             </div>

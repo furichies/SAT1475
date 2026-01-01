@@ -126,16 +126,17 @@ export default function AdminPedidosPage() {
     doc.setFontSize(12)
     doc.setTextColor(100)
     doc.text('Resumen de Pedido Oficial', 14, 30)
+    doc.text('Calle Arcas del Agua, 2 (Sector 3), 28905 Getafe, Madrid', 14, 35)
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 150, 30)
 
     // Order Info
     doc.setDrawColor(200)
-    doc.line(14, 35, 196, 35)
+    doc.line(14, 40, 196, 40)
 
     doc.setFontSize(14)
     doc.setTextColor(0)
-    doc.text(`Número de Pedido: ${pedido.numeroPedido}`, 14, 45)
-    doc.text(`Estado Actual: ${pedido.estado.toUpperCase()}`, 14, 52)
+    doc.text(`Número de Pedido: ${pedido.numeroPedido}`, 14, 50)
+    doc.text(`Estado Actual: ${pedido.estado.toUpperCase()}`, 14, 57)
 
     // Client Info
     doc.setFontSize(12)

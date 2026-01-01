@@ -11,6 +11,11 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               Tu tienda de confianza para equipos informáticos, componentes y servicio técnico especializado.
             </p>
+            <div className="text-xs text-muted-foreground pt-2 space-y-1">
+              <p className="font-bold">Sede Central:</p>
+              <p>Calle Arcas del Agua, 2 (Sector 3)</p>
+              <p>28905 Getafe (Madrid)</p>
+            </div>
           </div>
 
           {/* Columna 2: Tienda */}
