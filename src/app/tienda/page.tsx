@@ -91,6 +91,8 @@ export default function TiendaPage() {
         busqueda,
         tipo: tipoSeleccionado,
         ordenar,
+        ...(enStock ? { enStock: 'true' } : {}),
+        ...(enOferta ? { enOferta: 'true' } : {}),
       })
       const res = await fetch(`/api/productos?${params.toString()}`)
       const data = await res.json()

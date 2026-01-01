@@ -73,7 +73,7 @@ async function main() {
       stockMinimo: 3,
       marca: 'Asus',
       modelo: 'ROG Strix G15',
-      tipo: ProductoTipo.EQUIPO_COMPLETO,
+      tipo: ProductoTipo.equipo_completo,
       especificaciones: JSON.stringify({
         procesador: 'Intel Core i7-13700H (14 núcleos)',
         gpu: 'NVIDIA GeForce RTX 4070 8GB GDDR6',
@@ -103,7 +103,7 @@ async function main() {
       stockMinimo: 5,
       marca: 'Asus',
       modelo: 'ZenBook 14 OLED',
-      tipo: ProductoTipo.EQUIPO_COMPLETO,
+      tipo: ProductoTipo.equipo_completo,
       especificaciones: JSON.stringify({
         procesador: 'Intel Core i5-1340P',
         ram: '16GB LPDDR5',
@@ -131,7 +131,7 @@ async function main() {
       stockMinimo: 10,
       marca: 'Samsung',
       modelo: '980 Pro',
-      tipo: ProductoTipo.COMPONENTE,
+      tipo: ProductoTipo.componente,
       especificaciones: JSON.stringify({
         interfaz: 'NVMe PCIe 4.0',
         velocidadLectura: '7.000 MB/s',
@@ -160,7 +160,7 @@ async function main() {
       stockMinimo: 8,
       marca: 'Corsair',
       modelo: 'Vengeance DDR5',
-      tipo: ProductoTipo.COMPONENTE,
+      tipo: ProductoTipo.componente,
       especificaciones: JSON.stringify({
         capacidad: '32GB (2x16GB)',
         tipo: 'DDR5',
@@ -189,7 +189,7 @@ async function main() {
       stockMinimo: 5,
       marca: 'Samsung',
       modelo: 'Odyssey G7',
-      tipo: ProductoTipo.PERIFERICO,
+      tipo: ProductoTipo.periferico,
       especificaciones: JSON.stringify({
         tamano: '32" curvo',
         curvatura: '1000R',
@@ -222,7 +222,7 @@ async function main() {
       stockMinimo: 15,
       marca: 'Logitech',
       modelo: 'G Pro X TKL',
-      tipo: ProductoTipo.PERIFERICO,
+      tipo: ProductoTipo.periferico,
       especificaciones: JSON.stringify({
         switches: 'Cherry MX Red (táctiles)',
         tipo: 'Mecánico',
@@ -252,7 +252,7 @@ async function main() {
       stockMinimo: 20,
       marca: 'Razer',
       modelo: 'DeathAdder V3',
-      tipo: ProductoTipo.PERIFERICO,
+      tipo: ProductoTipo.periferico,
       especificaciones: JSON.stringify({
         sensor: '25,600 DPI Focus Pro óptico',
         dpiMax: '25,600',
@@ -282,7 +282,7 @@ async function main() {
       stockMinimo: 5,
       marca: 'Intel',
       modelo: 'Core i9-13900K',
-      tipo: ProductoTipo.COMPONENTE,
+      tipo: ProductoTipo.componente,
       especificaciones: JSON.stringify({
         nucleos: '24 (8 Performance + 16 Efficient)',
         hilos: '32',
@@ -313,7 +313,7 @@ async function main() {
       stockMinimo: 3,
       marca: 'NVIDIA',
       modelo: 'RTX 4080',
-      tipo: ProductoTipo.COMPONENTE,
+      tipo: ProductoTipo.componente,
       especificaciones: JSON.stringify({
         memoria: '16GB GDDR6X',
         cudaCores: '9728',
@@ -346,7 +346,7 @@ async function main() {
       stockMinimo: 10,
       marca: 'Sennheiser',
       modelo: 'HD 600',
-      tipo: ProductoTipo.PERIFERICO,
+      tipo: ProductoTipo.periferico,
       especificaciones: JSON.stringify({
         tipo: 'Open-back',
         impedancia: '150 Ohm',
@@ -375,7 +375,7 @@ async function main() {
       stockMinimo: 15,
       marca: 'Seagate',
       modelo: 'IronWolf 8TB',
-      tipo: ProductoTipo.COMPONENTE,
+      tipo: ProductoTipo.componente,
       especificaciones: JSON.stringify({
         capacidad: '8TB',
         rotacion: '5400 RPM',
@@ -406,7 +406,7 @@ async function main() {
       stockMinimo: 20,
       marca: 'Kingston',
       modelo: 'Fury Beast',
-      tipo: ProductoTipo.COMPONENTE,
+      tipo: ProductoTipo.componente,
       especificaciones: JSON.stringify({
         capacidad: '16GB (2x8GB)',
         tipo: 'DDR4',
@@ -451,11 +451,11 @@ async function main() {
 
   for (const producto of productos) {
     let categoriaId: string | null = null
-    
+
     // Asignar categoría según el tipo
-    if (producto.tipo === ProductoTipo.EQUIPO_COMPLETO) {
+    if (producto.tipo === ProductoTipo.equipo_completo) {
       categoriaId = categoriaOrdenadores?.id || null
-    } else if (producto.tipo === ProductoTipo.COMPONENTE) {
+    } else if (producto.tipo === ProductoTipo.componente) {
       if (producto.modelo.includes('SSD') || producto.modelo.includes('HDD')) {
         categoriaId = categoriaAlmacenamiento?.id || null
       } else if (producto.modelo.includes('RAM') || producto.modelo.includes('CPU') || producto.modelo.includes('GPU')) {
@@ -463,7 +463,7 @@ async function main() {
       } else {
         categoriaId = categoriaComponentes?.id || null
       }
-    } else if (producto.tipo === ProductoTipo.PERIFERICO) {
+    } else if (producto.tipo === ProductoTipo.periferico) {
       if (producto.modelo.includes('Sennheiser')) {
         categoriaId = categoriaAudio?.id || null
       } else {
@@ -481,84 +481,89 @@ async function main() {
 
   console.log(`✅ ${productos.length} productos creados`)
 
+  // Obtener productos creados para valoraciones
+  const productosCreados = await prisma.producto.findMany({
+    where: { sku: { in: productos.slice(0, 3).map(p => p.sku) } }
+  })
+
   // Crear algunas valoraciones de ejemplo
   console.log('⭐ Creando valoraciones de ejemplo...')
-  const productosConValoraciones = productos.slice(0, 3)
-  const usuariosDemo = [
+
+  for (const producto of productosCreados) {
     {
       id: 'demo-user-1',
-      email: 'demo1@microinfo.es',
-      passwordHash: '$2b$12$LQv3c1yqBHqZK6zW3YJ7w5jOz0QIwYj4z7M0w1xY', // demo123
-      nombre: 'Juan Pérez',
-      apellidos: 'García López',
-      telefono: '+34 600 123 456',
-      direccion: 'Calle Mayor, 123',
-      codigoPostal: '28001',
-      ciudad: 'Madrid',
-      provincia: 'Madrid',
-      rol: 'cliente'
+        email: 'demo1@microinfo.es',
+          passwordHash: '$2b$12$LQv3c1yqBHqZK6zW3YJ7w5jOz0QIwYj4z7M0w1xY', // demo123
+            nombre: 'Juan Pérez',
+              apellidos: 'García López',
+                telefono: '+34 600 123 456',
+                  direccion: 'Calle Mayor, 123',
+                    codigoPostal: '28001',
+                      ciudad: 'Madrid',
+                        provincia: 'Madrid',
+                          rol: 'cliente'
     },
     {
       id: 'demo-user-2',
-      email: 'demo2@microinfo.es',
-      passwordHash: '$2b$12$LQv3c1yqBHqZK6zW3YJ7w5jOz0QIwYj4z7M0w1xY', // demo123
-      nombre: 'María García',
-      apellidos: 'Martínez Sánchez',
-      telefono: '+34 600 789 012',
-      direccion: 'Avenida de la Castellana, 45',
-      codigoPostal: '28002',
-      ciudad: 'Madrid',
-      provincia: 'Madrid',
-      rol: 'cliente'
+        email: 'demo2@microinfo.es',
+          passwordHash: '$2b$12$LQv3c1yqBHqZK6zW3YJ7w5jOz0QIwYj4z7M0w1xY', // demo123
+            nombre: 'María García',
+              apellidos: 'Martínez Sánchez',
+                telefono: '+34 600 789 012',
+                  direccion: 'Avenida de la Castellana, 45',
+                    codigoPostal: '28002',
+                      ciudad: 'Madrid',
+                        provincia: 'Madrid',
+                          rol: 'cliente' as any
     }
   ]
 
-  // Crear usuarios de demo
-  for (const usuario of usuariosDemo) {
-    await prisma.usuario.create({
-      data: usuario
-    })
-  }
-  console.log(`✅ ${usuariosDemo.length} usuarios de demo creados`)
-
-  for (const producto of productosConValoraciones) {
-    const valoraciones = [
-      {
-        usuarioId: usuariosDemo[0].id,
-        puntuacion: 5,
-        titulo: '¡Excelente producto!',
-        comentario: 'He estado usando este producto durante 3 meses y el rendimiento es increíble. Los juegos corren fluidos en Ultra settings y la pantalla QHD es espectacular.',
-        verificada: true
-      },
-      {
-        usuarioId: usuariosDemo[1].id,
-        puntuacion: 5,
-        titulo: 'Mejor compra del año',
-        comentario: 'Increíble relación calidad-precio. El RGB de la tecla y el sistema de refrigeración funcionan perfectamente. Totalmente recomendado.',
-        verificada: true
-      }
-    ]
-
-    for (const valoracion of valoraciones) {
-      await prisma.valoracion.create({
-        data: {
-          ...valoracion,
-          productoId: producto.id
-        }
+    // Crear usuarios de demo
+    for (const usuario of usuariosDemo) {
+      await prisma.usuario.create({
+        data: usuario
       })
     }
+    console.log(`✅ ${usuariosDemo.length} usuarios de demo creados`)
+
+    for (const producto of productosConValoraciones) {
+      const valoraciones = [
+        {
+          usuarioId: usuariosDemo[0].id,
+          puntuacion: 5,
+          titulo: '¡Excelente producto!',
+          comentario: 'He estado usando este producto durante 3 meses y el rendimiento es increíble. Los juegos corren fluidos en Ultra settings y la pantalla QHD es espectacular.',
+          verificada: true
+        },
+        {
+          usuarioId: usuariosDemo[1].id,
+          puntuacion: 5,
+          titulo: 'Mejor compra del año',
+          comentario: 'Increíble relación calidad-precio. El RGB de la tecla y el sistema de refrigeración funcionan perfectamente. Totalmente recomendado.',
+          verificada: true
+        }
+      ]
+
+      for (const valoracion of valoraciones) {
+        await prisma.valoracion.create({
+          data: {
+            ...valoracion,
+            productoId: producto.id
+          }
+        })
+      }
+    }
+
+    console.log(`✅ ${productosConValoraciones.length * 2} valoraciones creadas`)
+
+    console.log('✅ Seed de productos completado!')
   }
 
-  console.log(`✅ ${productosConValoraciones.length * 2} valoraciones creadas`)
-
-  console.log('✅ Seed de productos completado!')
-}
-
-main()
-  .catch((e) => {
-    console.error('❌ Error durante el seed:', e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+  main()
+    .catch((e) => {
+      console.error('❌ Error durante el seed:', e)
+      process.exit(1)
+    })
+    .finally(async () => {
+      await prisma.$disconnect()
+    })
