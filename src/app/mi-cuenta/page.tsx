@@ -37,6 +37,14 @@ export default function MiCuentaPage() {
     provincia: ''
   })
 
+  // Estado para cambio de contraseña
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+
   useEffect(() => {
     async function fetchProfile() {
       try {
@@ -103,6 +111,55 @@ export default function MiCuentaPage() {
       toast.error('Error de conexión')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Las contraseñas no coinciden')
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) { // Updated to match schema
+      toast.error('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número')
+      return
+    }
+
+    setPasswordLoading(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+          confirmPassword: passwordData.confirmPassword
+        })
+      })
+
+      console.log('ChangePassword Status:', res.status, res.statusText)
+
+      const data = await res.json()
+      console.log('ChangePassword Data:', JSON.stringify(data, null, 2))
+
+      if (data.success) {
+        toast.success('Contraseña actualizada correctamente')
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      } else {
+        console.error('Password change error:', data)
+        if (data.errors) {
+          const firstError = Object.values(data.errors).flat()[0] as string
+          toast.error(firstError || 'Error de validación')
+        } else {
+          toast.error(data.error || 'Error al cambiar la contraseña')
+        }
+      }
+    } catch (error) {
+      console.error('Connection error:', error)
+      toast.error('Error de conexión con el servidor')
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -234,6 +291,47 @@ export default function MiCuentaPage() {
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Cambiar Contraseña</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Contraseña Actual</Label>
+                    <Input
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nueva Contraseña</Label>
+                    <Input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirmar Nueva Contraseña</Label>
+                    <Input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" disabled={passwordLoading}>
+                    {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Actualizar Contraseña
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 

@@ -8,8 +8,10 @@ import { changePasswordSchema } from '@/lib/validations/auth'
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
+    console.log('[ChangePassword] Session:', session ? 'Found' : 'Null', session?.user?.id)
 
     if (!session?.user?.id) {
+      console.log('[ChangePassword] No user ID in session')
       return NextResponse.json(
         {
           success: false,
@@ -20,10 +22,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
+    console.log('[ChangePassword] Body received (masked):', { ...body, currentPassword: '***', newPassword: '***', confirmPassword: '***' })
 
     // Validate input
     const validation = changePasswordSchema.safeParse(body)
     if (!validation.success) {
+      console.log('[ChangePassword] Validation failed:', validation.error.flatten())
       return NextResponse.json(
         {
           success: false,
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
     const user = await db.usuario.findUnique({
       where: { id: session.user.id }
     })
+    console.log('[ChangePassword] User found:', user ? 'Yes' : 'No')
 
     if (!user) {
       return NextResponse.json(
@@ -53,6 +58,7 @@ export async function POST(req: Request) {
 
     // Verify current password
     const isPasswordValid = await compare(currentPassword, user.passwordHash)
+    console.log('[ChangePassword] Password valid:', isPasswordValid)
 
     if (!isPasswordValid) {
       return NextResponse.json(
@@ -72,6 +78,7 @@ export async function POST(req: Request) {
       where: { id: session.user.id },
       data: { passwordHash: newPasswordHash }
     })
+    console.log('[ChangePassword] Password updated successfully')
 
     return NextResponse.json({
       success: true,

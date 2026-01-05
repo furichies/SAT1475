@@ -204,9 +204,26 @@ export default function SatPage() {
   }
 
   const ticketsFiltrados = tickets.filter((ticket) => {
-    // 1. Filtro por Rol (CLIENTE solo ve los suyos, STAFF ve todos)
-    const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'tecnico' || session?.user?.role === 'superadmin'
-    const matchRol = isStaff || ticket.usuarioId === session?.user?.id
+    // 1. Filtro por Rol
+    const role = session?.user?.role
+    const isAdmin = role === 'admin' || role === 'superadmin'
+    const isTecnico = role === 'tecnico'
+    const userId = session?.user?.id
+
+    let matchRol = false
+
+    if (isAdmin) {
+      matchRol = true // Admin ve todo
+    } else if (isTecnico) {
+      // Técnico ve lo asignado y lo suyo propio
+      // Nota: ticket.tecnico puede ser null. Si existe, verificamos si su usuarioId coinicide.
+      const isAssigned = ticket.tecnico?.usuarioId === userId
+      const isOwner = ticket.usuarioId === userId
+      matchRol = isAssigned || isOwner
+    } else {
+      // Cliente ve solo lo suyo
+      matchRol = ticket.usuarioId === userId
+    }
 
     if (!matchRol) return false
 

@@ -23,7 +23,8 @@ import {
     QrCode,
     Download,
     Settings,
-    FileText
+    FileText,
+    Star
 } from 'lucide-react'
 import {
     Dialog,
@@ -49,6 +50,9 @@ export default function TicketDetailPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [isSending, setIsSending] = useState(false)
     const [qrCodeUrl, setQrCodeUrl] = useState('')
+    const [rating, setRating] = useState(0)
+    const [hoverRating, setHoverRating] = useState(0)
+    const [isSubmittingRating, setIsSubmittingRating] = useState(false)
 
     // --- Lógica de Resolución (Base de Conocimiento) ---
     const [isResolucionModalOpen, setIsResolucionModalOpen] = useState(false)
@@ -173,6 +177,9 @@ export default function TicketDetailPage() {
                 // aunque lo ideal es que el servidor mande lo último.
                 // Como setTicket reemplaza todo, está bien.
                 setTicket(data.ticket)
+                if (data.ticket.satisfaccion) {
+                    setRating(data.ticket.satisfaccion)
+                }
 
                 // Generar QR solo la primera vez o si cambia (opcional, pero lo dejamos aquí por simplicidad)
                 if (!qrCodeUrl && !silent) {
@@ -239,6 +246,23 @@ export default function TicketDetailPage() {
             console.error('Error sending comment:', error)
         } finally {
             setIsSending(false)
+        }
+    }
+
+    const handleRating = async (value: number) => {
+        setRating(value)
+        setIsSubmittingRating(true)
+        try {
+            await fetch(`/api/sat/tickets/${id}/valorar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ satisfaccion: value })
+            })
+            fetchTicket(true)
+        } catch (error) {
+            console.error('Error submitting rating:', error)
+        } finally {
+            setIsSubmittingRating(false)
         }
     }
 
@@ -470,6 +494,55 @@ export default function TicketDetailPage() {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {(ticket.estado === 'resuelto' || ticket.estado === 'cerrado') && !isStaff && (
+                            <Card className="shadow-lg border-2 border-yellow-400/20 bg-yellow-50/50">
+                                <CardHeader>
+                                    <CardTitle className="text-xl flex items-center gap-2 text-yellow-700">
+                                        <div className="bg-yellow-100 p-2 rounded-full">
+                                            <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                                        </div>
+                                        Valorar Atención y Resolución
+                                    </CardTitle>
+                                    <CardDescription>
+                                        ¿Qué tal ha sido el servicio técnico? Su opinión nos ayuda a mejorar.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex flex-col items-center gap-4 py-4">
+                                        <div className="flex gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button
+                                                    key={star}
+                                                    type="button"
+                                                    className="transition-all hover:scale-110 focus:outline-none"
+                                                    onMouseEnter={() => setHoverRating(star)}
+                                                    onMouseLeave={() => setHoverRating(0)}
+                                                    onClick={() => handleRating(star)}
+                                                    disabled={isSubmittingRating}
+                                                >
+                                                    <Star
+                                                        className={`h-10 w-10 ${(hoverRating || rating) >= star
+                                                                ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm'
+                                                                : 'text-gray-300'
+                                                            }`}
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-sm font-medium text-muted-foreground h-5 text-center">
+                                            {hoverRating === 1 && "Muy insatisfecho"}
+                                            {hoverRating === 2 && "Insatisfecho"}
+                                            {hoverRating === 3 && "Normal"}
+                                            {hoverRating === 4 && "Satisfecho"}
+                                            {hoverRating === 5 && "Muy satisfecho"}
+                                            {!hoverRating && rating > 0 && "¡Gracias por su valoración!"}
+                                            {!hoverRating && rating === 0 && "Seleccione una puntuación"}
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         <Card className="flex flex-col shadow-xl border-none overflow-hidden">
                             {/* ... Chat Content ... */}

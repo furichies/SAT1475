@@ -182,7 +182,8 @@ export default function AdminTecnicosPage() {
     telefono: '',
     nivel: 'junior',
     especialidades: [] as string[],
-    disponible: true
+    disponible: true,
+    password: ''
   })
 
   const resetForm = () => {
@@ -193,7 +194,8 @@ export default function AdminTecnicosPage() {
       telefono: '',
       nivel: 'junior',
       especialidades: [],
-      disponible: true
+      disponible: true,
+      password: ''
     })
     setTecnicoSeleccionado(null)
     setIsEditing(false)
@@ -214,7 +216,8 @@ export default function AdminTecnicosPage() {
       telefono: tecnico.telefono,
       nivel: tecnico.nivel,
       especialidades: [...tecnico.especialidades],
-      disponible: tecnico.disponible
+      disponible: tecnico.disponible,
+      password: '' // Reset password field on edit
     })
     setIsEditing(true)
     setIsFormModalOpen(true)
@@ -525,6 +528,16 @@ export default function AdminTecnicosPage() {
                   onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{isEditing ? 'Nueva Contraseña (Opcional)' : 'Contraseña *'}</Label>
+              <Input
+                type="password"
+                placeholder={isEditing ? "Dejar en blanco para mantener actual" : "Contraseña segura"}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              {!isEditing && <p className="text-xs text-muted-foreground">Si se deja vacío, se usará 'MicroInfo2024!' por defecto.</p>}
             </div>
             <div className="space-y-2">
               <Label>Nivel de Experiencia *</Label>

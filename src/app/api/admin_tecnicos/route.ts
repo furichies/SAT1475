@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const nivel = searchParams.get('nivel') || ''
     const disponible = searchParams.get('disponible') || ''
 
+    // Get technicians with their tickets to calculate stats dynamically
     const tecnicos = await db.tecnico.findMany({
       include: {
         usuario: {
@@ -28,26 +29,51 @@ export async function GET(req: NextRequest) {
             ultimoAcceso: true,
             fechaRegistro: true
           }
+        },
+        tickets: {
+          select: {
+            estado: true,
+            satisfaccion: true
+          }
         }
       }
     })
 
     // Mapear al formato esperado por el frontend
-    let filteredTecnicos = tecnicos.map(t => ({
-      id: t.id,
-      nombre: t.usuario.nombre,
-      apellidos: t.usuario.apellidos || '',
-      email: t.usuario.email,
-      telefono: t.usuario.telefono || '',
-      especialidades: t.especialidades ? JSON.parse(t.especialidades) : [],
-      nivel: t.nivel,
-      disponible: t.disponible,
-      ticketsAsignados: t.ticketsAsignados,
-      ticketsResueltos: t.ticketsResueltos,
-      valoracionMedia: t.valoracionMedia,
-      ultimaConexion: t.usuario.ultimoAcceso ? new Date(t.usuario.ultimoAcceso).toLocaleString() : 'Nunca',
-      fechaCreacion: new Date(t.fechaCreacion).toISOString().split('T')[0]
-    }))
+    let filteredTecnicos = tecnicos.map(t => {
+      // Calculate stats dynamically
+      const asignados = t.tickets.filter(ticket =>
+        ticket.estado !== 'resuelto' &&
+        ticket.estado !== 'cerrado' &&
+        ticket.estado !== 'cancelado'
+      ).length
+
+      const resueltos = t.tickets.filter(ticket =>
+        ticket.estado === 'resuelto' ||
+        ticket.estado === 'cerrado'
+      ).length
+
+      const valoraciones = t.tickets.filter(ticket => ticket.satisfaccion && ticket.satisfaccion > 0)
+      const promedio = valoraciones.length > 0
+        ? valoraciones.reduce((acc, curr) => acc + (curr.satisfaccion || 0), 0) / valoraciones.length
+        : 0
+
+      return {
+        id: t.id,
+        nombre: t.usuario.nombre,
+        apellidos: t.usuario.apellidos || '',
+        email: t.usuario.email,
+        telefono: t.usuario.telefono || '',
+        especialidades: t.especialidades ? JSON.parse(t.especialidades) : [],
+        nivel: t.nivel,
+        disponible: t.disponible,
+        ticketsAsignados: asignados,
+        ticketsResueltos: resueltos,
+        valoracionMedia: Number(promedio.toFixed(1)),
+        ultimaConexion: t.usuario.ultimoAcceso ? new Date(t.usuario.ultimoAcceso).toLocaleString() : 'Nunca',
+        fechaCreacion: new Date(t.fechaCreacion).toISOString().split('T')[0]
+      }
+    })
 
     // Aplicar filtros adicionales si es necesario (ya que Prisma no filtra JSON fácilmente)
     if (especialidad && especialidad !== 'todos') {
@@ -162,7 +188,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { id, nombre, apellidos, email, telefono, especialidades, nivel, disponible } = body
+    const { id, nombre, apellidos, email, telefono, especialidades, nivel, disponible, password } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID es requerido' }, { status: 400 })
@@ -186,15 +212,23 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    // Prepare user update data
+    const userData: any = {
+      nombre,
+      apellidos,
+      email,
+      telefono
+    }
+
+    // If password provided, update it
+    if (password && password.trim() !== '') {
+      userData.passwordHash = await hash(password, 12)
+    }
+
     // Actualizar datos del usuario
     await db.usuario.update({
       where: { id: tecnicoActual.usuarioId },
-      data: {
-        nombre,
-        apellidos,
-        email,
-        telefono
-      }
+      data: userData
     })
 
     // Actualizar datos del técnico
