@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+// ... rest of imports
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,23 +28,62 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
-// Mock data simplificado
-const productosMock = [
-  { id: '1', sku: 'LAP-GAM-X15', nombre: 'Portátil Gaming Pro X15', precio: 1499, stock: 12, categoria: 'ordenadores', marca: 'Asus', imagen: '/images/producto_laptop_gaming.png', enOferta: true, destacado: true },
-  { id: '2', sku: 'SSD-SAM-2TB', nombre: 'SSD NVMe Samsung 2TB', precio: 329, stock: 8, categoria: 'almacenamiento', marca: 'Samsung', imagen: '/images/producto_ssd.png', enOferta: true },
-  { id: '3', sku: 'RAM-COR-DD5-32', nombre: 'RAM DDR5 32GB Corsair', precio: 169, stock: 15, categoria: 'ram', marca: 'Corsair', imagen: '/images/producto_ram.png', enOferta: true, destacado: true },
-  { id: '4', sku: 'MON-SAM-32-4K', nombre: 'Monitor Curvo 32" 4K', precio: 749, stock: 3, categoria: 'perifericos', marca: 'Samsung', imagen: '/images/producto_monitor.png', enOferta: true },
-  { id: '5', sku: 'CPU-INT-i9', nombre: 'CPU Intel Core i9', precio: 649, stock: 5, categoria: 'componentes', marca: 'Intel', imagen: '/images/producto_cpu.png', enOferta: false, destacado: true },
-  { id: '6', sku: 'GPU-NV-RTX4080', nombre: 'NVIDIA RTX 4080', precio: 1899, stock: 2, categoria: 'componentes', marca: 'NVIDIA', imagen: '/images/producto_gpu.png', enOferta: false }
-]
+// Mock data deleted. Now fetching from DB.
+// Componente para manejar imágenes de productos de forma robusta
+const ProductThumbnail = ({ src, alt }: { src: string, alt: string }) => {
+  const [error, setError] = useState(false)
+
+  if (!src || error) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+        <ImageIcon className="h-6 w-6" />
+      </div>
+    )
+  }
+
+  // Ensure path is absolute if it's a local file
+  const imagePath = src.startsWith('http') || src.startsWith('/') ? src : `/${src}`
+
+  return (
+    <img
+      src={imagePath}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setError(true)}
+    />
+  )
+}
 
 export default function AdminProductosPage() {
   const [busqueda, setBusqueda] = useState('')
   const [categoria, setCategoria] = useState('todos')
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
-  const [productos, setProductos] = useState(productosMock)
+  const [productos, setProductos] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [productoSeleccionado, setProductoSeleccionado] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
+
+  // Fetch products
+  const fetchProductos = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/admin_productos')
+      const data = await res.json()
+      if (data.success) {
+        setProductos(data.data)
+      } else {
+        console.error('Error fetching products:', data.error)
+      }
+    } catch (error) {
+      console.error('Error connection:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProductos()
+  }, [])
 
   // Estado para el formulario
   const [formData, setFormData] = useState({
@@ -126,41 +166,67 @@ export default function AdminProductosPage() {
     setIsFormModalOpen(true)
   }
 
-  const handleBorrar = (id: string) => {
+  const handleBorrar = async (id: string) => {
     if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-      setProductos(productos.filter(p => p.id !== id))
+      try {
+        const res = await fetch(`/api/admin_productos/${id}`, {
+          method: 'DELETE'
+        })
+        const data = await res.json()
+        if (data.success) {
+          fetchProductos()
+        } else {
+          alert('Error al eliminar: ' + data.error)
+        }
+      } catch (error) {
+        console.error('Error deleting:', error)
+      }
     }
   }
 
-  const handleGuardar = () => {
-    if (!formData.nombre || !formData.sku || !formData.precio) {
+  const handleGuardar = async () => {
+    if (!formData.nombre || !formData.sku || !formData.precio || !formData.stock) {
       alert('Por favor, rellena los campos obligatorios (*)')
       return
     }
 
-    const itemData = {
+    const payload = {
       ...formData,
       precio: parseFloat(formData.precio),
       stock: parseInt(formData.stock) || 0,
-      imagen: formData.imagen || '/images/placeholder.png'
+      stockMinimo: 5 // Default
     }
 
-    if (isEditing && productoSeleccionado) {
-      setProductos(productos.map(p =>
-        p.id === productoSeleccionado.id
-          ? { ...p, ...itemData }
-          : p
-      ))
-    } else {
-      const nuevo = {
-        id: Date.now().toString(),
-        ...itemData
+    try {
+      let res
+      if (isEditing && productoSeleccionado) {
+        // UPDATE
+        res = await fetch(`/api/admin_productos/${productoSeleccionado.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      } else {
+        // CREATE
+        res = await fetch('/api/admin_productos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
       }
-      setProductos([nuevo, ...productos])
-    }
 
-    setIsFormModalOpen(false)
-    resetForm()
+      const data = await res.json()
+      if (data.success) {
+        setIsFormModalOpen(false)
+        resetForm()
+        fetchProductos() // Reload list
+      } else {
+        alert('Error al guardar: ' + (data.error || 'Error desconocido'))
+      }
+    } catch (error) {
+      console.error('Error saving product:', error)
+      alert('Error de conexión al guardar')
+    }
   }
 
   const productosFiltrados = productos.filter(p => {
@@ -169,14 +235,21 @@ export default function AdminProductosPage() {
     return true
   })
 
-  const handleStockUpdate = (id: string, delta: number) => {
-    setProductos(productos.map(p => {
-      if (p.id === id) {
-        const nuevoStock = Math.max(0, p.stock + delta)
-        return { ...p, stock: nuevoStock }
-      }
-      return p
-    }))
+  const handleStockUpdate = async (id: string, delta: number) => {
+    const producto = productos.find(p => p.id === id)
+    if (!producto) return
+
+    const nuevoStock = Math.max(0, producto.stock + delta)
+    try {
+      await fetch(`/api/admin_productos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: nuevoStock })
+      })
+      fetchProductos() // Refresh to be safe
+    } catch (error) {
+      console.error('Error updating stock:', error)
+    }
   }
 
   return (
@@ -266,8 +339,8 @@ export default function AdminProductosPage() {
                       <td className="p-4 font-medium text-xs">{producto.sku}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded flex-shrink-0 overflow-hidden">
-                            <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
+                          <div className="w-12 h-12 bg-white border border-gray-200 rounded flex-shrink-0 overflow-hidden flex items-center justify-center">
+                            <ProductThumbnail src={producto.imagen} alt={producto.nombre} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium line-clamp-1">{producto.nombre}</div>

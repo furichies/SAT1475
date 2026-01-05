@@ -1,122 +1,143 @@
 import { NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
+import { db } from '@/lib/db'
+import { ProductoTipo } from '@prisma/client'
 
-let productosAdminMock = [
-  {
-    id: '1',
-    sku: 'LAP-GAM-X15',
-    nombre: 'Portátil Gaming Pro X15',
-    descripcionCorta: 'Intel Core i7-13700H, RTX 4070, 32GB RAM DDR5',
-    descripcionLarga: 'Portátil gaming de alto rendimiento con Intel Core i7 de 13ª generación, NVIDIA GeForce RTX 4070 de 8GB, 32GB de RAM DDR5 a 6000MHz, SSD NVMe de 1TB y pantalla de 15.6" QHD 240Hz. Incluye Windows 11 Home preinstalado y 2 años de garantía.',
-    precio: 1499,
-    precioOferta: 1299,
-    stock: 12,
-    stockMinimo: 5,
-    categoria: 'ordenadores',
-    marca: 'Asus',
-    modelo: 'ROG Strix G15',
-    imagen: '/images/producto_laptop_gaming.png',
-    enOferta: true,
-    destacado: true,
-    enStock: true,
-    estado: 'activo',
-    fechaCreacion: '2023-12-15',
-    fechaActualizacion: '2023-12-28'
+// GET /api/admin_productos - Obtener todos los productos
+export async function GET() {
+  try {
+    const productos = await db.producto.findMany({
+      include: {
+        categoria: true
+      },
+      orderBy: {
+        fechaCreacion: 'desc'
+      }
+    })
+
+    const productosFormateados = productos.map(p => ({
+      id: p.id,
+      sku: p.sku,
+      nombre: p.nombre,
+      descripcionCorta: p.descripcionCorta || '',
+      descripcionLarga: p.descripcion || '',
+      precio: p.precio,
+      precioOferta: p.precioOferta,
+      stock: p.stock,
+      stockMinimo: p.stockMinimo,
+      categoria: p.categoria?.nombre || p.tipo || 'Sin categoría', // Fallback to type or generic
+      categoriaId: p.categoriaId,
+      marca: p.marca || '',
+      modelo: p.modelo || '',
+      imagen: (() => {
+        if (!p.imagenes) return ''
+        let mainImage = p.imagenes
+
+        // Handle common JSON array format stored as string
+        if (mainImage.startsWith('["')) {
+          try {
+            const parsed = JSON.parse(mainImage)
+            mainImage = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : ''
+          } catch (e) {
+            // Fallback to simple clean
+            mainImage = mainImage.replace(/[\[\]"]/g, '').split(',')[0]
+          }
+        } else {
+          // Handle simple comma separation
+          mainImage = mainImage.split(',')[0]
+        }
+
+        // Remove public prefix if inadvertently stored, so it maps to root
+        return mainImage.replace(/^public\//, '/').replace(/^\/?images\//, '/images/')
+      })(),
+      enOferta: !!p.precioOferta && p.precioOferta < p.precio,
+      destacado: p.destacado,
+      enStock: p.stock > 0,
+      estado: p.activo ? 'activo' : 'inactivo',
+      fechaCreacion: p.fechaCreacion.toISOString(),
+      fechaActualizacion: p.fechaActualizacion.toISOString()
+    }))
+
+    return NextResponse.json({
+      success: true,
+      data: productosFormateados
+    })
+  } catch (error) {
+    console.error('Error en GET /api/admin_productos:', error)
+    return NextResponse.json(
+      { success: false, error: 'Error al obtener productos' },
+      { status: 500 }
+    )
   }
-]
+}
 
-// POST /api/admin_productos - Crear producto (admin)
+// POST /api/admin_productos - Crear producto
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { sku, nombre, descripcionCorta, descripcionLarga, precio, precioOferta, stock, stockMinimo, categoria, marca, modelo, imagen, enOferta, destacado, enStock } = body
+    const { sku, nombre, descripcionCorta, descripcionLarga, precio, precioOferta, stock, stockMinimo, categoria, marca, modelo, imagen, destacado } = body
 
-    // Validaciones básicas
-    if (!sku || sku.trim().length < 3) {
+    // Validation
+    if (!sku || !nombre || !precio) {
       return NextResponse.json(
-        { success: false, error: 'El SKU debe tener al menos 3 caracteres' },
+        { success: false, error: 'Faltan campos obligatorios' },
         { status: 400 }
       )
     }
 
-    if (!nombre || nombre.trim().length < 5) {
-      return NextResponse.json(
-        { success: false, error: 'El nombre debe tener al menos 5 caracteres' },
-        { status: 400 }
-      )
+    // Determine category ID or create if not exists, or just fallback to null if using mapping logic not provided.
+    // For simplicity, we search for category by name or just use null if not found.
+    // Assuming 'categoria' coming from frontend is a string name (slug-like).
+
+    let categoriaId: string | null = null
+    const catNombre = categoria || 'componentes'
+
+    const catDb = await db.categoria.findFirst({
+      where: { nombre: { contains: catNombre } }
+    })
+
+    if (catDb) {
+      categoriaId = catDb.id
     }
 
-    if (!descripcionCorta || descripcionCorta.trim().length < 10) {
-      return NextResponse.json(
-        { success: false, error: 'La descripción corta debe tener al menos 10 caracteres' },
-        { status: 400 }
-      )
-    }
+    // Determine Product Type based on category or default
+    let tipo: ProductoTipo = 'componente'
+    if (String(categoria).toLowerCase().includes('ordenador')) tipo = 'equipo_completo'
+    else if (String(categoria).toLowerCase().includes('periferico')) tipo = 'periferico'
+    else if (String(categoria).toLowerCase().includes('software')) tipo = 'software'
 
-    if (!descripcionLarga || descripcionLarga.trim().length < 20) {
-      return NextResponse.json(
-        { success: false, error: 'La descripción larga debe tener al menos 20 caracteres' },
-        { status: 400 }
-      )
-    }
 
-    if (!precio || precio < 0) {
-      return NextResponse.json(
-        { success: false, error: 'El precio es requerido' },
-        { status: 400 }
-      )
-    }
-
-    if (!stock || stock < 0) {
-      return NextResponse.json(
-        { success: false, error: 'El stock es requerido' },
-        { status: 400 }
-      )
-    }
-
-    if (!categoria) {
-      return NextResponse.json(
-        { success: false, error: 'La categoría es requerida' },
-        { status: 400 }
-      )
-    }
-
-    if (!marca) {
-      return NextResponse.json(
-        { success: false, error: 'La marca es requerida' },
-        { status: 400 }
-      )
-    }
-
-    // Crear nuevo producto mock
-    const nuevoProducto = {
-      id: randomUUID(),
-      sku,
-      nombre,
-      descripcionCorta,
-      descripcionLarga,
-      precio: Number(precio),
-      precioOferta: precioOferta ? Number(precioOferta) : null,
-      stock: Number(stock),
-      stockMinimo: Number(stockMinimo) || 3,
-      categoria,
-      marca,
-      modelo,
-      imagen: imagen || '',
-      enOferta: Boolean(enOferta),
-      destacado: Boolean(destacado),
-      enStock: Boolean(enStock),
-      estado: 'activo',
-      fechaCreacion: new Date().toISOString(),
-      fechaActualizacion: new Date().toISOString()
-    }
-
-    productosAdminMock.push(nuevoProducto)
+    const nuevoProducto = await db.producto.create({
+      data: {
+        sku,
+        nombre,
+        descripcion: descripcionLarga,
+        descripcionCorta,
+        precio: Number(precio),
+        precioOferta: precioOferta ? Number(precioOferta) : null,
+        stock: Number(stock),
+        stockMinimo: Number(stockMinimo) || 5,
+        categoriaId: categoriaId,
+        marca,
+        modelo,
+        tipo,
+        imagenes: imagen, // Storing single image for now
+        destacado: Boolean(destacado),
+        activo: true
+      },
+      include: {
+        categoria: true
+      }
+    })
 
     return NextResponse.json({
       success: true,
       data: {
-        producto: nuevoProducto,
+        producto: {
+          ...nuevoProducto,
+          imagen: nuevoProducto.imagenes,
+          categoria: nuevoProducto.categoria?.nombre || nuevoProducto.tipo,
+          enOferta: !!nuevoProducto.precioOferta
+        },
         mensaje: 'Producto creado correctamente'
       }
     }, { status: 201 })
@@ -125,8 +146,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Error al crear producto',
-        datos: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        error: 'Error al crear producto'
       },
       { status: 500 }
     )
