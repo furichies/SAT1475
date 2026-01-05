@@ -234,12 +234,15 @@ export default function AdminTecnicosPage() {
 
     setIsLoading(true)
     try {
+      const method = isEditing ? 'PUT' : 'POST'
+      const body = isEditing ? { ...formData, id: tecnicoSeleccionado.id } : formData
+
       const res = await fetch('/api/admin_tecnicos', {
-        method: 'POST',
+        method: method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(body)
       })
       const data = await res.json()
 

@@ -153,3 +153,80 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Error al crear técnico' }, { status: 500 })
   }
 }
+// PUT /api/admin_tecnicos - Actualizar técnico
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { id, nombre, apellidos, email, telefono, especialidades, nivel, disponible } = body
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'ID es requerido' }, { status: 400 })
+    }
+
+    // Buscamos el tecnico para obtener el usuarioId
+    const tecnicoActual = await db.tecnico.findUnique({
+      where: { id },
+      include: { usuario: true }
+    })
+
+    if (!tecnicoActual) {
+      return NextResponse.json({ success: false, error: 'Técnico no encontrado' }, { status: 404 })
+    }
+
+    // Verificar si el email ha cambiado y si ya existe otro usuario con ese email
+    if (email !== tecnicoActual.usuario.email) {
+      const existingUser = await db.usuario.findUnique({ where: { email } })
+      if (existingUser) {
+        return NextResponse.json({ success: false, error: 'El email ya está en uso por otro usuario' }, { status: 400 })
+      }
+    }
+
+    // Actualizar datos del usuario
+    await db.usuario.update({
+      where: { id: tecnicoActual.usuarioId },
+      data: {
+        nombre,
+        apellidos,
+        email,
+        telefono
+      }
+    })
+
+    // Actualizar datos del técnico
+    const tecnicoActualizado = await db.tecnico.update({
+      where: { id },
+      data: {
+        especialidades: JSON.stringify(especialidades || []),
+        nivel: nivel || 'junior',
+        disponible: disponible
+      },
+      include: {
+        usuario: true
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        tecnico: {
+          id: tecnicoActualizado.id,
+          nombre: tecnicoActualizado.usuario.nombre,
+          apellidos: tecnicoActualizado.usuario.apellidos,
+          email: tecnicoActualizado.usuario.email,
+          especialidades: tecnicoActualizado.especialidades,
+          nivel: tecnicoActualizado.nivel,
+          disponible: tecnicoActualizado.disponible
+        },
+        mensaje: 'Técnico actualizado correctamente'
+      }
+    })
+  } catch (error) {
+    console.error('Error en PUT /api/admin_tecnicos:', error)
+    return NextResponse.json({ success: false, error: 'Error al actualizar técnico' }, { status: 500 })
+  }
+}

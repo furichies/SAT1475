@@ -52,13 +52,24 @@ async function main() {
     }
   ]
 
-  console.log('📁 Creando categorías...')
+  console.log('📁 Creando/Actualizando categorías...')
   for (const categoria of categorias) {
-    await prisma.categoria.create({
-      data: categoria
+    const existing = await prisma.categoria.findFirst({
+      where: { nombre: categoria.nombre }
     })
+
+    if (existing) {
+      await prisma.categoria.update({
+        where: { id: existing.id },
+        data: categoria
+      })
+    } else {
+      await prisma.categoria.create({
+        data: categoria
+      })
+    }
   }
-  console.log(`✅ ${categorias.length} categorías creadas`)
+  console.log(`✅ ${categorias.length} categorías procesadas`)
 
   // Crear productos
   const productos = [
@@ -471,15 +482,20 @@ async function main() {
       }
     }
 
-    await prisma.producto.create({
-      data: {
+    await prisma.producto.upsert({
+      where: { sku: producto.sku },
+      update: {
+        ...producto,
+        categoriaId
+      },
+      create: {
         ...producto,
         categoriaId
       }
     })
   }
 
-  console.log(`✅ ${productos.length} productos creados`)
+  console.log(`✅ ${productos.length} productos procesados`)
 
   // Obtener productos creados para valoraciones
   const productosCreados = await prisma.producto.findMany({

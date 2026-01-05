@@ -28,6 +28,7 @@ import {
   FileDown
 } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +43,8 @@ import autoTable from 'jspdf-autotable'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
 export default function AdminPedidosPage() {
+  const searchParams = useSearchParams()
+  const clienteId = searchParams.get('clienteId') || ''
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState('todos')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<any>(null)
@@ -53,7 +56,7 @@ export default function AdminPedidosPage() {
   const fetchPedidos = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin_pedidos?estado=${estado !== 'todos' ? estado : ''}&busqueda=${busqueda}`)
+      const res = await fetch(`/api/admin_pedidos?estado=${estado !== 'todos' ? estado : ''}&busqueda=${busqueda}&clienteId=${clienteId}`)
       const data = await res.json()
       if (data.success) {
         setPedidos(data.data.pedidos)
@@ -68,7 +71,7 @@ export default function AdminPedidosPage() {
 
   useEffect(() => {
     fetchPedidos()
-  }, [estado, busqueda])
+  }, [estado, busqueda, clienteId])
 
   const handleUpdateEstado = async (id: string, nuevoEstado: string) => {
     try {
@@ -201,6 +204,18 @@ export default function AdminPedidosPage() {
             <p className="text-gray-600">
               Panel de control avanzado para la administración de ventas y logística.
             </p>
+            {clienteId && (
+              <div className="mt-4 flex items-center gap-2">
+                <Badge variant="secondary" className="text-sm px-3 py-1">
+                  Filtrando por Cliente ID: {clienteId}
+                </Badge>
+                <Link href="/admin/pedidos">
+                  <Badge variant="outline" className="cursor-pointer hover:bg-gray-100">
+                    <X className="h-3 w-3 mr-1" /> Limpiar filtro
+                  </Badge>
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="bg-white border p-6 rounded-2xl mb-6 shadow-sm">

@@ -17,7 +17,10 @@ export async function GET(req: NextRequest) {
 
     const where: any = {
       activo: true,
-      precio: { lte: precioMax }
+      precio: {
+        gt: 0,
+        lte: precioMax
+      }
     }
 
     if (busqueda) {

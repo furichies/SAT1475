@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const estadoStr = searchParams.get('estado') || ''
     const busqueda = searchParams.get('busqueda') || ''
+    const clienteId = searchParams.get('clienteId') || ''
 
     const pedidos = await db.pedido.findMany({
       include: {
@@ -57,7 +58,11 @@ export async function GET(req: NextRequest) {
       notas: p.notas
     }))
 
-    // Filtrado adicional si es necesario
+    // Filtrado adicional
+    if (clienteId) {
+      mappedPedidos = mappedPedidos.filter(p => p.clienteId === clienteId)
+    }
+
     if (estadoStr && estadoStr !== 'todos') {
       mappedPedidos = mappedPedidos.filter(p => p.estado === estadoStr)
     }

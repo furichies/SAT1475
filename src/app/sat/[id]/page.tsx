@@ -38,34 +38,41 @@ export default function TicketDetailPage() {
     const [isSending, setIsSending] = useState(false)
     const [qrCodeUrl, setQrCodeUrl] = useState('')
 
-    const fetchTicket = async () => {
+    const fetchTicket = async (silent = false) => {
         if (!id) return
+        if (!silent) setIsLoading(true)
         try {
             const res = await fetch(`/api/sat/tickets/${id}`)
             if (!res.ok) throw new Error('Failed to fetch')
             const data = await res.json()
             if (data.success) {
+                // Si estamos enviando, no sobreescribir con datos antiguos si hubiera lag,
+                // aunque lo ideal es que el servidor mande lo último.
+                // Como setTicket reemplaza todo, está bien.
                 setTicket(data.ticket)
-                // Generar código QR con la URL del ticket
-                const ticketUrl = `${window.location.origin}/sat/${id}`
-                try {
-                    const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
-                        width: 256,
-                        margin: 2,
-                        color: {
-                            dark: '#000000',
-                            light: '#FFFFFF'
-                        }
-                    })
-                    setQrCodeUrl(qrDataUrl)
-                } catch (qrError) {
-                    console.error('Error generating QR code:', qrError)
+
+                // Generar QR solo la primera vez o si cambia (opcional, pero lo dejamos aquí por simplicidad)
+                if (!qrCodeUrl && !silent) {
+                    const ticketUrl = `${window.location.origin}/sat/${id}`
+                    try {
+                        const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
+                            width: 256,
+                            margin: 2,
+                            color: {
+                                dark: '#000000',
+                                light: '#FFFFFF'
+                            }
+                        })
+                        setQrCodeUrl(qrDataUrl)
+                    } catch (qrError) {
+                        console.error('Error generating QR code:', qrError)
+                    }
                 }
             }
         } catch (error) {
             console.error('Error fetching ticket:', error)
         } finally {
-            setIsLoading(false)
+            if (!silent) setIsLoading(false)
         }
     }
 
@@ -76,6 +83,17 @@ export default function TicketDetailPage() {
             fetchTicket()
         }
     }, [id, session, status])
+
+    // Polling para actualización automática de mensajes (cada 5 segundos)
+    useEffect(() => {
+        if (!id || status !== 'authenticated') return
+
+        const intervalId = setInterval(() => {
+            fetchTicket(true)
+        }, 5000)
+
+        return () => clearInterval(intervalId)
+    }, [id, status])
 
     const handleEnviarComentario = async () => {
         if (!nuevoComentario.trim() || !id) return
@@ -344,7 +362,7 @@ export default function TicketDetailPage() {
                                                     <div className={`flex items-center justify-between gap-8 mb-3 pb-2 border-b ${seg.usuarioId === session?.user?.id ? 'border-white/20' : 'border-muted'
                                                         }`}>
                                                         <span className="text-xs font-black uppercase tracking-widest opacity-90">
-                                                            {seg.usuarioId === session?.user?.id ? 'Tú (Cliente)' : (seg.usuario?.nombre || 'Especialista MicroInfo')}
+                                                            {seg.usuarioId === session?.user?.id ? `Tú (${session?.user?.name || 'Yo'})` : (seg.usuario?.nombre || 'Especialista MicroInfo')}
                                                         </span>
                                                         <span className="text-[10px] font-bold opacity-70 whitespace-nowrap">
                                                             {new Date(seg.fechaCreacion).toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}

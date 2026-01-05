@@ -36,6 +36,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog"
+import Link from 'next/link'
 
 export default function AdminClientesPage() {
     const [busqueda, setBusqueda] = useState('')
@@ -279,8 +280,10 @@ export default function AdminClientesPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem className="gap-2">
-                                                                <ShoppingBag className="h-4 w-4" /> Ver Pedidos
+                                                            <DropdownMenuItem className="gap-2" asChild>
+                                                                <Link href={`/admin/pedidos?clienteId=${cliente.id}`}>
+                                                                    <ShoppingBag className="h-4 w-4" /> Ver Pedidos
+                                                                </Link>
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem className="gap-2 text-red-600" onClick={() => handleEliminarCliente(cliente.id, cliente.nombre)}>
                                                                 <Trash className="h-4 w-4" /> Eliminar Cliente

@@ -30,7 +30,7 @@ El sistema utiliza bcrypt para la seguridad de las contraseñas. Asegúrate de t
 bun add bcrypt
 ```
 
-**Linux (Debian/Ubuntu):**
+**Linux (Debian 13 / Ubuntu):**
 ```bash
 # Usando curl
 curl -fsSL https://bun.sh/install | bash
