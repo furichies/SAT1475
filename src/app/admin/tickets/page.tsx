@@ -32,7 +32,11 @@ import {
   FileText,
   Calendar,
   Tag,
+  BookOpen, // New icon for KB
+  Share, // New icon for sharing to KB
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
@@ -122,7 +126,9 @@ export default function AdminTicketsPage() {
           tecnico: t.tecnico?.usuario?.nombre || 'Sin asignar',
           fecha: new Date(t.fechaCreacion).toLocaleString(),
           estado: t.estado,
-          descripcion: t.descripcion
+          descripcion: t.descripcion,
+          diagnostico: t.diagnostico, // Added
+          solucion: t.solucion // Added
         }))
         setTickets(mappedTickets)
       } else {
@@ -152,7 +158,10 @@ export default function AdminTicketsPage() {
     tipo: 'incidencia',
     estado: 'abierto',
     tecnico: 'Sin asignar',
-    cliente: ''
+    cliente: '',
+    diagnostico: '',
+    solucion: '',
+    guardarEnKB: false // Temporary state for UI
   })
 
   const handleGuardar = async () => {
@@ -162,11 +171,48 @@ export default function AdminTicketsPage() {
       const res = await fetch(isNuevo ? '/api/sat/tickets' : `/api/sat/tickets/${ticketSeleccionado.id}`, {
         method: isNuevo ? 'POST' : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formTicket)
+        body: JSON.stringify({
+          ...formTicket,
+          guardarEnKB: undefined // Don't send this to ticket API
+        })
       })
 
       const data = await res.json()
       if (data.success) {
+        // Logica para guardar en KB si se solicitó
+        if (formTicket.guardarEnKB && formTicket.solucion && formTicket.asunto) {
+          console.log('Attempting to save to KB:', {
+            titulo: `Solución: ${formTicket.asunto}`,
+            solucion: formTicket.solucion
+          })
+          try {
+            const resKB = await fetch('/api/admin_conocimiento', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                titulo: `Solución: ${formTicket.asunto} [Ticket ${ticketSeleccionado?.numero || ''} - ${new Date().toLocaleTimeString()}]`,
+                contenido: `PROBLEMA:\n${formTicket.descripcion}\n\nDIAGNÓSTICO:\n${formTicket.diagnostico}\n\nSOLUCIÓN:\n${formTicket.solucion}`,
+                categoria: 'Reparación', // Default category or could be improved
+                estado: 'borrador', // Draft for review
+                tags: ['ticket-resuelto', formTicket.tipo]
+              })
+            })
+
+            const resultKB = await resKB.json()
+            if (resKB.ok && resultKB.success) {
+              alert('Solución guardada en Base de Conocimiento (Borrador)')
+            } else {
+              console.error('KB Save Failed:', resultKB)
+              alert(`Ticket guardado, pero ERROR al guardar en KB: ${resultKB.error || 'Desconocido'}. Verifica si ya existe.`)
+            }
+          } catch (kbError) {
+            console.error('Error saving to KB', kbError)
+            alert('Ticket guardado, pero error de conexión al guardar en KB')
+          }
+        } else if (formTicket.guardarEnKB) {
+          alert('Para guardar en KB necesitas completar Asunto y Solución')
+        }
+
         // Forzamos actualización inmediata
         await fetchTickets()
       } else {
@@ -192,7 +238,10 @@ export default function AdminTicketsPage() {
       tipo: ticket.tipo,
       estado: ticket.estado,
       tecnico: ticket.tecnico,
-      cliente: ticket.cliente
+      cliente: ticket.cliente,
+      diagnostico: ticket.diagnostico || '',
+      solucion: ticket.solucion || '',
+      guardarEnKB: false
     })
     setIsEdicion(true)
   }
@@ -207,7 +256,10 @@ export default function AdminTicketsPage() {
       tipo: 'incidencia',
       estado: 'abierto',
       tecnico: 'Sin asignar',
-      cliente: ''
+      cliente: '',
+      diagnostico: '',
+      solucion: '',
+      guardarEnKB: false
     })
   }
 
@@ -581,6 +633,49 @@ export default function AdminTicketsPage() {
                   rows={4}
                 />
               </div>
+
+              {/* Sección de Resolución (solo edición) */}
+              {isEdicion && (
+                <div className="space-y-4 pt-4 border-t bg-blue-50/50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" /> Resolución Técnica
+                  </h3>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Diagnóstico</Label>
+                    <Textarea
+                      value={formTicket.diagnostico}
+                      onChange={(e) => setFormTicket({ ...formTicket, diagnostico: e.target.value })}
+                      placeholder="Causa raíz del problema..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Solución Aplicada</Label>
+                    <Textarea
+                      value={formTicket.solucion}
+                      onChange={(e) => setFormTicket({ ...formTicket, solucion: e.target.value })}
+                      placeholder="Pasos realizados para resolver la incidencia..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox
+                      id="kb-save"
+                      checked={formTicket.guardarEnKB}
+                      onCheckedChange={(checked) => setFormTicket({ ...formTicket, guardarEnKB: checked as boolean })}
+                    />
+                    <Label htmlFor="kb-save" className="cursor-pointer font-medium text-blue-800">
+                      Generar nuevo borrador en Base de Conocimiento
+                      <span className="block text-xs text-blue-600 font-normal mt-0.5">
+                        Guarda una nueva entrada independiente con esta información actual.
+                      </span>
+                    </Label>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-6">
                 <Button variant="outline" className="flex-1" onClick={closeModals}>Cancelar</Button>

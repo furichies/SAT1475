@@ -21,8 +21,20 @@ import {
     Calendar,
     Tag,
     QrCode,
-    Download
+    Download,
+    Settings,
+    FileText
 } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import QRCode from 'qrcode'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -38,13 +50,124 @@ export default function TicketDetailPage() {
     const [isSending, setIsSending] = useState(false)
     const [qrCodeUrl, setQrCodeUrl] = useState('')
 
+    // --- Lógica de Resolución (Base de Conocimiento) ---
+    const [isResolucionModalOpen, setIsResolucionModalOpen] = useState(false)
+    const [resolucionData, setResolucionData] = useState({ title: '', content: '', id: '' })
+    const [isSavingResolucion, setIsSavingResolucion] = useState(false)
+
+    // Check staff role
+    const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'tecnico' || session?.user?.role === 'superadmin'
+
+    const handleGestionarResolucion = async () => {
+        if (!ticket) return
+
+        // 1. Si el ticket ya tiene resolución asociada (viene en el GET /api/sat/tickets/[id])
+        if (ticket.resolucion) {
+            // Fetch contenido completo
+            try {
+                const res = await fetch(`/api/sat/tickets/${id}/resolucion`)
+                const data = await res.json()
+                if (data.success) {
+                    setResolucionData({
+                        id: data.resolucion.id,
+                        title: data.resolucion.titulo,
+                        content: data.resolucion.contenido
+                    })
+                    setIsResolucionModalOpen(true)
+                } else {
+                    alert('Error al cargar resolución: ' + data.error)
+                }
+            } catch (e) {
+                console.error(e)
+                alert('Error de conexión')
+            }
+        } else {
+            // 2. Si no tiene, preparamos para crear una nueva
+            setResolucionData({
+                id: '',
+                title: `Resolución: ${ticket.asunto}`,
+                content: '## Procedimiento de Resolución\n\n1. Diagnóstico:\n2. Acciones realizadas:\n3. Pruebas finales:\n'
+            })
+            setIsResolucionModalOpen(true)
+        }
+    }
+
+    const handleGuardarResolucion = async () => {
+        setIsSavingResolucion(true)
+        try {
+            let res
+            if (resolucionData.id) {
+                // UPDATE (PUT)
+                res = await fetch(`/api/sat/tickets/${id}/resolucion`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        titulo: resolucionData.title,
+                        contenido: resolucionData.content,
+                        estado: 'borrador' // Opcional, podría ser parámetro
+                    })
+                })
+            } else {
+                // CREATE (POST)
+                res = await fetch(`/api/sat/tickets/${id}/resolucion`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                })
+            }
+
+            if (!resolucionData.id) {
+                // Estábamos creando.
+                const data = await res.json()
+                if (data.success) {
+                    // Ahora actualizamos con el contenido real del modal si es diferente al default
+                    await fetch(`/api/sat/tickets/${id}/resolucion`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            titulo: resolucionData.title,
+                            contenido: resolucionData.content
+                        })
+                    })
+                    // Refrescar ticket para coger la asociación
+                    fetchTicket()
+                    setIsResolucionModalOpen(false)
+                } else {
+                    alert('Error al crear: ' + data.error)
+                }
+            } else {
+                // Update normal
+                const data = await res.json()
+                if (data.success) {
+                    setIsResolucionModalOpen(false)
+                    alert('Resolución guardada correctamente')
+                } else {
+                    alert('Error al guardar: ' + data.error)
+                }
+            }
+
+        } catch (e) {
+            console.error(e)
+            alert('Error al guardar resolución')
+        } finally {
+            setIsSavingResolucion(false)
+        }
+    }
+
+    const [error, setError] = useState<string | null>(null)
+
     const fetchTicket = async (silent = false) => {
         if (!id) return
         if (!silent) setIsLoading(true)
+        setError(null)
         try {
             const res = await fetch(`/api/sat/tickets/${id}`)
-            if (!res.ok) throw new Error('Failed to fetch')
             const data = await res.json()
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Error al cargar el ticket')
+            }
+
             if (data.success) {
                 // Si estamos enviando, no sobreescribir con datos antiguos si hubiera lag,
                 // aunque lo ideal es que el servidor mande lo último.
@@ -69,8 +192,9 @@ export default function TicketDetailPage() {
                     }
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching ticket:', error)
+            if (!silent) setError(error.message || 'No se pudo cargar la información del ticket')
         } finally {
             if (!silent) setIsLoading(false)
         }
@@ -256,8 +380,12 @@ export default function TicketDetailPage() {
         return (
             <div className="min-h-screen py-16 flex flex-col items-center justify-center text-center p-4">
                 <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />
-                <h1 className="text-2xl font-bold mb-2">Ticket no encontrado</h1>
-                <p className="text-muted-foreground mb-6">El ticket solicitado no existe o no tienes permiso para verlo.</p>
+                <h1 className="text-2xl font-bold mb-2">
+                    {error || 'Ticket no encontrado'}
+                </h1>
+                <p className="text-muted-foreground mb-6">
+                    {error ? 'Hubo un problema al acceder al ticket.' : 'El ticket solicitado no existe o no tienes permiso para verlo.'}
+                </p>
                 <Button asChild>
                     <Link href="/sat">Volver a mis tickets</Link>
                 </Button>
@@ -344,6 +472,7 @@ export default function TicketDetailPage() {
                         </Card>
 
                         <Card className="flex flex-col shadow-xl border-none overflow-hidden">
+                            {/* ... Chat Content ... */}
                             <CardHeader className="border-b bg-primary/5">
                                 <CardTitle className="text-xl flex items-center gap-2 font-black text-primary">
                                     <MessageSquare className="h-6 w-6" />
@@ -415,6 +544,34 @@ export default function TicketDetailPage() {
                     </div>
 
                     <div className="space-y-8">
+                        {isStaff && (
+                            <Card className="shadow-xl border-none overflow-hidden rounded-3xl ring-2 ring-primary bg-primary/5">
+                                <CardHeader className="bg-primary pb-3">
+                                    <CardTitle className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                                        <Settings className="h-5 w-5" />
+                                        PANEL DE GESTIÓN TÉCNICA
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 pt-6">
+                                    <p className="text-sm text-primary/80 font-medium">
+                                        Herramientas exclusivas para el personal técnico.
+                                    </p>
+                                    <Button
+                                        onClick={handleGestionarResolucion}
+                                        className="w-full bg-white text-primary hover:bg-white/90 font-bold shadow-sm"
+                                    >
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        {ticket.resolucionId ? 'Ver / Editar Procedimiento Resolución' : 'Crear Procedimiento de Resolución'}
+                                    </Button>
+                                    {ticket.resolucionId && (
+                                        <p className="text-xs text-center text-primary/60 font-medium">
+                                            * Resolución ya vinculada
+                                        </p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         <Card className="shadow-xl border-none overflow-hidden rounded-3xl">
                             <div className="h-2 bg-primary w-full" />
                             <CardHeader className="bg-muted/5 pb-2">
@@ -512,6 +669,49 @@ export default function TicketDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal Resolución */}
+            <Dialog open={isResolucionModalOpen} onOpenChange={setIsResolucionModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="border-b pb-4">
+                        <DialogTitle className="text-2xl font-black">Procedimiento de Resolución</DialogTitle>
+                        <DialogDescription>
+                            Documenta los pasos técnicos y la solución aplicada. Esto se guardará en la base de conocimiento.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto py-6 space-y-6">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Título del Artículo</Label>
+                            <Input
+                                value={resolucionData.title}
+                                onChange={(e) => setResolucionData({ ...resolucionData, title: e.target.value })}
+                                className="font-bold text-lg"
+                                placeholder="Ej: Resolución: Fallo en placa base..."
+                            />
+                        </div>
+                        <div className="space-y-2 h-[400px]">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Contenido Detallado (Markdown soportado)</Label>
+                            <Textarea
+                                value={resolucionData.content}
+                                onChange={(e) => setResolucionData({ ...resolucionData, content: e.target.value })}
+                                className="h-full font-mono text-sm leading-relaxed resize-none p-4"
+                                placeholder="Describe el procedimiento técnico..."
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="border-t pt-4">
+                        <Button variant="ghost" onClick={() => setIsResolucionModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleGuardarResolucion} disabled={isSavingResolucion} className="gap-2">
+                            {isSavingResolucion ? 'Guardando...' : (
+                                <>
+                                    <CheckCircle className="h-4 w-4" />
+                                    Guardar Resolución
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

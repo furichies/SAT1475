@@ -178,10 +178,13 @@ model Ticket {
   producto            Producto?           @relation(fields: [productoId], references: [id])
   pedido              Pedido?             @relation(fields: [pedidoId], references: [id])
   tecnico             Tecnico?            @relation(fields: [tecnicoId], references: [id])
+  resolucionId        String?
+  resolucion          BaseConocimiento?   @relation(fields: [resolucionId], references: [id])
   usuario             Usuario             @relation(fields: [usuarioId], references: [id])
 
   @@index([usuarioId])
   @@index([tecnicoId])
+  @@index([resolucionId])
   @@index([estado])
   @@index([prioridad])
   @@index([numeroTicket])
@@ -219,6 +222,7 @@ model BaseConocimiento {
   fechaActualizacion    DateTime         @updatedAt
   autor                 Usuario          @relation(fields: [autorId], references: [id])
   productoRelacionado   Producto?        @relation(fields: [productoRelacionadoId], references: [id])
+  ticketsResueltos      Ticket[]
 
   @@index([categoria])
   @@index([tipo])

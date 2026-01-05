@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -52,102 +52,10 @@ import {
 import Link from 'next/link'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
-const articulosMock = [
-  {
-    id: '1',
-    titulo: 'Cómo instalar un SSD NVMe en portátil',
-    contenido: 'Guía paso a paso para instalar un SSD NVMe en tu portátil. Aprende los requisitos previos, herramientas necesarias y procedimiento completo de instalación...',
-    categoria: 'Almacenamiento',
-    tags: ['SSD', 'NVMe', 'Instalación', 'Hardware'],
-    autor: 'Carlos García',
-    rol: 'tecnico',
-    estado: 'publicado',
-    vistas: 1234,
-    likes: 87,
-    comentarios: 15,
-    fechaCreacion: '2023-12-20',
-    fechaActualizacion: '2023-12-28'
-  },
-  {
-    id: '2',
-    titulo: 'Solución a problemas de conexión WiFi',
-    contenido: 'Guía completa para solucionar problemas de conexión WiFi en ordenadores portátiles y de escritorio. Incluye diagnósticos, soluciones comunes y...',
-    categoria: 'Redes',
-    tags: ['WiFi', 'Conexión', 'Redes', 'Troubleshooting'],
-    autor: 'María Martínez',
-    rol: 'tecnico',
-    estado: 'publicado',
-    vistas: 890,
-    likes: 65,
-    comentarios: 23,
-    fechaCreacion: '2023-12-18',
-    fechaActualizacion: '2023-12-25'
-  },
-  {
-    id: '3',
-    titulo: 'Guía de reparación de portátiles - Diagnóstico inicial',
-    contenido: 'Aprende cómo realizar un diagnóstico inicial de tu portátil antes de llevarlo al técnico. Identifica problemas comunes de hardware y software...',
-    categoria: 'Reparación',
-    tags: ['Portátiles', 'Diagnóstico', 'Hardware', 'Software'],
-    autor: 'Admin Principal',
-    rol: 'admin',
-    estado: 'publicado',
-    vistas: 2345,
-    likes: 156,
-    comentarios: 34,
-    fechaCreacion: '2023-12-15',
-    fechaActualizacion: '2023-12-30'
-  },
-  {
-    id: '4',
-    titulo: 'Actualización de BIOS y UEFI - Guía completa',
-    contenido: 'Guía completa sobre cómo actualizar la BIOS o UEFI de tu ordenador. Incluye pasos de seguridad, métodos de actualización y...',
-    categoria: 'Sistema',
-    tags: ['BIOS', 'UEFI', 'Actualización', 'Sistema'],
-    autor: 'Diego Fernández',
-    rol: 'tecnico',
-    estado: 'publicado',
-    vistas: 1567,
-    likes: 92,
-    comentarios: 18,
-    fechaCreacion: '2023-12-12',
-    fechaActualizacion: '2023-12-22'
-  },
-  {
-    id: '5',
-    titulo: 'Borrador: Instalación de GPU NVIDIA RTX 4090',
-    contenido: 'Guía paso a paso para instalar una RTX 4090 en tu ordenador. Incluye requisitos de sistema, fuentes de alimentación...',
-    categoria: 'Hardware',
-    tags: ['GPU', 'NVIDIA', 'RTX', 'Instalación', 'Hardware'],
-    autor: 'Ana Rodríguez',
-    rol: 'admin',
-    estado: 'borrador',
-    vistas: 0,
-    likes: 0,
-    comentarios: 0,
-    fechaCreacion: '2023-12-28',
-    fechaActualizacion: '2023-12-28'
-  },
-  {
-    id: '6',
-    titulo: 'Guía de limpieza y mantenimiento de monitores',
-    contenido: 'Aprende cómo limpiar y mantener tu monitor para prolongar su vida útil. Incluye productos recomendados, frecuencia de limpieza...',
-    categoria: 'Periféricos',
-    tags: ['Monitor', 'Limpieza', 'Mantenimiento', 'Cuidado'],
-    autor: 'Admin Principal',
-    rol: 'admin',
-    estado: 'archivado',
-    vistas: 678,
-    likes: 45,
-    comentarios: 8,
-    fechaCreacion: '2023-11-20',
-    fechaActualizacion: '2023-12-01'
-  }
-]
-
+// Mocks y utilidades
 const categoriasMock = [
   'Almacenamiento', 'Redes', 'Reparación', 'Sistema', 'Hardware', 'Periféricos',
-  'Software', 'Configuración', 'Troubleshooting', 'Seguridad'
+  'Software', 'Configuración', 'Troubleshooting', 'Seguridad', 'Garantía'
 ]
 
 const estadosMock = {
@@ -157,15 +65,65 @@ const estadosMock = {
 }
 
 export default function AdminConocimientoPage() {
-  const [articulos, setArticulos] = useState(articulosMock)
+  const [articulos, setArticulos] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Filtros
   const [busqueda, setBusqueda] = useState('')
   const [categoria, setCategoria] = useState('todos')
   const [estado, setEstado] = useState('todos')
   const [autor, setAutor] = useState('todos')
+
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<any>(null)
   const [isVerModalOpen, setIsVerModalOpen] = useState(false)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+
+  const [error, setError] = useState('')
+
+  // Fetch articles on mount and when filters change
+  const fetchArticulos = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const params = new URLSearchParams()
+      if (busqueda) params.append('busqueda', busqueda)
+      if (categoria !== 'todos') params.append('categoria', categoria)
+      if (estado !== 'todos') params.append('estado', estado)
+      // autor filter not fully supported in backend yet correctly, but passing it
+      if (autor !== 'todos') params.append('autor', autor)
+
+      console.log('Fetching articles with params:', params.toString())
+      const res = await fetch(`/api/admin_conocimiento?${params.toString()}`)
+      console.log('Response status:', res.status)
+
+      const data = await res.json()
+      console.log('Response data:', data)
+
+      if (data.success) {
+        setArticulos(data.data.articulos)
+      } else {
+        console.error('API Error:', data.error)
+        setError(data.error || 'Error al cargar artículos')
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error)
+      setError('Error de conexión con el servidor')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Use debounce or simple effect for now
+  useEffect(() => {
+    fetchArticulos()
+  }, [categoria, estado, autor]) // Trigger reload on filter change. For search usually debounce is better but button is fine too. Let's add simple debounce or manual refresh.
+
+  // Also debounced search triggers
+  useEffect(() => {
+    const handler = setTimeout(() => fetchArticulos(), 500)
+    return () => clearTimeout(handler)
+  }, [busqueda])
 
   // Estado para el formulario
   const [formData, setFormData] = useState({
@@ -175,6 +133,12 @@ export default function AdminConocimientoPage() {
     estado: 'borrador',
     tags: ''
   })
+
+  const handleReload = () => {
+    // Reset author filter if needed, or just force fetch
+    if (autor !== 'todos') setAutor('todos')
+    else fetchArticulos()
+  }
 
   const resetForm = () => {
     setFormData({
@@ -186,6 +150,7 @@ export default function AdminConocimientoPage() {
     })
     setArticuloSeleccionado(null)
     setIsEditing(false)
+
   }
 
   const handleNuevo = () => {
@@ -212,61 +177,77 @@ export default function AdminConocimientoPage() {
     setIsFormModalOpen(true)
   }
 
-  const handleBorrar = (id: string) => {
+  const handleBorrar = async (id: string) => {
     if (confirm('¿Estás seguro de que deseas eliminar este artículo?')) {
-      setArticulos(articulos.filter(a => a.id !== id))
+      try {
+        const res = await fetch(`/api/admin_conocimiento?id=${id}`, { method: 'DELETE' })
+        if (res.ok) {
+          fetchArticulos()
+        } else {
+          alert('Error al eliminar')
+        }
+      } catch (e) {
+        alert('Error de conexión')
+      }
     }
   }
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (!formData.titulo || !formData.contenido) {
       alert('Por favor, rellena los campos obligatorios (*)')
       return
     }
 
-    if (isEditing && articuloSeleccionado) {
-      setArticulos(articulos.map(a =>
-        a.id === articuloSeleccionado.id
-          ? {
-            ...a,
-            ...formData,
+    try {
+      if (isEditing && articuloSeleccionado) {
+        // Update
+        const res = await fetch(`/api/admin_conocimiento?id=${articuloSeleccionado.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titulo: formData.titulo,
+            contenido: formData.contenido,
+            categoria: formData.categoria || 'General',
             tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
-            fechaActualizacion: new Date().toISOString().split('T')[0]
-          }
-          : a
-      ))
-    } else {
-      const nuevo = {
-        id: (articulos.length + 1).toString(),
-        titulo: formData.titulo,
-        contenido: formData.contenido,
-        categoria: formData.categoria || 'General',
-        tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
-        autor: 'Admin Principal',
-        rol: 'admin',
-        estado: formData.estado,
-        vistas: 0,
-        likes: 0,
-        comentarios: 0,
-        fechaCreacion: new Date().toISOString().split('T')[0],
-        fechaActualizacion: new Date().toISOString().split('T')[0]
+            estado: formData.estado
+          })
+        })
+        if (res.ok) {
+          fetchArticulos()
+          setIsFormModalOpen(false)
+          resetForm()
+        } else {
+          alert('Error al actualizar')
+        }
+      } else {
+        // Create
+        const res = await fetch('/api/admin_conocimiento', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titulo: formData.titulo,
+            contenido: formData.contenido,
+            categoria: formData.categoria || 'General',
+            tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
+            estado: formData.estado
+          })
+        })
+        if (res.ok) {
+          fetchArticulos()
+          setIsFormModalOpen(false)
+          resetForm()
+        } else {
+          alert('Error al crear')
+        }
       }
-      setArticulos([nuevo, ...articulos])
+    } catch (e) {
+      console.error(e)
+      alert('Error de conexión')
     }
-
-    setIsFormModalOpen(false)
-    resetForm()
   }
 
-  const articulosFiltrados = articulos.filter(a => {
-    if (busqueda && !a.titulo.toLowerCase().includes(busqueda.toLowerCase()) &&
-      !a.contenido.toLowerCase().includes(busqueda.toLowerCase()) &&
-      !a.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))) return false
-    if (categoria !== 'todos' && a.categoria !== categoria) return false
-    if (estado !== 'todos' && a.estado !== estado) return false
-    if (autor !== 'todos' && a.autor.toLowerCase() !== autor.toLowerCase()) return false
-    return true
-  })
+  // Filtering is now handled by backend, but we keep the variable for display count
+  const articulosFiltrados = articulos // Already filtered by API
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -277,10 +258,18 @@ export default function AdminConocimientoPage() {
         <main className="flex-1 lg:ml-64 p-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Base de Conocimiento</h1>
-            <p className="text-gray-600">
-              Administra la base de conocimiento: crear, editar, archivar y gestionar artículos de soporte técnico.
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Base de Conocimiento</h1>
+                <p className="text-gray-600">
+                  Administra la base de conocimiento: crear, editar, archivar y gestionar artículos de soporte técnico.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleReload} className="gap-2">
+                <LayoutDashboard className="h-4 w-4" /> {/* Icon reused temporary */}
+                Recargar
+              </Button>
+            </div>
           </div>
 
           {/* Buscar y Filtrar */}
@@ -443,59 +432,183 @@ export default function AdminConocimientoPage() {
 
       {/* Modal Detalles */}
       <Dialog open={isVerModalOpen} onOpenChange={setIsVerModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{articuloSeleccionado?.titulo}</DialogTitle>
-          </DialogHeader>
-          {articuloSeleccionado && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Badge variant="secondary">{articuloSeleccionado.categoria}</Badge>
-                <Badge className={estadosMock[articuloSeleccionado.estado as keyof typeof estadosMock].color}>
-                  {estadosMock[articuloSeleccionado.estado as keyof typeof estadosMock].label}
-                </Badge>
-              </div>
-
-              <div className="prose max-w-none text-gray-700 leading-relaxed">
-                {articuloSeleccionado.contenido}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t text-sm">
-                <div className="space-y-2">
-                  <p className="text-gray-500">Autor</p>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>{articuloSeleccionado.autor} ({articuloSeleccionado.rol})</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-gray-500">Fechas</p>
-                  <div className="flex flex-col gap-1">
-                    <span className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" /> Creado: {articuloSeleccionado.fechaCreacion}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" /> Actualizado: {articuloSeleccionado.fechaActualizacion}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t flex flex-wrap gap-2">
-                {articuloSeleccionado.tags.map((tag: string, idx: number) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white">
+          <DialogTitle className="sr-only">Detalle del Artículo: {articuloSeleccionado?.titulo}</DialogTitle>
+          <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs font-normal border-gray-300">
+                {articuloSeleccionado?.id}
+              </Badge>
+              <Badge className={articuloSeleccionado ? estadosMock[articuloSeleccionado.estado as keyof typeof estadosMock]?.color : ''}>
+                {articuloSeleccionado ? estadosMock[articuloSeleccionado.estado as keyof typeof estadosMock]?.label : ''}
+              </Badge>
             </div>
-          )}
-          <DialogFooter>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => {
+                if (!articuloSeleccionado) return
+                import('jspdf').then(module => {
+                  const jsPDF = module.default || (module as any).jsPDF;
+                  const doc = new jsPDF();
+
+                  // Header
+                  doc.setFontSize(24);
+                  doc.setTextColor(20, 20, 20);
+                  const titleLines = doc.splitTextToSize(articuloSeleccionado.titulo, 170);
+                  doc.text(titleLines, 20, 20);
+
+                  let yPos = 20 + (titleLines.length * 10);
+
+                  // Meta
+                  doc.setFontSize(10);
+                  doc.setTextColor(100, 100, 100);
+                  doc.text(`Categoría: ${articuloSeleccionado.categoria}`, 20, yPos);
+                  doc.text(`Autor: ${articuloSeleccionado.autor} (${articuloSeleccionado.rol})`, 20, yPos + 5);
+                  doc.text(`Fecha: ${articuloSeleccionado.fechaCreacion}`, 20, yPos + 10);
+
+                  yPos += 20;
+                  doc.setDrawColor(200, 200, 200);
+                  doc.line(20, yPos - 5, 190, yPos - 5);
+
+                  // Content
+                  doc.setFontSize(11);
+                  doc.setTextColor(40, 40, 40);
+                  const contentLines = doc.splitTextToSize(articuloSeleccionado.contenido, 170);
+
+                  // Simple pagination loop
+                  let pageHeight = doc.internal.pageSize.height;
+
+                  contentLines.forEach((line: string) => {
+                    if (yPos > pageHeight - 20) {
+                      doc.addPage();
+                      yPos = 20;
+                    }
+                    doc.text(line, 20, yPos);
+                    yPos += 7;
+                  });
+
+                  // Tags footer
+                  if (yPos > pageHeight - 30) {
+                    doc.addPage();
+                    yPos = 20;
+                  }
+
+                  yPos += 10;
+                  doc.setTextColor(0, 102, 204);
+                  doc.setFontSize(10);
+                  doc.text(`Tags: ${articuloSeleccionado.tags.join(', ')}`, 20, yPos);
+
+                  doc.save(`KB-${articuloSeleccionado.id}-${articuloSeleccionado.titulo.slice(0, 20)}.pdf`);
+                })
+              }}>
+                <FileUp className="h-4 w-4 mr-2" />
+                Descargar PDF
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsVerModalOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-8 space-y-8">
+            {articuloSeleccionado && (
+              <>
+                {/* Document Header */}
+                <div className="space-y-4 pb-6 border-b">
+                  <h1 className="text-3xl font-bold text-gray-900 leading-tight">
+                    {articuloSeleccionado.titulo}
+                  </h1>
+
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                          {articuloSeleccionado.autor ? articuloSeleccionado.autor.charAt(0) : 'U'}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{articuloSeleccionado.autor}</p>
+                          <p className="text-xs">{articuloSeleccionado.rol === 'tecnico' ? 'Soporte Técnico' : 'Administrador'}</p>
+                        </div>
+                      </div>
+                      <div className="h-8 w-[1px] bg-gray-200"></div>
+                      <div className="space-y-1">
+                        <p className="flex items-center gap-2">
+                          <Calendar className="h-3.5 w-3.5" />
+                          Publicado: {articuloSeleccionado.fechaCreacion}
+                        </p>
+                        {articuloSeleccionado.fechaActualizacion !== articuloSeleccionado.fechaCreacion && (
+                          <p className="flex items-center gap-2 text-gray-400">
+                            <Clock className="h-3.5 w-3.5" />
+                            Act: {articuloSeleccionado.fechaActualizacion}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-sm px-3 py-1">
+                      {articuloSeleccionado.categoria}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Document Content */}
+                <div className="prose prose-gray max-w-none prose-headings:font-bold prose-headings:text-gray-800 prose-p:text-gray-600 prose-p:leading-relaxed prose-a:text-blue-600">
+                  {articuloSeleccionado.contenido.split('\n').map((paragraph: string, idx: number) => (
+                    paragraph.trim() !== '' ? <p key={idx}>{paragraph}</p> : <br key={idx} />
+                  ))}
+                </div>
+
+                {/* Footer / Metadatos */}
+                <div className="pt-8 border-t bg-gray-50/50 -mx-8 px-8 pb-8 mt-8">
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Tag className="h-4 w-4" /> Etiquetas
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {articuloSeleccionado.tags.map((tag: string, idx: number) => (
+                        <Badge key={idx} variant="outline" className="bg-white hover:bg-gray-100 transition-colors cursor-pointer">
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border shadow-sm">
+                    <div className="flex flex-col items-center justify-center p-2 text-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Impacto</p>
+                      <div className="flex items-center gap-2 text-lg font-semibold text-blue-600">
+                        <Eye className="h-5 w-5" />
+                        {articuloSeleccionado.vistas}
+                      </div>
+                      <p className="text-xs text-gray-400">visualizaciones</p>
+                    </div>
+                    <div className="flex flex-col items-center justify-center p-2 text-center border-l border-r border-gray-100">
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Utilidad</p>
+                      <div className="flex items-center gap-2 text-lg font-semibold text-green-600">
+                        <Heart className="h-5 w-5" />
+                        {articuloSeleccionado.likes}
+                      </div>
+                      <p className="text-xs text-gray-400">personas les sirvió</p>
+                    </div>
+                    <div className="flex flex-col items-center justify-center p-2 text-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Feedback</p>
+                      <div className="flex items-center gap-2 text-lg font-semibold text-purple-600">
+                        <MessageSquare className="h-5 w-5" />
+                        {articuloSeleccionado.comentarios}
+                      </div>
+                      <p className="text-xs text-gray-400">comentarios</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="sticky bottom-0 p-4 border-t bg-gray-50 flex justify-end gap-3 z-10">
             <Button variant="outline" onClick={() => setIsVerModalOpen(false)}>Cerrar</Button>
             <Button onClick={() => { setIsVerModalOpen(false); handleEditar(articuloSeleccionado); }}>
-              Editar Artículo
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Contenido
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

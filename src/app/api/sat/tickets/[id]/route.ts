@@ -34,12 +34,25 @@ export async function GET(
             return NextResponse.json({ success: false, error: 'Ticket no encontrado' }, { status: 404 })
         }
 
-        const isStaff = session.user.role === 'admin' || session.user.role === 'tecnico' || session.user.role === 'superadmin'
-        if (!isStaff && ticket.usuarioId !== session.user.id) {
+        // Manual fetch of resolution association to avoid Prisma relation issues if client is not synced
+        let resolucionData: any = null
+        if ((ticket as any).resolucionId) {
+            resolucionData = await db.baseConocimiento.findUnique({
+                where: { id: (ticket as any).resolucionId },
+                select: { id: true, titulo: true }
+            })
+        }
+
+        const finalTicket = { ...ticket, resolucion: resolucionData }
+
+        const userRole = session.user.role?.toLowerCase()
+        const isStaff = userRole === 'admin' || userRole === 'tecnico' || userRole === 'superadmin'
+
+        if (!isStaff && finalTicket.usuarioId !== session.user.id) {
             return NextResponse.json({ success: false, error: 'No tienes permiso para ver este ticket' }, { status: 403 })
         }
 
-        return NextResponse.json({ success: true, ticket })
+        return NextResponse.json({ success: true, ticket: finalTicket })
     } catch (error) {
         console.error('Error al obtener ticket:', error)
         return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
@@ -63,7 +76,7 @@ export async function PATCH(
         }
 
         const body = await req.json()
-        const { estado, prioridad, tecnico, tipo, descripcion, asunto } = body
+        const { estado, prioridad, tecnico, tipo, descripcion, asunto, diagnostico, solucion } = body
         const { id } = await params
 
         let tecnicoId: string | null | undefined = undefined
@@ -100,7 +113,10 @@ export async function PATCH(
                 ...(descripcion !== undefined && { descripcion }),
                 ...(asunto && { asunto }),
                 ...(tecnicoId !== undefined && { tecnicoId }),
-                ...(tecnicoId ? { fechaAsignacion: new Date() } : {})
+                ...(tecnicoId ? { fechaAsignacion: new Date() } : {}),
+                ...(diagnostico !== undefined && { diagnostico }),
+                ...(solucion !== undefined && { solucion }),
+                ...(estado === 'resuelto' ? { fechaResolucion: new Date() } : {})
             }
         })
 
