@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 // Mock data para tickets
-let ticketsMock = [
+let ticketsMock: any[] = [
   {
     id: '1',
     numeroTicket: 'SAT-2023-0001',
@@ -117,7 +117,7 @@ export async function GET(req: Request) {
     if (tipo) ticketsFiltrados = ticketsFiltrados.filter(t => t.tipo === tipo)
     if (prioridad) ticketsFiltrados = ticketsFiltrados.filter(t => t.prioridad === prioridad)
     if (soloPendientes) {
-      ticketsFiltrados = ticketsFiltrados.filter(t => 
+      ticketsFiltrados = ticketsFiltrados.filter(t =>
         t.estado !== 'resuelto' && t.estado !== 'cancelado' && t.estado !== 'cerrado'
       )
     }
@@ -214,10 +214,10 @@ export async function POST(req: Request) {
     if (prioridad === 'alta' || prioridad === 'urgente') {
       const tecnicoDisponible = tecnicosMock.find(t => t.disponible)
       if (tecnicoDisponible) {
-        nuevoTicket.tecnicoId = tecnicoDisponible.id
-        nuevoTicket.estado = 'asignado'
-        nuevoTicket.fechaAsignacion = new Date()
-        nuevoTicket.numeroSeguimientos = 2
+        (nuevoTicket as any).tecnicoId = tecnicoDisponible.id;
+        (nuevoTicket as any).estado = 'asignado';
+        (nuevoTicket as any).fechaAsignacion = new Date();
+        (nuevoTicket as any).numeroSeguimientos = 2
       }
     }
 

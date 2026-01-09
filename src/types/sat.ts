@@ -1,4 +1,6 @@
 import { TecnicoNivel, TicketTipo, TicketPrioridad, TicketEstado, SeguimientoTipo, ConocimientoTipo, DocumentoTipo, DocumentoEntidadTipo } from './enums'
+import { User } from './auth'
+import { Producto, Categoria, Pedido, Valoracion } from './tienda'
 
 // ==================== TÉCNICOS ====================
 
@@ -251,32 +253,5 @@ export interface DocumentoFiltros {
 }
 
 // Re-exportar tipos necesarios
-export { User } from './auth'
-export { Producto, Categoria, Pedido, Valoracion } from './tienda'
-
-// ==================== DOCUMENTOS ====================
-
-export interface Documento {
-  id: string
-  tipo: DocumentoTipo
-  numeroDocumento: string
-  entidadTipo: DocumentoEntidadTipo
-  entidadId: string
-  usuarioGeneradorId: string
-  contenido?: string | null
-  rutaArchivo?: string | null
-  fechaGeneracion: Date
-  usuarioGenerador: User
-  pedido?: Pedido
-  ticket?: Ticket
-}
-
-export interface DocumentoFiltros {
-  tipo?: DocumentoTipo
-  entidadTipo?: DocumentoEntidadTipo
-  entidadId?: string
-  fechaDesde?: Date
-  fechaHasta?: Date
-  page?: number
-  limit?: number
-}
+export type { User } from './auth'
+export type { Producto, Categoria, Pedido, Valoracion } from './tienda'

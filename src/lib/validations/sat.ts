@@ -4,7 +4,7 @@ import { TecnicoNivel, TicketTipo, TicketPrioridad, TicketEstado, ConocimientoTi
 export const createTecnicoSchema = z.object({
   usuarioId: z.string().min(1, 'Usuario ID es requerido'),
   especialidades: z.array(z.string()).optional(),
-  nivel: z.nativeEnum(TecnicoNivel).default('junior'),
+  nivel: z.nativeEnum(TecnicoNivel).default(TecnicoNivel.JUNIOR),
   fechaIncorporacion: z.date().optional()
 })
 
@@ -12,7 +12,7 @@ export const updateTecnicoSchema = createTecnicoSchema.partial()
 
 export const createTicketSchema = z.object({
   tipo: z.nativeEnum(TicketTipo),
-  prioridad: z.nativeEnum(TicketPrioridad).default('media'),
+  prioridad: z.nativeEnum(TicketPrioridad).default(TicketPrioridad.MEDIA),
   asunto: z.string().min(5, 'El asunto debe tener al menos 5 caracteres'),
   descripcion: z.string().min(10, 'La descripción debe tener al menos 10 caracteres'),
   pedidoId: z.string().optional(),

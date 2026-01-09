@@ -1,4 +1,5 @@
 import { ProductoTipo, PedidoEstado, MetodoPago } from './enums'
+import { User } from './auth'
 
 // ==================== CATEGORÍAS ====================
 

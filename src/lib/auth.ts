@@ -52,7 +52,7 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         token.role = user.role
@@ -60,11 +60,22 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
+      // Si el token está vacío o corrupto, retornar sesión vacía
+      if (!token || !token.id) {
+        return session
+      }
+
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
       }
       return session
+    }
+  },
+  events: {
+    async signOut({ token }) {
+      // Limpiar cualquier dato relacionado con la sesión
+      console.log('Usuario desconectado:', token?.id)
     }
   },
   pages: {
@@ -82,7 +93,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_URL?.startsWith('https')
       }
     }
   },

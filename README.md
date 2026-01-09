@@ -114,13 +114,21 @@ bun run dev
 La aplicación estará disponible en: `http://localhost:3000`
 
 **Modo Producción:**
+
+Ver la [Guía de Deployment en Producción](docs/PRODUCTION.md) para instrucciones detalladas.
+
 ```bash
-# Construir
+# 1. Construir la aplicación
 bun run build
 
-# Ejecutar
-bun run start
+# 2. Preparar para producción (configura .env, copia DB, etc.)
+./scripts/prepare-production.sh
+
+# 3. Iniciar servidor de producción
+./scripts/start-production.sh
 ```
+
+**⚠️ IMPORTANTE**: El script `prepare-production.sh` genera un `NEXTAUTH_SECRET` seguro. Guárdalo en un lugar seguro.
 
 ## 📁 Estructura del Proyecto
 
@@ -246,20 +254,25 @@ Después de ejecutar el seed, puedes usar:
 
 ```bash
 # Desarrollo
-bun run dev              # Inicia el servidor de desarrollo
+bun run dev                      # Inicia el servidor de desarrollo
 
 # Producción
-bun run build            # Construye la aplicación
-bun run start            # Inicia el servidor de producción
+bun run build                    # Construye la aplicación
+./scripts/prepare-production.sh  # Prepara el build para producción
+./scripts/start-production.sh    # Inicia el servidor de producción
 
 # Base de Datos
-bun run db:generate      # Genera el cliente de Prisma
-bun run db:push          # Aplica cambios al esquema
-bun run db:migrate       # Crea una migración
-bun run db:reset         # Resetea la base de datos
+bun run db:generate              # Genera el cliente de Prisma
+bun run db:push                  # Aplica cambios al esquema
+bun run db:migrate               # Crea una migración
+bun run db:reset                 # Resetea la base de datos
+
+# Seeding
+bun scripts/seed-productos.ts    # Pobla el catálogo de productos
+bun scripts/seed-tecnicos.ts     # Crea usuarios técnicos y admin
 
 # Calidad de Código
-bun run lint             # Ejecuta ESLint
+bun run lint                     # Ejecuta ESLint
 ```
 
 ## 🔒 Seguridad

@@ -38,15 +38,19 @@ export default function LoginPage() {
         redirect: false
       })
 
+      console.log('Login result:', result)
+
       if (result?.ok) {
         setSuccess(true)
+        // Usar window.location para asegurar la redirección
         setTimeout(() => {
-          router.push(callbackUrl)
-        }, 2000)
+          window.location.href = callbackUrl
+        }, 1500)
       } else {
-        setError('Error al iniciar sesión. Por favor, verifica tus credenciales.')
+        setError(result?.error || 'Error al iniciar sesión. Por favor, verifica tus credenciales.')
       }
     } catch (err) {
+      console.error('Login error:', err)
       setError('Error de conexión con el servidor. Por favor, intenta de nuevo.')
     } finally {
       setIsLoading(false)

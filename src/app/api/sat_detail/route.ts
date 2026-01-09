@@ -90,9 +90,9 @@ export async function GET(req: Request) {
         ticket: {
           ...ticket,
           tecnico,
-          estadoLabel: ticket.estado === 'en_progreso' ? 'En Progreso' : 
-                       ticket.estado === 'resuelto' ? 'Resuelto' :
-                       ticket.estado
+          estadoLabel: ticket.estado === 'en_progreso' ? 'En Progreso' :
+            ticket.estado === 'resuelto' ? 'Resuelto' :
+              ticket.estado
         },
         seguimientos,
         totalSeguimientos: seguimientos.length
@@ -157,7 +157,6 @@ export async function POST(req: Request) {
     }
 
     seguimientosMock.push(nuevoSeguimiento)
-    ticket.numeroSeguimientos = seguimientosMock.filter(s => s.ticketId === ticketId).length
 
     return NextResponse.json({
       success: true,

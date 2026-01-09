@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Resolver pedidoId si se proporciona (puede ser ID o NumeroPedido)
-        let resolvedPedidoId = null
+        let resolvedPedidoId: string | null = null
         if (pedidoId) {
             const pedido = await db.pedido.findFirst({
                 where: {

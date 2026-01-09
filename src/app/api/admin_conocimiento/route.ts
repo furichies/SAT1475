@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        articulo: { id: nueva.id, ...nueva },
+        articulo: nueva,
         mensaje: 'Artículo creado correctamente'
       }
     }, { status: 201 })

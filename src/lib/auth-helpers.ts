@@ -45,14 +45,14 @@ export async function hasAnyRole(roles: UserRole[]) {
  * Check if user is admin or superadmin
  */
 export async function isAdmin() {
-  return await hasAnyRole([UserRole.ADMIN, UserRole.SUPERADMIN])
+  return await hasAnyRole([UserRole.admin, UserRole.superadmin])
 }
 
 /**
  * Check if user is tecnico, admin or superadmin
  */
 export async function isStaff() {
-  return await hasAnyRole([UserRole.TECNICO, UserRole.ADMIN, UserRole.SUPERADMIN])
+  return await hasAnyRole([UserRole.tecnico, UserRole.admin, UserRole.superadmin])
 }
 
 /**
@@ -92,12 +92,12 @@ export async function requireAnyRole(roles: UserRole[]) {
  * Require admin or superadmin
  */
 export async function requireAdmin() {
-  return await requireAnyRole([UserRole.ADMIN, UserRole.SUPERADMIN])
+  return await requireAnyRole([UserRole.admin, UserRole.superadmin])
 }
 
 /**
  * Require staff (tecnico, admin or superadmin)
  */
 export async function requireStaff() {
-  return await requireAnyRole([UserRole.TECNICO, UserRole.ADMIN, UserRole.SUPERADMIN])
+  return await requireAnyRole([UserRole.tecnico, UserRole.admin, UserRole.superadmin])
 }

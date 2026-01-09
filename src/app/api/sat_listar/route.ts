@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { TicketTipo, TicketPrioridad, TicketEstado } from '@prisma/client'
 
 // Mock data en memoria para tickets
-let ticketsMock = [
+let ticketsMock: any[] = [
   {
     id: '1',
     numeroTicket: 'SAT-2023-0001',
@@ -105,7 +105,7 @@ export async function GET(req: Request) {
       ticketsFiltrados = ticketsFiltrados.filter(t => t.prioridad === prioridad)
     }
     if (soloPendientes) {
-      ticketsFiltrados = ticketsFiltrados.filter(t => 
+      ticketsFiltrados = ticketsFiltrados.filter(t =>
         t.estado !== 'resuelto' && t.estado !== 'cancelado'
       )
     }
@@ -206,10 +206,10 @@ export async function POST(req: Request) {
 
     // Simular asignación automática para prioridad alta/urgente
     if (prioridad === 'alta' || prioridad === 'urgente') {
-      nuevoTicket.tecnicoId = 'tecnico-1' // Mock: técnico disponible
-      nuevoTicket.estado = 'asignado' as TicketEstado
-      nuevoTicket.fechaAsignacion = new Date()
-      nuevoTicket.numeroSeguimientos = 2
+      (nuevoTicket as any).tecnicoId = 'tecnico-1'; // Mock: técnico disponible
+      (nuevoTicket as any).estado = 'asignado' as TicketEstado;
+      (nuevoTicket as any).fechaAsignacion = new Date();
+      (nuevoTicket as any).numeroSeguimientos = 2
     }
 
     ticketsMock.push(nuevoTicket)

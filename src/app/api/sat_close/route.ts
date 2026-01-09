@@ -59,21 +59,10 @@ export async function PUT(req: Request) {
       )
     }
 
-    // Verificar que no esté cerrado ya
-    if (ticket.estado === 'cerrado') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Este ticket ya está cerrado'
-        },
-        { status: 400 }
-      )
-    }
-
     // Cerrar ticket
     ticket.estado = 'cerrado'
     ticket.fechaCierre = new Date()
-    
+
     // Guardar motivo si se proporcionó
     if (motivo) {
       ticket.descripcion += `\n\nMotivo de cierre: ${motivo}`
