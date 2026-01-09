@@ -64,9 +64,10 @@ bun install
 
 **Linux/macOS:**
 ```bash
+# Crear archivo .env
 cat > .env << EOF
 DATABASE_URL="file:./prisma/dev.db"
-NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro"
+NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro-$(openssl rand -hex 16)"
 NEXTAUTH_URL="http://localhost:3000"
 EOF
 ```
@@ -113,22 +114,24 @@ bun run dev
 
 La aplicación estará disponible en: `http://localhost:3000`
 
-**Modo Producción:**
+**Modo Producción (Recomendado):**
 
-Ver la [Guía de Deployment en Producción](docs/PRODUCTION.md) para instrucciones detalladas.
+Para ejecutar la aplicación en un entorno de producción localmente:
 
 ```bash
 # 1. Construir la aplicación
 bun run build
 
-# 2. Preparar para producción (configura .env, copia DB, etc.)
-./scripts/prepare-production.sh
-
-# 3. Iniciar servidor de producción
+# 2. Iniciar el servidor de producción (Script optimizado)
 ./scripts/start-production.sh
 ```
 
-**⚠️ IMPORTANTE**: El script `prepare-production.sh` genera un `NEXTAUTH_SECRET` seguro. Guárdalo en un lugar seguro.
+El script `start-production.sh` se encarga automáticamente de:
+- Verificar que el build existe.
+- Configurar la ruta correcta a la base de datos (usando la original en `prisma/dev.db`).
+- Iniciar el servidor optimizado.
+
+*Nota: No es necesario ejecutar `prepare-production.sh` manualmente si usas el script de inicio.*
 
 ## 📁 Estructura del Proyecto
 
@@ -258,8 +261,7 @@ bun run dev                      # Inicia el servidor de desarrollo
 
 # Producción
 bun run build                    # Construye la aplicación
-./scripts/prepare-production.sh  # Prepara el build para producción
-./scripts/start-production.sh    # Inicia el servidor de producción
+./scripts/start-production.sh    # Inicia el servidor de producción (Recomendado)
 
 # Base de Datos
 bun run db:generate              # Genera el cliente de Prisma
@@ -268,7 +270,7 @@ bun run db:migrate               # Crea una migración
 bun run db:reset                 # Resetea la base de datos
 
 # Seeding
-bun scripts/seed-productos.ts    # Pobla el catálogo de productos
+bun scripts/seed-productos.ts    # Puebla el catálogo de productos
 bun scripts/seed-tecnicos.ts     # Crea usuarios técnicos y admin
 
 # Calidad de Código
