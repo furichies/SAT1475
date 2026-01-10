@@ -86,4 +86,4 @@ fi
 
 # Cambiar al directorio standalone e iniciar
 cd .next/standalone
-DATABASE_URL="file:${DB_PATH}" NODE_ENV=production bun server.js
+DATABASE_URL="file:${DB_PATH}" NODE_ENV=production node server.js

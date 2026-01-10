@@ -10,13 +10,14 @@ Sistema completo de gestión para tienda de informática con servicio técnico i
 - 📊 **Panel de Administración**: Dashboard completo para gestión de productos, pedidos, tickets y clientes
 - 📄 **Generación de PDFs**: Informes de pedidos y tickets con códigos QR para seguimiento
 - 📱 **Diseño Responsive**: Interfaz moderna y adaptable a todos los dispositivos
-- 🔐 **Autenticación Segura**: Sistema de login con NextAuth.js y bcrypt
+- 🔐 **Autenticación Segura**: Sistema de login con NextAuth.js
 
 ## 🚀 Instalación
 
 ### Requisitos Previos
 
-#### Instalación de Bun
+#### 1. Instalación de Bun (Entorno de Desarrollo)
+El runtime **Bun** se utiliza para el desarrollo, gestión de dependencias y construcción del proyecto por su extrema velocidad.
 
 **Windows:**
 ```powershell
@@ -24,25 +25,27 @@ Sistema completo de gestión para tienda de informática con servicio técnico i
 powershell -c "irm bun.sh/install.ps1 | iex"
 ```
 
-#### Instalación de bcrypt (Requerido)
-El sistema utiliza bcrypt para la seguridad de las contraseñas. Asegúrate de tenerlo instalado:
-```bash
-bun add bcrypt
-```
-
 **Linux (Debian 13 / Ubuntu):**
 ```bash
 # Usando curl
 curl -fsSL https://bun.sh/install | bash
-
 # Recargar el shell
 source ~/.bashrc
 ```
 
-Verifica la instalación:
+#### 2. Instalación de Node.js (Entorno de Producción)
+Para la ejecución en producción, se recomienda **Node.js (LTS)** por su estabilidad y compatibilidad oficial con el modo `standalone` de Next.js.
+
+**Linux (Debian 13 / Ubuntu):**
 ```bash
-bun --version
+# Instalación de Node.js 20 LTS vía NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
 ```
+
+**Windows:**
+Descarga e instala la versión **LTS** desde el sitio oficial: [nodejs.org](https://nodejs.org/)
+
 
 ### Clonar el Repositorio
 
@@ -106,17 +109,17 @@ Esto creará:
 - Estructura completa de la base de datos
 
 ### Ejecutar el Proyecto
-
-**Modo Desarrollo:**
-```bash
-bun run dev
-```
-
-La aplicación estará disponible en: `http://localhost:3000`
-
-**Modo Producción (Recomendado):**
-
-Para ejecutar la aplicación en un entorno de producción localmente:
+ 
+ **Modo Desarrollo (usando Bun):**
+ ```bash
+ bun run dev
+ ```
+ 
+ La aplicación estará disponible en: `http://localhost:3000`
+ 
+ **Modo Producción (usando Node.js):**
+ 
+ Para ejecutar la aplicación en un entorno de producción (servidor estable):
 
 ```bash
 # 1. Construir la aplicación
@@ -129,7 +132,7 @@ bun run build
 El script `start-production.sh` se encarga automáticamente de:
 - Verificar que el build existe.
 - Configurar la ruta correcta a la base de datos (usando la original en `prisma/dev.db`).
-- Iniciar el servidor optimizado.
+- Iniciar el servidor optimizado utilizando **Node.js**.
 
 *Nota: No es necesario ejecutar `prepare-production.sh` manualmente si usas el script de inicio.*
 
@@ -279,7 +282,7 @@ bun run lint                     # Ejecuta ESLint
 
 ## 🔒 Seguridad
 
-- Contraseñas hasheadas con bcrypt
+- Contraseñas hasheadas de forma segura
 - Sesiones seguras con NextAuth.js
 - Protección CSRF
 - Validación de datos con Zod
