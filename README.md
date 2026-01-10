@@ -66,7 +66,7 @@ bun install
 ```bash
 # Crear archivo .env
 cat > .env << EOF
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="file:./dev.db"
 NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro-$(openssl rand -hex 16)"
 NEXTAUTH_URL="http://localhost:3000"
 EOF
@@ -79,7 +79,7 @@ notepad .env
 
 2. **Contenido base para `.env`:**
 ```env
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="file:./dev.db"
 NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro"
 NEXTAUTH_URL="http://localhost:3000"
 ```
