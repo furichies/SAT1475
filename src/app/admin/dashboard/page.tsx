@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -164,8 +164,86 @@ const tecnicoPerformanceData = [
   { name: 'Guzmán G.', asignados: 15, resueltos: 12, satisfaccion: 4.2 },
 ]
 
+// ... imports remain the same
+
 export default function AdminDashboardPage() {
   const [periodo, setPeriodo] = useState<'7d' | '30d' | '90d'>('30d')
+  const [data, setData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const res = await fetch(`/api/admin/dashboard?period=${periodo}`)
+        const json = await res.json()
+        if (json.success) {
+          setData(json.data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [periodo])
+
+  // Merge API data with KPI definitions to keep icons/styling
+  const getKpis = () => {
+    if (!data) return kpiMock
+
+    return [
+      {
+        id: 'ventas',
+        titulo: 'Ventas Totales',
+        valor: data.kpis.ventas,
+        valorAnterior: 0, // Not calculated yet for simplicity
+        cambio: 0,
+        moneda: true,
+        icon: DollarSign,
+        color: 'text-green-600',
+        trend: 'neutral'
+      },
+      {
+        id: 'pedidos',
+        titulo: 'Pedidos',
+        valor: data.kpis.pedidos,
+        valorAnterior: 0,
+        cambio: 0,
+        icon: ShoppingCart,
+        color: 'text-blue-600',
+        trend: 'neutral'
+      },
+      {
+        id: 'clientes',
+        titulo: 'Clientes Nuevos',
+        valor: data.kpis.clientes_nuevos,
+        valorAnterior: 0,
+        cambio: 0,
+        icon: Users,
+        color: 'text-purple-600',
+        trend: 'neutral'
+      },
+      {
+        id: 'ticketsPendientes',
+        titulo: 'Tickets Pendientes',
+        valor: data.kpis.tickets_pendientes,
+        valorAnterior: 0,
+        cambio: 0,
+        icon: MessageSquare,
+        color: 'text-red-600',
+        trend: 'down'
+      }
+    ]
+  }
+
+  const kpis = getKpis()
+  const salesData = data?.salesChart || ventasPorDiaMock
+  const catData = data?.categoryChart || []
+  const ticketsStatus = data?.ticketStatusChart || ticketsStatusData
+  const techPerformance = data?.techPerformance || tecnicoPerformanceData
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -208,7 +286,7 @@ export default function AdminDashboardPage() {
 
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {kpiMock.map((kpi) => (
+            {kpis.map((kpi) => (
               <Card key={kpi.id} className="hover:shadow-lg transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">
@@ -261,7 +339,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={ventasPorDiaMock}>
+                    <BarChart data={salesData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="dia" />
                       <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
@@ -289,23 +367,18 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { categoria: 'Ordenadores', ventas: 15678, porcentaje: 34.3, color: 'bg-blue-500' },
-                    { categoria: 'Componentes', ventas: 12345, porcentaje: 27.0, color: 'bg-purple-500' },
-                    { categoria: 'Almacenamiento', ventas: 7890, porcentaje: 17.3, color: 'bg-green-500' },
-                    { categoria: 'Periféricos', ventas: 5670, porcentaje: 12.4, color: 'bg-orange-500' },
-                    { categoria: 'Audio', ventas: 4195, porcentaje: 9.0, color: 'bg-pink-500' }
-                  ].map((item, idx) => (
+                  {catData.length > 0 ? catData.map((item: any, idx: number) => (
                     <div key={idx} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{item.categoria}</span>
+                        <span className="font-medium">{item.name}</span>
                         <span className="text-gray-600 font-semibold">
-                          {item.ventas.toLocaleString()}€ ({item.porcentaje}%)
+                          {item.value.toLocaleString()}€
                         </span>
                       </div>
-                      <Progress value={item.porcentaje} className="h-2" />
+                      {/* Calculate percentage relative to total if possible, or just mock/skip */}
+                      <Progress value={(item.value / catData.reduce((acc: number, curr: any) => acc + curr.value, 0)) * 100} className="h-2" />
                     </div>
-                  ))}
+                  )) : <p className="text-sm text-gray-500 text-center py-4">No hay datos de ventas por categoría.</p>}
                 </div>
               </CardContent>
             </Card>
@@ -330,7 +403,7 @@ export default function AdminDashboardPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPieChart>
                         <Pie
-                          data={ticketsStatusData}
+                          data={ticketsStatus}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
@@ -338,7 +411,7 @@ export default function AdminDashboardPage() {
                           paddingAngle={5}
                           dataKey="value"
                         >
-                          {ticketsStatusData.map((entry, index) => (
+                          {ticketsStatus.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -360,7 +433,7 @@ export default function AdminDashboardPage() {
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
-                        data={tecnicoPerformanceData}
+                        data={techPerformance}
                         layout="vertical"
                         margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
                       >
@@ -389,7 +462,7 @@ export default function AdminDashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {tecnicoPerformanceData.map((tech, idx) => (
+                    {techPerformance.map((tech: any, idx: number) => (
                       <div key={idx} className="bg-white border rounded-lg p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start">
                           <span className="font-semibold text-gray-800">{tech.name}</span>
