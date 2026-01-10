@@ -115,7 +115,8 @@ async function main() {
     for (const nombreRaw of tecnicosRaw) {
         const { nombre, apellidos } = parseName(nombreRaw)
         const email = generateEmail(nombreRaw)
-        const nivel = getRandomItem(NIVELES)
+        const nivel = 'senior'
+        // const nivel = getRandomItem(NIVELES)
         const especialidades = getRandomSpecialities()
 
         console.log(`👤 Creando: ${nombre} ${apellidos} (${email}) - ${nivel}`)

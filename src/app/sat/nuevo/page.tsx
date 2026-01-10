@@ -39,7 +39,7 @@ const tipos = [
 ]
 
 const prioridades = [
-  { value: 'baja', label: 'Baja', tiempo: '24h', color: 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' },
+  { value: 'baja', label: 'Baja', tiempo: '72h', color: 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' },
   { value: 'media', label: 'Media', tiempo: '48h', color: 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200' },
   { value: 'alta', label: 'Alta', tiempo: '24h', color: 'bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200' },
   { value: 'urgente', label: 'Urgente', tiempo: '4h', color: 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200' }
