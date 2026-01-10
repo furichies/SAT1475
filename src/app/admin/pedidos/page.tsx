@@ -185,7 +185,7 @@ export default function AdminPedidosPage() {
   const getEstadoInfo = (est: string) => {
     const estados = {
       pendiente: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      en_proceso: { label: 'En Proceso', color: 'bg-blue-100 text-blue-800', icon: Package },
+      procesando: { label: 'En Proceso', color: 'bg-blue-100 text-blue-800', icon: Package },
       enviado: { label: 'Enviado', color: 'bg-purple-100 text-purple-800', icon: Truck },
       entregado: { label: 'Entregado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
       cancelado: { label: 'Cancelado', color: 'bg-red-100 text-red-800', icon: XCircle }
@@ -237,7 +237,7 @@ export default function AdminPedidosPage() {
               >
                 <option value="todos">Todos los estados</option>
                 <option value="pendiente">Pendiente</option>
-                <option value="en_proceso">En Proceso</option>
+                <option value="procesando">En Proceso</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregado">Entregado</option>
                 <option value="cancelado">Cancelado</option>
@@ -317,13 +317,10 @@ export default function AdminPedidosPage() {
                                   <Edit className="h-4 w-4" /> Editar Pedido
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="gap-2 font-medium text-blue-600">
-                                  <Printer className="h-4 w-4" /> Imprimir Ticket
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-2 font-medium text-amber-600">
-                                  <Clock className="h-4 w-4" /> Marcar Urgente
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-2 font-medium text-red-600">
+                                <DropdownMenuItem
+                                  className="gap-2 font-medium text-red-600"
+                                  onClick={() => handleUpdateEstado(pedido.id, 'cancelado')}
+                                >
                                   <XCircle className="h-4 w-4" /> Cancelar
                                 </DropdownMenuItem>
                               </DropdownMenuContent>

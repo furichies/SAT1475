@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { writeFile, mkdir } from 'fs/promises'
+import path from 'path'
+import { DocumentoTipo, DocumentoEntidadTipo } from '@prisma/client'
 
 // Función para generar número de ticket único
 function generarNumeroTicket(): string {
@@ -24,17 +27,15 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const body = await req.json()
-        const {
-            tipo,
-            prioridad,
-            asunto,
-            descripcion,
-            pedidoId,
-            productoId,
-            numeroSerie,
-            adjuntos
-        } = body
+        const formData = await req.formData()
+        const tipo: any = formData.get('tipo')
+        const prioridad: any = formData.get('prioridad')
+        const asunto: any = formData.get('asunto')
+        const descripcion: any = formData.get('descripcion')
+        const pedidoId: any = formData.get('pedidoId')
+        const productoId: any = formData.get('productoId')
+        const numeroSerie: any = formData.get('numeroSerie')
+        const files = formData.getAll('adjuntos') as File[]
 
         // Validaciones básicas
         if (!tipo || !prioridad || !asunto || !descripcion) {
@@ -46,8 +47,6 @@ export async function POST(req: NextRequest) {
 
         // Generar número de ticket único
         let numeroTicket = generarNumeroTicket()
-
-        // Verificar que sea único (aunque es muy improbable que se repita)
         let existente = await db.ticket.findUnique({
             where: { numeroTicket }
         })
@@ -59,7 +58,7 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        // Resolver pedidoId si se proporciona (puede ser ID o NumeroPedido)
+        // Resolver pedidoId (ID o NumeroPedido)
         let resolvedPedidoId: string | null = null
         if (pedidoId) {
             const pedido = await db.pedido.findFirst({
@@ -93,20 +92,45 @@ export async function POST(req: NextRequest) {
                 pedidoId: resolvedPedidoId,
                 productoId: productoId || null,
                 numeroSerieProducto: numeroSerie || null,
-                // Los adjuntos se manejarían con un sistema de archivos separado
-                // Por ahora solo guardamos los nombres como referencia
             }
         })
+
+        // Procesar Archivos
+        if (files && files.length > 0) {
+            // Save to root 'uploads' folder for persistence and API serving
+            const uploadDir = path.join(process.cwd(), 'uploads', 'tickets')
+            await mkdir(uploadDir, { recursive: true })
+
+            for (const file of files) {
+                if (file.size > 0 && file.name !== 'undefined') {
+                    const bytes = await file.arrayBuffer()
+                    const buffer = Buffer.from(bytes)
+                    const fileName = `${ticket.numeroTicket}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+                    const filePath = path.join(uploadDir, fileName)
+
+                    await writeFile(filePath, buffer)
+
+                    // Crear registro Documento
+                    await db.documento.create({
+                        data: {
+                            tipo: DocumentoTipo.informe_reparacion, // General type used for ticket docs
+                            numeroDocumento: fileName,
+                            entidadTipo: DocumentoEntidadTipo.ticket,
+                            ticketId: ticket.id,
+                            usuarioGeneradorId: session.user.id,
+                            contenido: `Adjunto: ${file.name}`,
+                            rutaArchivo: `/api/uploads/tickets/${fileName}` // Serve via API
+                        }
+                    })
+                }
+            }
+        }
 
         return NextResponse.json({
             success: true,
             ticket: {
                 id: ticket.id,
-                numeroTicket: ticket.numeroTicket,
-                tipo: ticket.tipo,
-                prioridad: ticket.prioridad,
-                estado: ticket.estado,
-                asunto: ticket.asunto
+                numeroTicket: ticket.numeroTicket
             }
         })
     } catch (error) {
@@ -155,6 +179,7 @@ export async function GET(req: NextRequest) {
                         }
                     }
                 },
+                documentos: true, // Incluir documentos adjuntos
                 _count: {
                     select: {
                         seguimientos: true

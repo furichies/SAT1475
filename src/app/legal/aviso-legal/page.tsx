@@ -25,8 +25,8 @@ export default function AvisoLegalPage() {
                     <ul className="list-disc pl-6 space-y-2 mt-4">
                         <li><strong>Titular:</strong> MicroInfo Shop S.L.</li>
                         <li><strong>NIF:</strong> B-12345678</li>
-                        <li><strong>Domicilio Social:</strong> Calle de la Informática, 42, 28001 Madrid, España</li>
-                        <li><strong>Correo electrónico:</strong> contacto@microinfo.es</li>
+                        <li><strong>Domicilio Social:</strong> Calle Arcas del Agua, 2 (Sector 3) 28905 Getafe (Madrid)</li>
+                        <li><strong>Correo electrónico:</strong> superadmin@microinfo.es</li>
                         <li><strong>Teléfono:</strong> +34 912 345 678</li>
                     </ul>
                 </section>

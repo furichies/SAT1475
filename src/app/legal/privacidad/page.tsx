@@ -23,7 +23,7 @@ export default function PrivacidadPage() {
                     <h2 className="text-2xl font-semibold mb-4">1. Responsable del Tratamiento</h2>
                     <p>
                         El responsable del tratamiento de sus datos personales es MicroInfo Shop S.L., con NIF B-12345678
-                        y domicilio en Calle de la Informática, 42, 28001 Madrid.
+                        y domicilio en Calle Arcas del Agua, 2 (Sector 3) 28905 Getafe (Madrid).
                     </p>
                 </section>
 

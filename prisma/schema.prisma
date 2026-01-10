@@ -83,6 +83,7 @@ model Producto {
   categoria          Categoria?         @relation(fields: [categoriaId], references: [id])
   tickets            Ticket[]
   valoraciones       Valoracion[]
+  documentos         Documento[]
 
   @@index([categoriaId])
   @@index([tipo])
@@ -234,17 +235,25 @@ model Documento {
   tipo               DocumentoTipo
   numeroDocumento    String               @unique
   entidadTipo        DocumentoEntidadTipo
-  entidadId          String
+  
+  // Separate FKs to avoid multiple constraint issues on a single column
+  ticketId           String?
+  pedidoId           String?
+  productoId         String?
+
   usuarioGeneradorId String
   contenido          String?
   rutaArchivo        String?
   fechaGeneracion    DateTime             @default(now())
-  ticketAsociado     Ticket?              @relation(fields: [entidadId], references: [id])
-  pedidoAsociado     Pedido?              @relation(fields: [entidadId], references: [id])
+  
+  ticket             Ticket?              @relation(fields: [ticketId], references: [id])
+  pedido             Pedido?              @relation(fields: [pedidoId], references: [id])
+  producto           Producto?            @relation(fields: [productoId], references: [id])
   usuarioGenerador   Usuario              @relation(fields: [usuarioGeneradorId], references: [id])
 
-  @@index([entidadTipo])
-  @@index([entidadId])
+  @@index([ticketId])
+  @@index([pedidoId])
+  @@index([productoId])
   @@index([tipo])
 }
 

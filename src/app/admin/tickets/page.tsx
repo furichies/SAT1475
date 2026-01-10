@@ -34,6 +34,7 @@ import {
   Tag,
   BookOpen, // New icon for KB
   Share, // New icon for sharing to KB
+  Download, // For files
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -84,6 +85,10 @@ export default function AdminTicketsPage() {
   const [isNuevo, setIsNuevo] = useState(false)
   const [tecnicosList, setTecnicosList] = useState<any[]>([])
 
+  // Reply modal state
+  const [isReplying, setIsReplying] = useState(false)
+  const [replyMessage, setReplyMessage] = useState('')
+
   useEffect(() => {
     fetchTickets()
     fetchTecnicos()
@@ -128,7 +133,8 @@ export default function AdminTicketsPage() {
           estado: t.estado,
           descripcion: t.descripcion,
           diagnostico: t.diagnostico, // Added
-          solucion: t.solucion // Added
+          solucion: t.solucion, // Added
+          documentos: t.documentos // Added for attachments view
         }))
         setTickets(mappedTickets)
       } else {
@@ -285,10 +291,40 @@ export default function AdminTicketsPage() {
     }
   }
 
+  const handleSendReply = async () => {
+    if (!replyMessage.trim()) return
+
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/sat/tickets/${ticketSeleccionado.id}/comentarios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contenido: replyMessage })
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        alert('Respuesta enviada correctamente al cliente.')
+        setReplyMessage('')
+        setIsReplying(false)
+        // Optionally fetch tickets again if needed, or just keep the detail open
+      } else {
+        alert('Error al enviar respuesta: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error)
+      alert('Error de conexión al enviar respuesta')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const closeModals = () => {
     setTicketSeleccionado(null)
     setIsEdicion(false)
     setIsNuevo(false)
+    setIsReplying(false)
+    setReplyMessage('')
   }
 
   const ticketsFiltrados = tickets.filter(t => {
@@ -500,6 +536,38 @@ export default function AdminTicketsPage() {
                   </p>
                 </div>
 
+                {/* Archivos Adjuntos */}
+                {ticketSeleccionado.documentos && ticketSeleccionado.documentos.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Archivos Adjuntos</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {ticketSeleccionado.documentos.map((doc: any) => (
+                        <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="bg-primary/10 p-2 rounded-md text-primary">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate max-w-[180px]">{doc.contenido.replace('Adjunto: ', '')}</p>
+                              <p className="text-[10px] text-gray-500">{new Date(doc.fechaGeneracion).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                            <a
+                              href={doc.rutaArchivo.startsWith('/api') ? doc.rutaArchivo : `/api${doc.rutaArchivo.startsWith('/') ? '' : '/'}${doc.rutaArchivo}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-6 border-t pt-4">
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Cliente</p>
@@ -525,7 +593,7 @@ export default function AdminTicketsPage() {
                   <Button variant="outline" className="flex-1" onClick={() => openEdicion(ticketSeleccionado)}>
                     <Edit className="h-4 w-4 mr-2" /> Editar Información
                   </Button>
-                  <Button className="flex-1" onClick={() => alert('Función de respuesta preparada')}>
+                  <Button className="flex-1" onClick={() => setIsReplying(true)}>
                     <MessageSquare className="h-4 w-4 mr-2" /> Responder Cliente
                   </Button>
                 </div>
@@ -681,6 +749,50 @@ export default function AdminTicketsPage() {
                 <Button variant="outline" className="flex-1" onClick={closeModals}>Cancelar</Button>
                 <Button className="flex-1" onClick={handleGuardar}>
                   {isEdicion ? 'Actualizar Ticket' : 'Crear Ticket'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Responder */}
+        <Dialog open={isReplying} onOpenChange={(open) => !open && setIsReplying(false)}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Responder al Cliente
+              </DialogTitle>
+              {ticketSeleccionado && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ticket {ticketSeleccionado.numero} - {ticketSeleccionado.cliente}
+                </p>
+              )}
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+                <p className="font-medium">Información:</p>
+                <p>El mensaje se enviará al cliente y quedará registrado en el historial del ticket. El cliente podrá verlo desde su panel.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reply-message" className="font-bold">Mensaje</Label>
+                <Textarea
+                  id="reply-message"
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  placeholder="Escriba su respuesta aquí..."
+                  className="min-h-[150px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setIsReplying(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSendReply} disabled={!replyMessage.trim() || isLoading}>
+                  {isLoading ? 'Enviando...' : 'Enviar Respuesta'}
                 </Button>
               </div>
             </div>

@@ -133,16 +133,42 @@ export default function CarritoPage() {
   }, [])
 
   useEffect(() => {
+    const fetchProfileData = async () => {
+      if (session?.user) {
+        try {
+          const res = await fetch('/api/auth/profile')
+          const data = await res.json()
+
+          if (data.success && data.data.user) {
+            setDatosEnvio({
+              nombre: data.data.user.nombre || session.user.name || '',
+              apellidos: data.data.user.apellidos || '',
+              direccion: data.data.user.direccion || '',
+              codigoPostal: data.data.user.codigoPostal || '',
+              ciudad: data.data.user.ciudad || '',
+              provincia: data.data.user.provincia || '',
+              telefono: data.data.user.telefono || ''
+            })
+          } else {
+            // Fallback to session data if API fails
+            setDatosEnvio({
+              nombre: session.user.name || '',
+              apellidos: (session.user as any).apellidos || '',
+              direccion: (session.user as any).direccion || '',
+              codigoPostal: (session.user as any).codigoPostal || '',
+              ciudad: (session.user as any).ciudad || '',
+              provincia: (session.user as any).provincia || '',
+              telefono: (session.user as any).telefono || ''
+            })
+          }
+        } catch (error) {
+          console.error("Error fetching profile for cart:", error)
+        }
+      }
+    }
+
     if (session?.user) {
-      setDatosEnvio({
-        nombre: session.user.name || '',
-        apellidos: (session.user as any).apellidos || '',
-        direccion: (session.user as any).direccion || '',
-        codigoPostal: (session.user as any).codigoPostal || '',
-        ciudad: (session.user as any).ciudad || '',
-        provincia: (session.user as any).provincia || '',
-        telefono: (session.user as any).telefono || ''
-      })
+      fetchProfileData()
     }
   }, [session])
 

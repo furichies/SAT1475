@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 // Mock data para pedidos
 const pedidosMock = [
@@ -79,6 +80,25 @@ export default function MisPedidosPage() {
       console.error('Error fetching pedidos:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleCancelarPedido = async (id: string) => {
+    try {
+      const res = await fetch(`/api/pedidos/${id}`, {
+        method: 'PUT'
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        toast.success('Pedido cancelado correctamente')
+        fetchPedidos() // Recargar la lista
+      } else {
+        toast.error(data.error || 'No se pudo cancelar el pedido')
+      }
+    } catch (error) {
+      console.error('Error canceling order:', error)
+      toast.error('Error al cancelar el pedido')
     }
   }
 
@@ -192,7 +212,12 @@ export default function MisPedidosPage() {
                         </Button>
                       )}
                       {pedido.estado === 'pendiente' && (
-                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold"
+                          onClick={() => handleCancelarPedido(pedido.id)}
+                        >
                           CANCELAR PEDIDO
                         </Button>
                       )}

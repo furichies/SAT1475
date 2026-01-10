@@ -103,22 +103,23 @@ export default function NuevoTicketPage() {
     }
 
     try {
-      // Mock: Llamada a la API de tickets
+      const formData = new FormData()
+      formData.append('tipo', tipo)
+      formData.append('prioridad', prioridad)
+      formData.append('asunto', asunto)
+      formData.append('descripcion', descripcion)
+      if (pedidoId) formData.append('pedidoId', pedidoId)
+      if (productoId) formData.append('productoId', productoId)
+      if (numeroSerie) formData.append('numeroSerie', numeroSerie)
+
+      adjuntos.forEach(file => {
+        formData.append('adjuntos', file)
+      })
+
       const res = await fetch('/api/sat/tickets', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          tipo,
-          prioridad,
-          asunto,
-          descripcion,
-          pedidoId,
-          productoId,
-          numeroSerie,
-          adjuntos: adjuntos.map(f => f.name)
-        })
+        // Do not set Content-Type header when sending FormData; browser sets it with boundary
+        body: formData
       })
 
       const data = await res.json()

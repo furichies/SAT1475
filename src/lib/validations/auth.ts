@@ -17,9 +17,12 @@ export const registerSchema = z.object({
   apellidos: z.string().optional(),
   telefono: z.string()
     .regex(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/, 'Teléfono inválido')
+    .or(z.literal(''))
     .optional(),
   direccion: z.string().optional(),
-  codigoPostal: z.string().regex(/^\d{4,5}$/, 'Código postal inválido').optional(),
+  codigoPostal: z.string().regex(/^\d{4,5}$/, 'Código postal inválido')
+    .or(z.literal(''))
+    .optional(),
   ciudad: z.string().optional(),
   provincia: z.string().optional()
 }).refine((data) => data.password === data.passwordConfirm, {
@@ -32,9 +35,12 @@ export const updateProfileSchema = z.object({
   apellidos: z.string().optional(),
   telefono: z.string()
     .regex(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/, 'Teléfono inválido')
+    .or(z.literal(''))
     .optional(),
   direccion: z.string().optional(),
-  codigoPostal: z.string().regex(/^\d{4,5}$/, 'Código postal inválido').optional(),
+  codigoPostal: z.string().regex(/^\d{4,5}$/, 'Código postal inválido')
+    .or(z.literal(''))
+    .optional(),
   ciudad: z.string().optional(),
   provincia: z.string().optional()
 })
