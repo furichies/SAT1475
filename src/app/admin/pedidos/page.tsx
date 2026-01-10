@@ -118,6 +118,23 @@ export default function AdminPedidosPage() {
     }
   }
 
+  const parseDireccion = (dir: any) => {
+    if (!dir) return { direccion: '', ciudad: '', codigoPostal: '' }
+    if (typeof dir !== 'string') return dir
+    try {
+      // Try to parse as JSON (standard ecommerce orders)
+      return JSON.parse(dir)
+    } catch (e) {
+      // Fallback for simple strings (repair orders or legacy)
+      return {
+        direccion: dir,
+        ciudad: '',
+        codigoPostal: '',
+        telefono: ''
+      }
+    }
+  }
+
   const generatePDF = (pedido: any) => {
     const doc = new jsPDF() as any
 
@@ -148,15 +165,15 @@ export default function AdminPedidosPage() {
     doc.text(`Nombre: ${pedido.clienteNombre}`, 14, 72)
     doc.text(`Email: ${pedido.clienteEmail}`, 14, 78)
 
-    const direccion = typeof pedido.direccion === 'string' ? JSON.parse(pedido.direccion) : pedido.direccion
+    const direccion = parseDireccion(pedido.direccion)
     doc.text('DIRECCIÓN DE ENVÍO:', 110, 65)
-    doc.text(`${direccion.nombre} ${direccion.apellidos || ''}`, 110, 72)
-    doc.text(`${direccion.direccion}`, 110, 78)
-    doc.text(`${direccion.codigoPostal} ${direccion.ciudad}`, 110, 84)
+    doc.text(`${direccion.nombre || ''} ${direccion.apellidos || ''}`, 110, 72)
+    doc.text(`${direccion.direccion || ''}`, 110, 78)
+    doc.text(`${direccion.codigoPostal || ''} ${direccion.ciudad || ''}`, 110, 84)
 
     // Table
     const tableData = (pedido.detalles || []).map((d: any) => [
-      d.producto?.nombre || 'Producto',
+      d.descripcion || d.producto?.nombre || 'Producto',
       d.cantidad,
       `${d.precioUnitario.toFixed(2)}€`,
       `${(d.cantidad * d.precioUnitario).toFixed(2)}€`
@@ -309,7 +326,7 @@ export default function AdminPedidosPage() {
                                   setPedidoSeleccionado(pedido)
                                   setIsEditing(true)
                                   setEditData({
-                                    direccion: typeof pedido.direccion === 'string' ? JSON.parse(pedido.direccion) : pedido.direccion,
+                                    direccion: parseDireccion(pedido.direccion),
                                     notas: pedido.notas || '',
                                     estado: pedido.estado
                                   })
@@ -368,12 +385,16 @@ export default function AdminPedidosPage() {
                       </div>
                       <div className="bg-gray-50 p-4 rounded-2xl">
                         {(() => {
-                          const d = typeof pedidoSeleccionado.direccion === 'string' ? JSON.parse(pedidoSeleccionado.direccion) : pedidoSeleccionado.direccion
+                          const d = parseDireccion(pedidoSeleccionado.direccion)
                           return (
                             <div className="text-sm font-medium text-gray-700">
                               <p>{d.direccion}</p>
-                              <p>{d.codigoPostal} {d.ciudad}</p>
-                              <p className="text-xs text-gray-400 mt-2 font-black uppercase">Tel: {d.telefono}</p>
+                              {d.codigoPostal || d.ciudad ? (
+                                <p>{d.codigoPostal} {d.ciudad}</p>
+                              ) : null}
+                              {d.telefono && (
+                                <p className="text-xs text-gray-400 mt-2 font-black uppercase">Tel: {d.telefono}</p>
+                              )}
                             </div>
                           )
                         })()}
@@ -397,7 +418,7 @@ export default function AdminPedidosPage() {
                         <tbody className="divide-y">
                           {(pedidoSeleccionado.detalles || []).map((det: any, i: number) => (
                             <tr key={i}>
-                              <td className="p-3 font-bold">{det.producto?.nombre || 'Producto'}</td>
+                              <td className="p-3 font-bold">{det.descripcion || det.producto?.nombre || 'Producto'}</td>
                               <td className="p-3 text-center">{det.cantidad}</td>
                               <td className="p-3 text-right font-black">{(det.cantidad * det.precioUnitario).toFixed(2)}€</td>
                             </tr>
@@ -413,7 +434,7 @@ export default function AdminPedidosPage() {
                     </Button>
                     <Button className="flex-1 h-12 rounded-xl font-bold bg-primary text-white" onClick={() => {
                       setEditData({
-                        direccion: typeof pedidoSeleccionado.direccion === 'string' ? JSON.parse(pedidoSeleccionado.direccion) : pedidoSeleccionado.direccion,
+                        direccion: parseDireccion(pedidoSeleccionado.direccion),
                         notas: pedidoSeleccionado.notas || '',
                         estado: pedidoSeleccionado.estado
                       })

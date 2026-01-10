@@ -126,6 +126,7 @@ model DetallePedido {
   precioUnitario Float
   descuento      Float    @default(0)
   subtotal       Float
+  descripcion    String?  // Description override for custom repair items
   producto       Producto @relation(fields: [productoId], references: [id])
   pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
 

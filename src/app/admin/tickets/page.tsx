@@ -89,6 +89,14 @@ export default function AdminTicketsPage() {
   const [isReplying, setIsReplying] = useState(false)
   const [replyMessage, setReplyMessage] = useState('')
 
+  // Repair Order state
+  const [isConverting, setIsConverting] = useState(false)
+  const [repairData, setRepairData] = useState<{
+    laborHours: number,
+    parts: { name: string, cost: number }[]
+  }>({ laborHours: 1, parts: [] })
+  const [newPart, setNewPart] = useState({ name: '', cost: '' })
+
   useEffect(() => {
     fetchTickets()
     fetchTecnicos()
@@ -319,11 +327,65 @@ export default function AdminTicketsPage() {
     }
   }
 
+  const handleConvertirPedido = async () => {
+    if (!ticketSeleccionado) return
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/sat/tickets/${ticketSeleccionado.id}/convertir-pedido`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          laborHours: repairData.laborHours,
+          parts: repairData.parts
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert('Pedido de reparación creado correctamente.')
+        setIsConverting(false)
+        fetchTickets() // Refresh to see updated status
+        closeModals()
+      } else {
+        alert('Error al crear pedido: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error converting to order:', error)
+      alert('Error de conexión')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const addPart = () => {
+    if (!newPart.name || !newPart.cost) return
+    const cost = parseFloat(newPart.cost)
+    if (isNaN(cost)) return
+    setRepairData({
+      ...repairData,
+      parts: [...repairData.parts, { name: newPart.name, cost }]
+    })
+    setNewPart({ name: '', cost: '' })
+  }
+
+  const removePart = (index: number) => {
+    const newParts = [...repairData.parts]
+    newParts.splice(index, 1)
+    setRepairData({ ...repairData, parts: newParts })
+  }
+
+  const calculateTotal = () => {
+    const labor = repairData.laborHours * 80
+    const parts = repairData.parts.reduce((acc, p) => acc + p.cost, 0)
+    return (labor + parts) * 1.21 // IVA included estimate
+  }
+
   const closeModals = () => {
     setTicketSeleccionado(null)
     setIsEdicion(false)
     setIsNuevo(false)
+    setIsNuevo(false)
     setIsReplying(false)
+    setIsConverting(false)
     setReplyMessage('')
   }
 
@@ -597,6 +659,23 @@ export default function AdminTicketsPage() {
                     <MessageSquare className="h-4 w-4 mr-2" /> Responder Cliente
                   </Button>
                 </div>
+
+                {/* Convert to Order Action */}
+                {!ticketSeleccionado.pedidoId && (
+                  <div className="mt-4 pt-4 border-t">
+                    <Button
+                      variant="secondary"
+                      className="w-full bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200 border"
+                      onClick={() => setIsConverting(true)}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Crear Pedido de Reparación
+                    </Button>
+                    <p className="text-[10px] text-center text-gray-500 mt-2">
+                      Genera un pedido formal con mano de obra y piezas para facturación.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
@@ -799,6 +878,104 @@ export default function AdminTicketsPage() {
           </DialogContent>
         </Dialog>
       </main>
-    </div>
+
+
+      {/* Modal Convertir a Pedido */}
+      <Dialog open={isConverting} onOpenChange={(open) => !open && setIsConverting(false)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-green-600" />
+              Crear Pedido de Reparación
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Agrega mano de obra y piezas para generar el pedido y la factura.
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+
+            {/* Labor */}
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+              <Label className="font-bold flex justify-between">
+                <span>Mano de Obra (80€/hora)</span>
+                <span className="text-primary">{(repairData.laborHours * 80).toFixed(2)}€</span>
+              </Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={repairData.laborHours}
+                  onChange={(e) => setRepairData({ ...repairData, laborHours: parseFloat(e.target.value) || 0 })}
+                  className="w-24 text-center font-mono"
+                />
+                <span className="text-sm text-gray-600">horas</span>
+              </div>
+            </div>
+
+            {/* Parts */}
+            <div className="space-y-3">
+              <Label className="font-bold">Piezas y Repuestos</Label>
+
+              <div className="space-y-2 mb-4">
+                {repairData.parts.map((part, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm p-2 bg-white border rounded shadow-sm">
+                    <span>{part.name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono">{part.cost.toFixed(2)}€</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => removePart(idx)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {repairData.parts.length === 0 && <p className="text-sm text-gray-400 italic">No hay piezas agregadas</p>}
+              </div>
+
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <p className="text-xs mb-1 text-gray-500">Nombre de la pieza</p>
+                  <Input
+                    placeholder="Ej: Batería compatible..."
+                    value={newPart.name}
+                    onChange={(e) => setNewPart({ ...newPart, name: e.target.value })}
+                  />
+                </div>
+                <div className="w-24">
+                  <p className="text-xs mb-1 text-gray-500">Coste (€)</p>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={newPart.cost}
+                    onChange={(e) => setNewPart({ ...newPart, cost: e.target.value })}
+                  />
+                </div>
+                <Button onClick={addPart} size="icon" className="shrink-0" disabled={!newPart.name || !newPart.cost}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Total Summary */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-sm text-gray-500">Total Estimado (con IVA)</p>
+                  <p className="text-3xl font-bold text-green-700">{calculateTotal().toFixed(2)}€</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setIsConverting(false)}>Cancelar</Button>
+                  <Button onClick={handleConvertirPedido} className="bg-green-600 hover:bg-green-700">
+                    Confirmar y Generar
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div >
   )
 }
