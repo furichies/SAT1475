@@ -97,16 +97,64 @@ async function main() {
     const ids = usuariosTecnicos.map(u => u.id)
 
     if (ids.length > 0) {
-        // Borramos perfiles de técnico primero
+        console.log(`🔍 Encontrados ${ids.length} técnicos para limpiar. Procesando dependencias...`)
+
+        // 1. Desasignar tickets asignados a estos técnicos
+        // Necesitamos encontrar los IDs de tabla Tecnico correspondientes a estos usuarios
+        const tecnicosRecords = await db.tecnico.findMany({
+            where: { usuarioId: { in: ids } },
+            select: { id: true }
+        })
+        const tecnicoIds = tecnicosRecords.map(t => t.id)
+
+        if (tecnicoIds.length > 0) {
+            await db.ticket.updateMany({
+                where: { tecnicoId: { in: tecnicoIds } },
+                data: { tecnicoId: null }
+            })
+        }
+
+        // 2. Eliminar seguimientos (comentarios) hechos por estos técnicos
+        await db.seguimientoTicket.deleteMany({
+            where: { usuarioId: { in: ids } }
+        })
+
+        // 3. Eliminar documentos generados por estos técnicos
+        await db.documento.deleteMany({
+            where: { usuarioGeneradorId: { in: ids } }
+        })
+
+        // 4. Gestionar Base de Conocimiento (KB)
+        // Primero desvincular resoluciones de tickets
+        const kbArticles = await db.baseConocimiento.findMany({
+            where: { autorId: { in: ids } },
+            select: { id: true }
+        })
+        const kbIds = kbArticles.map(k => k.id)
+
+        if (kbIds.length > 0) {
+            await db.ticket.updateMany({
+                where: { resolucionId: { in: kbIds } },
+                data: { resolucionId: null }
+            })
+
+            // Eliminar artículos de KB
+            await db.baseConocimiento.deleteMany({
+                where: { autorId: { in: ids } }
+            })
+        }
+
+        // 5. Eliminar perfil técnico
         await db.tecnico.deleteMany({
             where: { usuarioId: { in: ids } }
         })
 
-        // Borramos los usuarios
+        // 6. Eliminar usuarios
         await db.usuario.deleteMany({
             where: { id: { in: ids } }
         })
-        console.log(`✅ Eliminados ${ids.length} técnicos anteriores.`)
+
+        console.log(`✅ Eliminados ${ids.length} técnicos anteriores y sus dependencias.`)
     }
 
     // Contraseña estándar
