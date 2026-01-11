@@ -1,6 +1,6 @@
 # Micro1475 - Sistema de Gestión de Tienda y SAT
 
-Sistema completo de gestión para tienda de informática con servicio técnico integrado (SAT). Desarrollado con Next.js 15, Prisma, SQLite y Bun.
+Sistema completo de gestión para tienda de informática con servicio técnico integrado (SAT). Desarrollado con Next.js 15 (versión segura 15.3.6), Prisma, SQLite y Bun.
 
 ## 📋 Características Principales
 
@@ -62,30 +62,31 @@ bun install
 
 ### Configuración de la Base de Datos
 
-1. **Crear el archivo de configuración:**
-*Nota: No existe archivo .env.example en este repositorio. Debes crearlo manualmente.*
+1. **Preparar el entorno y variables:**
+  Copia el archivo de ejemplo y genera tus propios secretos. **Nunca** compartas el archivo `.env` o lo incluyas en el repositorio.
 
-**Linux/macOS:**
-```bash
-# Crear archivo .env
-cat > .env << EOF
-DATABASE_URL="file:./dev.db"
-NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro-$(openssl rand -hex 16)"
-NEXTAUTH_URL="http://localhost:3000"
-EOF
-```
+  **Linux/macOS:**
+  ```bash
+  # Copiar el ejemplo
+  cp .env.example .env
+  # Generar un secreto seguro para NextAuth y añadirlo
+  echo "NEXTAUTH_SECRET=$(openssl rand -hex 32)" >> .env
+  ```
 
-**Windows (Notepad):**
-```cmd
-notepad .env
-```
+  **Windows:**
+  ```powershell
+  copy .env.example .env
+  # Edita el archivo y pon tu secreto
+  notepad .env
+  ```
 
-2. **Contenido base para `.env`:**
-```env
-DATABASE_URL="file:./dev.db"
-NEXTAUTH_SECRET="tu-secreto-aleatorio-muy-seguro"
-NEXTAUTH_URL="http://localhost:3000"
-```
+2. **Contenido base recomendado para `.env`:**
+  ```env
+  DATABASE_URL="file:./dev.db" # Usa prod.db para producción
+  NEXTAUTH_SECRET="REEMPLAZA_CON_UN_VALOR_GENERADO"
+  NEXTAUTH_URL="http://localhost:3000"
+  NODE_ENV="development"
+  ```
 
 3. **Generar el cliente de Prisma:**
 ```bash
@@ -134,7 +135,40 @@ El script `start-production.sh` se encarga automáticamente de:
 - Configurar la ruta correcta a la base de datos (usando la original en `prisma/dev.db`).
 - Iniciar el servidor optimizado utilizando **Node.js**.
 
-*Nota: No es necesario ejecutar `prepare-production.sh` manualmente si usas el script de inicio.*
+
+**Modo Producción (Alta Disponibilidad con PM2):**
+
+Para entornos profesionales donde la aplicación debe estar disponible 24/7 y sobrevivir a fallos o reinicios del servidor:
+
+1. **Instalar PM2 globalmente:**
+```bash
+sudo npm install -g pm2
+```
+
+2. **Iniciar la aplicación:**
+```bash
+# Opción A: Usando el script optimizado
+./scripts/start-pm2.sh
+
+# Opción B: Usando npm/bun
+npm run pm2:start
+```
+
+3. **Configurar persistencia al reiniciar el servidor:**
+```bash
+pm2 startup
+# (Sigue las instrucciones que aparecerán en pantalla)
+pm2 save
+```
+
+4. **Comandos útiles de gestión:**
+```bash
+bun run pm2:status   # Ver estado del servidor
+bun run pm2:logs     # Ver logs en tiempo real
+bun run pm2:stop     # Detener el servidor
+```
+
+*Nota: No es necesario ejecutar `prepare-production.sh` manualmente si usas los scripts de inicio.*
 
 ## 📁 Estructura del Proyecto
 
@@ -264,7 +298,9 @@ bun run dev                      # Inicia el servidor de desarrollo
 
 # Producción
 bun run build                    # Construye la aplicación
-./scripts/start-production.sh    # Inicia el servidor de producción (Recomendado)
+./scripts/start-production.sh    # Inicia el servidor de producción (Simple)
+./scripts/start-pm2.sh           # Inicia el servidor con PM2 (Alta Disponibilidad)
+npm run pm2:logs                 # Ver logs del servidor PM2
 
 # Base de Datos
 bun run db:generate              # Genera el cliente de Prisma

@@ -58,15 +58,24 @@ else
 fi
 
 # Verificar que existe la base de datos
-if [ ! -f ".next/standalone/prisma/dev.db" ]; then
-  echo "❌ No se encuentra .next/standalone/prisma/dev.db"
-  echo "   Ejecuta: ./scripts/prepare-production.sh"
-  ERRORS=$((ERRORS + 1))
+if [ ! -f ".next/standalone/prisma/prod.db" ]; then
+  echo "⚠️  No se encuentra .next/standalone/prisma/prod.db"
+  echo "   Buscando dev.db como alternativa..."
+  if [ ! -f ".next/standalone/prisma/dev.db" ]; then
+    echo "❌ No se encuentra ninguna base de datos"
+    ERRORS=$((ERRORS + 1))
+  else
+    DB_FILE=".next/standalone/prisma/dev.db"
+    echo "✅ Usando dev.db como fallback"
+  fi
 else
-  echo "✅ Base de datos existe"
-  
+  DB_FILE=".next/standalone/prisma/prod.db"
+  echo "✅ Base de datos prod.db existe"
+fi
+
+if [ -n "$DB_FILE" ]; then
   # Verificar tamaño de la base de datos
-  DB_SIZE=$(stat -f%z ".next/standalone/prisma/dev.db" 2>/dev/null || stat -c%s ".next/standalone/prisma/dev.db" 2>/dev/null)
+  DB_SIZE=$(stat -f%z "$DB_FILE" 2>/dev/null || stat -c%s "$DB_FILE" 2>/dev/null)
   
   if [ $DB_SIZE -lt 10000 ]; then
     echo "⚠️  Base de datos parece vacía (${DB_SIZE} bytes)"
@@ -78,11 +87,11 @@ else
   fi
   
   # Verificar permisos
-  if [ -r ".next/standalone/prisma/dev.db" ] && [ -w ".next/standalone/prisma/dev.db" ]; then
+  if [ -r "$DB_FILE" ] && [ -w "$DB_FILE" ]; then
     echo "✅ Permisos de base de datos correctos"
   else
     echo "❌ Permisos de base de datos incorrectos"
-    echo "   Ejecuta: chmod 644 .next/standalone/prisma/dev.db"
+    echo "   Ejecuta: chmod 664 $DB_FILE"
     ERRORS=$((ERRORS + 1))
   fi
 fi
@@ -126,7 +135,7 @@ if [ $ERRORS -eq 0 ]; then
   echo ""
   echo "O manualmente:"
   echo "  cd .next/standalone"
-  echo "  NODE_ENV=production bun server.js"
+  echo "  NODE_ENV=production node server.js"
   exit 0
 else
   echo "❌ Se encontraron $ERRORS error(es)"

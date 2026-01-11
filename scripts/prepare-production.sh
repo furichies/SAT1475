@@ -30,7 +30,7 @@ fi
 
 # Obtener ruta absoluta del directorio standalone
 STANDALONE_DIR="$(cd .next/standalone && pwd)"
-DB_PATH="${STANDALONE_DIR}/prisma/dev.db"
+DB_PATH="${STANDALONE_DIR}/prisma/prod.db"
 
 # Crear .env para producción en standalone
 echo "📝 Creando .env de producción..."
@@ -40,7 +40,8 @@ DATABASE_URL="file:${DB_PATH}"
 
 # NextAuth
 NEXTAUTH_SECRET="${NEXTAUTH_SECRET}"
-NEXTAUTH_URL="http://localhost:3000"
+# Cambia esto por tu dominio real en producción
+NEXTAUTH_URL="https://tudominio.com"
 
 # Node Environment
 NODE_ENV="production"
@@ -48,14 +49,16 @@ EOF
 
 echo "✅ Archivo .env creado en .next/standalone/"
 
-# Copiar la base de datos si no existe
-if [ ! -f ".next/standalone/prisma/dev.db" ]; then
-  echo "📦 Copiando base de datos..."
-  mkdir -p .next/standalone/prisma
-  cp prisma/dev.db .next/standalone/prisma/dev.db
-  echo "✅ Base de datos copiada"
+# Copiar la base de datos si existe, o crear directorio
+mkdir -p .next/standalone/prisma
+if [ -f "prisma/prod.db" ]; then
+  echo "📦 Copiando base de datos existente (prod.db)..."
+  cp prisma/prod.db .next/standalone/prisma/prod.db
+elif [ -f "prisma/dev.db" ]; then
+  echo "📦 Copiando base de datos inicial (dev.db -> prod.db)..."
+  cp prisma/dev.db .next/standalone/prisma/prod.db
 else
-  echo "ℹ️  Base de datos ya existe en standalone"
+  echo "⚠️  No se encontró base de datos para copiar."
 fi
 
 # Copiar schema.prisma
@@ -64,7 +67,9 @@ cp prisma/schema.prisma .next/standalone/prisma/schema.prisma
 
 # Verificar permisos de la base de datos
 echo "🔧 Verificando permisos..."
-chmod 644 .next/standalone/prisma/dev.db
+if [ -f ".next/standalone/prisma/prod.db" ]; then
+  chmod 664 .next/standalone/prisma/prod.db
+fi
 
 echo ""
 echo "✨ ¡Preparación completada!"
@@ -73,8 +78,7 @@ echo "📌 NEXTAUTH_SECRET generado:"
 echo "   ${NEXTAUTH_SECRET}"
 echo ""
 echo "🚀 Para ejecutar en producción:"
-echo "   cd .next/standalone"
-echo "   NODE_ENV=production bun server.js"
+echo "   ./scripts/start-production.sh"
 echo ""
 echo "⚠️  IMPORTANTE: Guarda el NEXTAUTH_SECRET en un lugar seguro"
 echo "   Si lo pierdes, todas las sesiones actuales serán invalidadas"

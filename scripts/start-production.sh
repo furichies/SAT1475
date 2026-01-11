@@ -40,22 +40,21 @@ echo ""
 
 # Usar ruta absoluta para la base de datos
 # Prioridad 1: Base de datos en raíz del proyecto (Persistente)
-DB_PATH="$(pwd)/../../prisma/dev.db"
+# En producción usamos prod.db
+DB_NAME="prod.db"
+DB_PATH="$(pwd)/../../prisma/${DB_NAME}"
 
 # Prioridad 2: Fallback si ejecutamos desde root
 if [ ! -f "$DB_PATH" ]; then
-    DB_PATH="$(pwd)/prisma/dev.db"
+    DB_PATH="$(pwd)/prisma/${DB_NAME}"
 fi
 
-# Prioridad 3: Verificar ruta anómala por error de configuración (prisma/prisma/dev.db)
+# Prioridad 3: Fallback a dev.db si no existe prod.db (para facilitar transición)
 if [ ! -f "$DB_PATH" ]; then
-    if [ -f "$(pwd)/prisma/prisma/dev.db" ]; then
-        echo "⚠️  ADVERTENCIA: Se detectó la base de datos anidada en 'prisma/prisma/dev.db'."
-        echo "   Esto ocurre por una configuración incorrecta en .env (file:./prisma/dev.db)."
-        echo "   Intentando usar esta base de datos..."
-        DB_PATH="$(pwd)/prisma/prisma/dev.db"
-    elif [ -f "$(pwd)/../../prisma/prisma/dev.db" ]; then
-        DB_PATH="$(pwd)/../../prisma/prisma/dev.db"
+    echo "⚠️  No se encontró ${DB_NAME}, buscando dev.db..."
+    DB_PATH="$(pwd)/../../prisma/dev.db"
+    if [ ! -f "$DB_PATH" ]; then
+        DB_PATH="$(pwd)/prisma/dev.db"
     fi
 fi
 
@@ -65,24 +64,20 @@ if [ ! -f "$DB_PATH" ]; then
     echo "   Buscando en desplegable standalone..."
     
     # Check relative to standalone dir
-    if [ -f "prisma/dev.db" ]; then
-       # We are in .next/standalone/ so this is local
-       # But we need absolute path logic if we are passing it via env
-       # Usually start script cd's later.
-       # Let's assume we are at root for now based on previous checks.
+    if [ -f "prisma/${DB_NAME}" ]; then
+       DB_PATH="$(pwd)/.next/standalone/prisma/${DB_NAME}"
+    elif [ -f "prisma/dev.db" ]; then
        DB_PATH="$(pwd)/.next/standalone/prisma/dev.db"
     fi
 fi
 
 if [ ! -f "$DB_PATH" ]; then
-     echo "❌ Error CRÍTICO: No se puede encontrar el archivo de base de datos 'dev.db' en ninguna ubicación estándar."
-     echo "   Ubicaciones verificadas:"
-     echo "   - ../../prisma/dev.db (Raíz)"
-     echo "   - prisma/dev.db (Raíz local)"
-     echo "   - prisma/prisma/dev.db (Error común)"
+     echo "❌ Error CRÍTICO: No se puede encontrar el archivo de base de datos en ninguna ubicación estándar."
+     echo "   Ubicaciones verificadas incluyen: prisma/prod.db, prisma/dev.db"
      exit 1
 fi
 
+echo "🗄️  Usando base de datos: $DB_PATH"
 
 # Cambiar al directorio standalone e iniciar
 cd .next/standalone

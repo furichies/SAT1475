@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { hash } from 'bcryptjs'
+import { hash } from 'bcrypt'
 import { db } from '@/lib/db'
 import { registerSchema } from '@/lib/validations/auth'
 import { UserRole } from '@prisma/client'
