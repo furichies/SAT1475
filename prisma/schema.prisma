@@ -247,6 +247,21 @@ model Documento {
   rutaArchivo        String?
   fechaGeneracion    DateTime             @default(now())
   
+  // Nuevos campos para el sistema de seguimiento y documentación
+  metadatos          String?              // JSON con datos específicos del documento
+  estadoDocumento    EstadoDocumento      @default(borrador)
+  firmaCliente       String?              // Firma digital del cliente (base64)
+  firmaTecnico       String?              // Firma digital del técnico (base64)
+  evidenciasFotos    String?              // JSON array con URLs/paths de fotos
+  fechaVencimiento   DateTime?            // Para presupuestos
+  fechaFirma         DateTime?            // Fecha de firma del documento
+  fechaEnvio         DateTime?            // Fecha de envío al cliente
+  
+  // Relación con otros documentos (ej: extensión relacionada con presupuesto original)
+  documentoRelacionadoId String?
+  documentoRelacionado   Documento?       @relation("DocumentoRelacion", fields: [documentoRelacionadoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentosHijos        Documento[]      @relation("DocumentoRelacion")
+  
   ticket             Ticket?              @relation(fields: [ticketId], references: [id])
   pedido             Pedido?              @relation(fields: [pedidoId], references: [id])
   producto           Producto?            @relation(fields: [productoId], references: [id])
@@ -256,6 +271,8 @@ model Documento {
   @@index([pedidoId])
   @@index([productoId])
   @@index([tipo])
+  @@index([estadoDocumento])
+  @@index([documentoRelacionadoId])
 }
 
 model Carrito {
@@ -373,6 +390,27 @@ enum DocumentoTipo {
   informe_reparacion
   garantia
   manual
+  // Nuevos tipos para el flujo de reparación
+  orden_servicio              // FASE 1: Orden de Servicio/Recibo de Entrega
+  diagnostico_presupuesto     // FASE 2: Informe de Diagnóstico y Presupuesto
+  aceptacion_presupuesto      // FASE 3: Aceptación del Presupuesto
+  rechazo_presupuesto         // FASE 3: Rechazo del Presupuesto
+  extension_presupuesto       // FASE 4: Extensión de Presupuesto
+  aceptacion_extension        // FASE 4: Aceptación de la Extensión
+  orden_trabajo_interna       // Orden de Trabajo Interna
+  hoja_ruta                   // Hoja de Ruta del Equipo
+  albaran_entrega             // Albarán de Entrega Reparado
+}
+
+enum EstadoDocumento {
+  borrador          // Documento en edición
+  pendiente_firma   // Esperando firma del cliente/técnico
+  firmado           // Documento firmado
+  enviado           // Enviado al cliente
+  aceptado          // Aceptado por el cliente
+  rechazado         // Rechazado por el cliente
+  vencido           // Presupuesto vencido
+  anulado           // Documento anulado
 }
 
 enum DocumentoEntidadTipo {

@@ -87,7 +87,17 @@ export enum DocumentoTipo {
   PRESUPUESTO = 'presupuesto',
   INFORME_REPARACION = 'informe_reparacion',
   GARANTIA = 'garantia',
-  MANUAL = 'manual'
+  MANUAL = 'manual',
+  // Nuevos tipos para el flujo de reparación
+  ORDEN_SERVICIO = 'orden_servicio',
+  DIAGNOSTICO_PRESUPUESTO = 'diagnostico_presupuesto',
+  ACEPTACION_PRESUPUESTO = 'aceptacion_presupuesto',
+  RECHAZO_PRESUPUESTO = 'rechazo_presupuesto',
+  EXTENSION_PRESUPUESTO = 'extension_presupuesto',
+  ACEPTACION_EXTENSION = 'aceptacion_extension',
+  ORDEN_TRABAJO_INTERNA = 'orden_trabajo_interna',
+  HOJA_RUTA = 'hoja_ruta',
+  ALBARAN_ENTREGA = 'albaran_entrega'
 }
 
 export enum DocumentoEntidadTipo {
@@ -95,3 +105,15 @@ export enum DocumentoEntidadTipo {
   TICKET = 'ticket',
   PRODUCTO = 'producto'
 }
+
+export enum EstadoDocumento {
+  BORRADOR = 'borrador',
+  PENDIENTE_FIRMA = 'pendiente_firma',
+  FIRMADO = 'firmado',
+  ENVIADO = 'enviado',
+  ACEPTADO = 'aceptado',
+  RECHAZADO = 'rechazado',
+  VENCIDO = 'vencido',
+  ANULADO = 'anulado'
+}
+

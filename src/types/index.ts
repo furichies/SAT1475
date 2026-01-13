@@ -4,6 +4,34 @@ export * from './tienda'
 export * from './sat'
 export * from './enums'
 
+// Exportar tipos específicos de documentos para evitar conflictos
+export type {
+  DocumentoExtendido,
+  EvidenciaFotografica,
+  MetadatosOrdenServicio,
+  MetadatosDiagnosticoPresupuesto,
+  MetadatosAceptacionPresupuesto,
+  MetadatosRechazoPresupuesto,
+  MetadatosExtensionPresupuesto,
+  MetadatosAceptacionExtension,
+  MetadatosOrdenTrabajoInterna,
+  MetadatosHojaRuta,
+  MetadatosAlbaranEntrega,
+  DocumentoMetadatos,
+  ItemRepuesto,
+  ActividadManoObra,
+  TareaInterna,
+  MovimientoEquipo,
+  CrearDocumentoInput,
+  ActualizarDocumentoInput,
+  FirmarDocumentoInput,
+  FiltrosDocumento,
+  DocumentoConRelaciones,
+  DocumentoResponse,
+  DocumentosListResponse,
+  GenerarPDFResponse
+} from './documentos'
+
 // Tipos generales adicionales
 
 export interface ApiResponse<T = any> {

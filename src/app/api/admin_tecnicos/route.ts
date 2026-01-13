@@ -64,7 +64,14 @@ export async function GET(req: NextRequest) {
         apellidos: t.usuario.apellidos || '',
         email: t.usuario.email,
         telefono: t.usuario.telefono || '',
-        especialidades: t.especialidades ? JSON.parse(t.especialidades) : [],
+        especialidades: (() => {
+          if (!t.especialidades) return []
+          try {
+            return JSON.parse(t.especialidades)
+          } catch {
+            return t.especialidades.split(',').map(s => s.trim())
+          }
+        })(),
         nivel: t.nivel,
         disponible: t.disponible,
         ticketsAsignados: asignados,

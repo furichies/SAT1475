@@ -10,6 +10,7 @@ import {
     MessageSquare,
     Users,
     Settings,
+    FileText,
 } from 'lucide-react'
 
 // Define the menu items directly in the component so it's easy to manage
@@ -20,6 +21,7 @@ const menuItems = [
     { href: '/admin/clientes', icon: Users, label: 'Clientes' },
     { href: '/admin/tickets', icon: MessageSquare, label: 'Tickets SAT' },
     { href: '/admin/tecnicos', icon: Users, label: 'Técnicos' },
+    { href: '/admin/documentos', icon: FileText, label: 'Seguimiento y Documentación' },
     { href: '/admin/conocimiento', icon: Settings, label: 'Base de Conocimiento' },
 ]
 

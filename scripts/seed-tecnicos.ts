@@ -1,4 +1,4 @@
-import { PrismaClient, TecnicoNivel } from '@prisma/client'
+import { PrismaClient, TecnicoNivel, UserRole } from '@prisma/client'
 import bcrypt from 'bcrypt'
 
 const db = new PrismaClient()
@@ -163,7 +163,7 @@ async function main() {
     for (const nombreRaw of tecnicosRaw) {
         const { nombre, apellidos } = parseName(nombreRaw)
         const email = generateEmail(nombreRaw)
-        const nivel = 'senior'
+        const nivel = TecnicoNivel.senior
         // const nivel = getRandomItem(NIVELES)
         const especialidades = getRandomSpecialities()
 
@@ -176,7 +176,7 @@ async function main() {
                     nombre,
                     apellidos,
                     passwordHash,
-                    rol: 'tecnico'
+                    rol: UserRole.tecnico
                 }
             })
 

@@ -1,0 +1,96 @@
+[2026-01-13T09:09:57.158Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"testing","identificacion":"12312453434","telefono":"619882182","correoElectronico":"reto@perro.es","direccion":"Calle de Somontín 100"},"equipo":{"tipoEquipo":"laptop","m...
+--------------------------------------------------
+[2026-01-13T09:10:11.631Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"testing","identificacion":"12312453434","telefono":"619882182","correoElectronico":"reto@perro.es","direccion":"Calle de Somontín 100"},"equipo":{"tipoEquipo":"laptop","m...
+--------------------------------------------------
+[2026-01-13T09:10:37.377Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"ghghghgh","identificacion":"123124534hg34","telefono":"619882182","correoElectronico":"reto@perro.es","direccion":"Calle de Somontín 100"},"equipo":{"tipoEquipo":"laptop"...
+--------------------------------------------------
+[2026-01-13T09:16:56.885Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"nueva orden reparación hp","identificacion":"51389259","telefono":"619882182","correoElectronico":"perri@mason.es","direccion":"Calle de Somontín 100"},"equipo":{"tipoEqu...
+--------------------------------------------------
+[2026-01-13T09:24:43.645Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"Bernardo perez","identificacion":"5123141","telefono":"619882182","correoElectronico":"perri@mason.es","direccion":"Calle de Somontín 100"},"equipo":{"tipoEquipo":"laptop...
+--------------------------------------------------
+[2026-01-13T09:27:59.191Z] POST /api/admin/documentos
+Tipo: diagnostico_presupuesto
+TicketId Recibido: cmkcdy8wq0008jcgbx2hbfoqn
+EntidadTipo: ticket
+Metadatos: {"tecnicoAsignado":{"id":"cmkbwhwco0006jcoctd59vw6v","nombre":"Pedro Reparaciones"},"diagnostico":{"pruebasRealizadas":["test de firm"],"resultadosObtenidos":"funciona","componentesDefectuosos":[],"ca...
+--------------------------------------------------
+[2026-01-13T09:28:03.210Z] POST /api/admin/documentos
+Tipo: diagnostico_presupuesto
+TicketId Recibido: cmkcdy8wq0008jcgbx2hbfoqn
+EntidadTipo: ticket
+Metadatos: {"tecnicoAsignado":{"id":"cmkbwhwco0006jcoctd59vw6v","nombre":"Pedro Reparaciones"},"diagnostico":{"pruebasRealizadas":["test de firm"],"resultadosObtenidos":"funciona","componentesDefectuosos":[],"ca...
+--------------------------------------------------
+[2026-01-13T09:40:26.676Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"femenia","identificacion":"12312453434","telefono":"619882182","correoElectronico":"perri@mason.es","direccion":"Calle de Somontín 100"},"equipo":{"tipoEquipo":"consola",...
+--------------------------------------------------
+[2026-01-13T09:43:00.090Z] POST /api/admin/documentos
+Tipo: diagnostico_presupuesto
+TicketId Recibido: cmkceigkk000hjcgbqgtshprd
+EntidadTipo: ticket
+Metadatos: {"tecnicoAsignado":{"id":"cmkbwhviy0000jcockxk48gvy","nombre":"Juan Técnico"},"diagnostico":{"pruebasRealizadas":["problemas varios"],"resultadosObtenidos":"correcto","componentesDefectuosos":[],"caus...
+--------------------------------------------------
+[2026-01-13T09:43:05.247Z] POST /api/admin/documentos
+Tipo: diagnostico_presupuesto
+TicketId Recibido: cmkceigkk000hjcgbqgtshprd
+EntidadTipo: ticket
+Metadatos: {"tecnicoAsignado":{"id":"cmkbwhviy0000jcockxk48gvy","nombre":"Juan Técnico"},"diagnostico":{"pruebasRealizadas":["problemas varios"],"resultadosObtenidos":"correcto","componentesDefectuosos":[],"caus...
+--------------------------------------------------
+[2026-01-13T10:08:57.680Z] POST /api/admin/documentos
+Tipo: aceptacion_presupuesto
+TicketId Recibido: cmkceigkk000hjcgbqgtshprd
+EntidadTipo: ticket
+Metadatos: {"presupuestoId":"","numeroPresupuesto":"DIA-1768297385250","fechaAceptacion":"2026-01-13T10:08:22.346Z","formaAprobacion":"firma_fisica","metodoPagoAcordado":"efectivo","autorizaciones":{"procederRep...
+--------------------------------------------------
+[2026-01-13T10:09:11.427Z] POST /api/admin/documentos
+Tipo: aceptacion_presupuesto
+TicketId Recibido: cmkceigkk000hjcgbqgtshprd
+EntidadTipo: ticket
+Metadatos: {"presupuestoId":"","numeroPresupuesto":"DIA-1768297385250","fechaAceptacion":"2026-01-13T10:08:22.346Z","formaAprobacion":"firma_fisica","metodoPagoAcordado":"efectivo","autorizaciones":{"procederRep...
+--------------------------------------------------
+[2026-01-13T10:12:18.904Z] POST /api/admin/documentos
+Tipo: rechazo_presupuesto
+TicketId Recibido: cmkcdfk5v0007jcvg32gffjvz
+EntidadTipo: ticket
+Metadatos: {"presupuestoId":"","numeroPresupuesto":"1768297380093","fechaRechazo":"2026-01-13T10:11:49.538Z","motivoRechazo":"costo_elevado","motivoDetalle":"","formaRechazo":"firma_fisica","instrucciones":{"ret...
+--------------------------------------------------
+[2026-01-13T10:18:43.597Z] POST /api/admin/documentos
+Tipo: albaran_entrega
+TicketId Recibido: cmkceigkk000hjcgbqgtshprd
+EntidadTipo: ticket
+Metadatos: {"ticketId":"cmkceigkk000hjcgbqgtshprd","numeroTicket":"","equipoEntregado":{"tipo":"a","marca":"ad","modelo":"ad","numeroSerie":"ad"},"reparacionesRealizadas":["ada"],"repuestosUtilizados":[],"garant...
+--------------------------------------------------
+[2026-01-13T10:28:04.949Z] POST /api/admin/documentos
+Tipo: albaran_entrega
+TicketId Recibido: cmkcdf8wr0002jcvgv4rjt07h
+EntidadTipo: ticket
+Metadatos: {"ticketId":"cmkcdf8wr0002jcvgv4rjt07h","numeroTicket":"","equipoEntregado":{"tipo":"ada","marca":"ada","modelo":"da","numeroSerie":"ada"},"reparacionesRealizadas":["daad"],"repuestosUtilizados":[],"g...
+--------------------------------------------------
+[2026-01-13T10:38:10.373Z] POST /api/admin/documentos
+Tipo: albaran_entrega
+TicketId Recibido: cmkcdf8wr0002jcvgv4rjt07h
+EntidadTipo: ticket
+Metadatos: {"ticketId":"cmkcdf8wr0002jcvgv4rjt07h","numeroTicket":"","equipoEntregado":{"tipo":"gfdg","marca":"fgdfdg","modelo":"ghgh","numeroSerie":"ghgh"},"reparacionesRealizadas":["gfdgdf"],"repuestosUtilizad...
+--------------------------------------------------

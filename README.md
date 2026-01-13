@@ -130,6 +130,18 @@ bun run build
 ./scripts/start-production.sh
 ```
 
+### 📦 Persistencia y Almacenamiento (Producción)
+
+En el modo `standalone` de Next.js, la carpeta `public` es de solo lectura. Por ello, el sistema utiliza una carpeta externa `uploads/` para almacenar evidencias fotográficas y otros documentos dinámicos.
+
+1.  **Directorio de Carga**: Asegúrate de que el directorio `uploads` existe en la raíz y tiene permisos de escritura:
+    ```bash
+    mkdir -p uploads/evidencias
+    chmod -R 775 uploads
+    ```
+2.  **Sincronización con Standalone**: El script `prepare-production.sh` (o `start-production.sh`) se encarga de que este directorio sea accesible para el servidor.
+3.  **Base de Datos**: Se recomienda usar `prod.db` para producción. Cambia el `DATABASE_URL` en tu `.env` antes de la ejecución final.
+
 El script `start-production.sh` se encarga automáticamente de:
 - Verificar que el build existe.
 - Configurar la ruta correcta a la base de datos (usando la original en `prisma/dev.db`).
@@ -180,7 +192,10 @@ bun run pm2:stop     # Detener el servidor
 │
 ├── public/
 │   ├── favicon.ico            # Icono de la aplicación
-│   └── images/                # Imágenes de productos y recursos
+│   └── images/                # Imágenes estáticas de la UI
+│
+├── uploads/                   # [PERSISTENTE] Evidencias, fotos y documentos (Producción)
+│   └── evidencias/            # Fotos adjuntas a documentos del SAT
 │
 ├── src/
 │   ├── app/                   # Rutas y páginas de Next.js

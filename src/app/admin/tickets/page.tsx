@@ -39,6 +39,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 
 const ticketsMock = [
@@ -74,6 +75,9 @@ const tipos = {
 }
 
 export default function AdminTicketsPage() {
+  const searchParams = useSearchParams()
+  const ticketIdParam = searchParams.get('ticketId')
+
   const [tickets, setTickets] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
@@ -101,6 +105,56 @@ export default function AdminTicketsPage() {
     fetchTickets()
     fetchTecnicos()
   }, [])
+
+  // Efeecto para deep linking desde documento
+  useEffect(() => {
+    if (ticketIdParam) {
+      if (tickets.length > 0) {
+        const found = tickets.find(t => t.id === ticketIdParam)
+        if (found) {
+          setTicketSeleccionado(found)
+        } else {
+          // Si no está en la lista cargada, lo buscamos individualmente
+          fetchTicketById(ticketIdParam)
+        }
+      } else {
+        // Si tickets no ha cargado aun, podemos esperar o intentar cargar individualmente tb.
+        // fetchTickets cargará la lista, y este efecto correrá de nuevo.
+        // Pero fetchTicketById es seguro.
+        fetchTicketById(ticketIdParam)
+      }
+    }
+  }, [ticketIdParam, tickets.length]) // Dependemos de tickets.length para re-ejecutar cuando carguen
+
+  const fetchTicketById = async (id: string) => {
+    try {
+      const res = await fetch(`/api/sat/tickets/${id}`)
+      const data = await res.json()
+      if (data.success && data.ticket) {
+        const t = data.ticket
+        // Mapeo manual para coincidir con la estructura de la lista
+        const mapped = {
+          id: t.id,
+          numero: t.numeroTicket,
+          cliente: t.usuario?.nombre || 'Desconocido',
+          asunto: t.asunto,
+          prioridad: t.prioridad,
+          tipo: t.tipo,
+          tecnico: t.tecnico?.usuario?.nombre || 'Sin asignar',
+          fecha: new Date(t.fechaCreacion).toLocaleString(),
+          estado: t.estado,
+          descripcion: t.descripcion,
+          diagnostico: t.diagnostico,
+          solucion: t.solucion,
+          documentos: t.documentos,
+          pedidoId: t.pedidoId
+        }
+        setTicketSeleccionado(mapped)
+      }
+    } catch (e) {
+      console.error("Error fetching single ticket", e)
+    }
+  }
 
   const fetchTecnicos = async () => {
     try {
@@ -610,13 +664,13 @@ export default function AdminTicketsPage() {
                               <FileText className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium truncate max-w-[180px]">{doc.contenido.replace('Adjunto: ', '')}</p>
+                              <p className="text-sm font-medium truncate max-w-[180px]">{doc.contenido ? doc.contenido.replace('Adjunto: ', '') : 'Documento Adjunto'}</p>
                               <p className="text-[10px] text-gray-500">{new Date(doc.fechaGeneracion).toLocaleDateString()}</p>
                             </div>
                           </div>
                           <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
                             <a
-                              href={doc.rutaArchivo.startsWith('/api') ? doc.rutaArchivo : `/api${doc.rutaArchivo.startsWith('/') ? '' : '/'}${doc.rutaArchivo}`}
+                              href={doc.rutaArchivo ? (doc.rutaArchivo.startsWith('/api') ? doc.rutaArchivo : `/api${doc.rutaArchivo.startsWith('/') ? '' : '/'}${doc.rutaArchivo}`) : '#'}
                               target="_blank"
                               rel="noopener noreferrer"
                               download
