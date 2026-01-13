@@ -1,7 +1,7 @@
 # Micro1475 - Sistema de Gestión de Tienda y SAT
 
 Sistema completo de gestión para tienda de informática con servicio técnico integrado (SAT). Desarrollado con Next.js 15 (versión segura 15.3.6), Prisma, SQLite y Bun.
-![Error 404](https://iycrtxokseizlhcxfotb.supabase.co/storage/v1/object/public/almacen/404.webp)
+
 ## 📋 Características Principales
 
 - 🛒 **Tienda Online**: Catálogo de productos con filtros avanzados, carrito de compras y gestión de pedidos
