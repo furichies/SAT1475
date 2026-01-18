@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +25,8 @@ import {
     Download,
     Settings,
     FileText,
-    Star
+    Star,
+    ImageIcon
 } from 'lucide-react'
 import {
     Dialog,
@@ -53,6 +55,9 @@ export default function TicketDetailPage() {
     const [rating, setRating] = useState(0)
     const [hoverRating, setHoverRating] = useState(0)
     const [isSubmittingRating, setIsSubmittingRating] = useState(false)
+
+    // Preview de imagen
+    const [previewImage, setPreviewImage] = useState<string | null>(null)
 
     // --- Lógica de Resolución (Base de Conocimiento) ---
     const [isResolucionModalOpen, setIsResolucionModalOpen] = useState(false)
@@ -726,6 +731,63 @@ export default function TicketDetailPage() {
                             </Card>
                         )}
 
+                        {/* Evidencias Fotográficas */}
+                        {ticket.documentos && ticket.documentos.filter((d: any) =>
+                          d.evidenciasFotos || d.rutaArchivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+                        ).length > 0 && (
+                          <Card className="shadow-xl border-none overflow-hidden rounded-3xl">
+                            <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500 w-full" />
+                            <CardHeader className="bg-muted/5 pb-2">
+                              <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
+                                <ImageIcon className="h-5 w-5" />
+                                EVIDENCIAS FOTOGRÁFICAS
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {ticket.documentos
+                                  .filter((d: any) => d.evidenciasFotos)
+                                  .map((doc: any) => {
+                                    let evidencias: any[] = []
+                                    try {
+                                      evidencias = JSON.parse(doc.evidenciasFotos)
+                                    } catch (e) {
+                                      console.error('Error parseando evidencias:', e)
+                                    }
+
+                                    return evidencias.map((img: any) => (
+                                      <div key={img.id} className="border rounded-lg overflow-hidden">
+                                        <div className="aspect-square relative">
+                                          <Image
+                                            src={img.url}
+                                            alt={img.descripcion || 'Evidencia'}
+                                            fill
+                                            className="object-cover cursor-pointer hover:opacity-90"
+                                            onClick={() => setPreviewImage(img.url)}
+                                            sizes="33vw"
+                                          />
+                                        </div>
+                                        <div className="p-3">
+                                          <p className="text-sm font-medium truncate">
+                                            {img.descripcion || 'Sin descripción'}
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            {new Date(img.fechaCaptura).toLocaleDateString('es-ES', {
+                                              day: '2-digit',
+                                              month: 'short',
+                                              year: 'numeric'
+                                            })}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))
+                                  })
+                                }
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                         <Card className="bg-gradient-to-br from-primary/10 to-transparent border-none shadow-none p-1 rounded-3xl">
                             <div className="bg-white/80 backdrop-blur-sm rounded-[22px] p-6 space-y-4">
                                 <div className="flex items-center gap-3">
@@ -785,6 +847,23 @@ export default function TicketDetailPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de preview de imagen */}
+            {previewImage && (
+                <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+                    <DialogContent className="max-w-4xl p-0">
+                        <div className="relative w-full h-[70vh]">
+                            <Image
+                                src={previewImage}
+                                alt="Vista previa"
+                                fill
+                                className="object-contain bg-gray-100"
+                                sizes="100vw"
+                            />
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     )
 }

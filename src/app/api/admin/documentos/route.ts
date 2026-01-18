@@ -197,14 +197,43 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
         const cleanProductoId = productoId && productoId.trim() !== '' ? productoId.trim() : null
         const cleanDocumentoRelacionadoId = documentoRelacionadoId && documentoRelacionadoId.trim() !== '' ? documentoRelacionadoId.trim() : null
 
-        // LOGICA DE NEGOCIO: Si es ORDÉN DE SERVICIO y no hay Ticket, se crea TODO (Cliente, Producto, Ticket)
-        // Usamos 'orden_servicio' en minúsculas porque así está definido en el Enum/Prisma
+        // === VALIDACIÓN DE INTEGRIDAD REFERENCIAL ===
+        if (cleanTicketId) {
+            const ticketExiste = await prisma.ticket.findUnique({
+                where: { id: cleanTicketId },
+                include: { usuario: true, producto: true }
+            })
+
+            if (!ticketExiste) {
+                return NextResponse.json(
+                    { success: false, error: 'El ticket especificado no existe' },
+                    { status: 404 }
+                )
+            }
+            // Guardar ticket validado para uso posterior
+            (request as any).ticketValidado = ticketExiste
+        }
+
+        if (cleanPedidoId) {
+            const pedidoExiste = await prisma.pedido.findUnique({
+                where: { id: cleanPedidoId }
+            })
+
+            if (!pedidoExiste) {
+                return NextResponse.json(
+                    { success: false, error: 'El pedido especificado no existe' },
+                    { status: 404 }
+                )
+            }
+        }
+
+        // === AUTO-GENERACIÓN DE TICKET PARA ORDEN DE SERVICIO ===
         if ((tipo === 'orden_servicio' || tipo === 'ORDEN_SERVICIO') && !cleanTicketId && metadatos) {
             try {
-                console.log('--- AUTO-GENERANDO TICKET PARA ORDEN DE SERVICIO ---')
+                console.log('[Auto-Generación] Creando ticket desde Orden de Servicio')
                 const meta = metadatos as any // MetadatosOrdenServicio
 
-                // 1. Buscar o Crear Usuario (Cliente)
+                // 1. Buscar o Crear Cliente (Usuario)
                 let cliente = await prisma.usuario.findFirst({
                     where: {
                         email: meta.cliente.correoElectronico
@@ -212,40 +241,58 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                 })
 
                 if (!cliente) {
-                    // Crear usuario rápido
+                    console.log('[Auto-Generación] Creando nuevo cliente:', meta.cliente.correoElectronico)
                     cliente = await prisma.usuario.create({
                         data: {
                             email: meta.cliente.correoElectronico,
                             nombre: meta.cliente.nombreCompleto.split(' ')[0],
-                            apellidos: meta.cliente.nombreCompleto.split(' ').slice(1).join(' ') || '.',
+                            apellidos: meta.cliente.nombreCompleto.split(' ').slice(1).join(' ') || '',
                             rol: 'cliente',
-                            passwordHash: '$2b$10$tempPasswordHashForAutoCreatedUser', // Password temporal
+                            passwordHash: '$2b$10$tempPasswordHashForAutoCreatedUser',
                             telefono: meta.cliente.telefono,
                             direccion: meta.cliente.direccion,
                             activo: true
                         }
                     })
+                } else {
+                    // Actualizar datos si cambiaron
+                    console.log('[Auto-Generación] Actualizando cliente existente')
+                    await prisma.usuario.update({
+                        where: { id: cliente.id },
+                        data: {
+                            telefono: meta.cliente.telefono,
+                            direccion: meta.cliente.direccion
+                        }
+                    })
                 }
 
-                // 2. Crear Producto (Equipo del cliente)
-                // Generar SKU único temporal
-                const sku = `REP-${Date.now().toString().slice(-6)}`
-
-                const producto = await prisma.producto.create({
-                    data: {
-                        sku,
-                        tipo: 'equipo_completo',
-                        nombre: `${meta.equipo.tipoEquipo} ${meta.equipo.marca} ${meta.equipo.modelo}`,
-                        descripcion: `IMEI/Serie: ${meta.equipo.imei || meta.equipo.numeroSerie || 'N/A'}. ${meta.equipo.caracteristicasFisicas || ''}`,
-                        precio: 0,
-                        stock: 0,
-                        marca: meta.equipo.marca,
-                        modelo: meta.equipo.modelo
-                    }
+                // 2. Buscar o Crear Producto (Equipo del cliente)
+                const skuEquipo = `CLI-${cliente.id}-${meta.equipo.numeroSerie || 'SIN-SERIE'}`
+                let producto = await prisma.producto.findFirst({
+                    where: { sku: skuEquipo }
                 })
 
-                // 3. Crear Ticket
-                const numeroTicket = `TIC-${Date.now().toString().slice(-6)}`
+                if (!producto) {
+                    producto = await prisma.producto.create({
+                        data: {
+                            sku: `REP-${Date.now().toString().slice(-6)}`,
+                            tipo: 'equipo_completo',
+                            nombre: `${meta.equipo.tipoEquipo} ${meta.equipo.marca} ${meta.equipo.modelo}`,
+                            descripcion: `Cliente: ${cliente.nombre} ${cliente.apellidos}\n` +
+                                         `IMEI/Serie: ${meta.equipo.imei || meta.equipo.numeroSerie || 'N/A'}\n` +
+                                         `Color: ${meta.equipo.color || 'N/A'}\n` +
+                                         `Estado físico: ${meta.estadoFisico.danosVisibles || 'Sin daños visibles'}\n` +
+                                         meta.equipo.caracteristicasFisicas,
+                            precio: 0,
+                            stock: 0,
+                            marca: meta.equipo.marca,
+                            modelo: meta.equipo.modelo
+                        }
+                    })
+                }
+
+                // 3. Crear Ticket SAT
+                const numeroTicket = `SAT-${Date.now().toString().slice(-6)}`
                 const ticket = await prisma.ticket.create({
                     data: {
                         numeroTicket,
@@ -254,16 +301,29 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                         tipo: 'reparacion',
                         prioridad: 'media',
                         estado: 'abierto',
-                        asunto: `Reparación: ${meta.equipo.tipoEquipo} ${meta.equipo.marca}`,
-                        descripcion: `Problema reportado: ${meta.equipo.descripcionFalla || 'Sin descripción'}. \nAccesorios: ${meta.accesoriosIncluidos?.map((a: any) => a.descripcion).join(', ') || 'Ninguno'}`
+                        asunto: `Reparación: ${meta.equipo.tipoEquipo} ${meta.equipo.marca} ${meta.equipo.modelo}`,
+                        descripcion: `Problema reportado: ${meta.problema.sintomasReportados}\n` +
+                                     `Frecuencia del fallo: ${meta.problema.frecuenciaFallo || 'No especificada'}\n` +
+                                     `Condiciones de ocurrencia: ${meta.problema.condicionesOcurrencia || 'No especificadas'}\n` +
+                                     `Accesorios entregados: ${meta.equipo.accesoriosEntregados?.join(', ') || 'Ninguno'}\n` +
+                                     `Estado físico al ingreso:\n` +
+                                     `- Golpes: ${meta.estadoFisico.golpes ? 'Sí' : 'No'}\n` +
+                                     `- Rayones: ${meta.estadoFisico.rayones ? 'Sí' : 'No'}\n` +
+                                     `- Estado pantalla: ${meta.estadoFisico.estadoPantalla || 'Normal'}\n` +
+                                     `- Daños visibles: ${meta.estadoFisico.danosVisibles || 'Ninguno'}`,
+                        diagnostico: meta.observacionesTecnico || null
                     }
                 })
 
-                // Asignar el ID del nuevo ticket
+                console.log('[Auto-Generación] Ticket creado exitosamente:', ticket.numeroTicket)
                 cleanTicketId = ticket.id
+
             } catch (autoGenError) {
-                console.error('Error autogenerando ticket:', autoGenError)
-                // No detenemos el proceso, pero el documento quedará suelto
+                console.error('[Auto-Generación] Error creando ticket:', autoGenError)
+                return NextResponse.json(
+                    { success: false, error: 'Error al crear ticket asociado: ' + (autoGenError as Error).message },
+                    { status: 500 }
+                )
             }
         }
 

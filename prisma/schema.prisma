@@ -262,10 +262,10 @@ model Documento {
   documentoRelacionado   Documento?       @relation("DocumentoRelacion", fields: [documentoRelacionadoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   documentosHijos        Documento[]      @relation("DocumentoRelacion")
   
-  ticket             Ticket?              @relation(fields: [ticketId], references: [id])
-  pedido             Pedido?              @relation(fields: [pedidoId], references: [id])
-  producto           Producto?            @relation(fields: [productoId], references: [id])
-  usuarioGenerador   Usuario              @relation(fields: [usuarioGeneradorId], references: [id])
+   ticket             Ticket?              @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+   pedido             Pedido?              @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
+   producto           Producto?            @relation(fields: [productoId], references: [id], onDelete: Cascade)
+   usuarioGenerador   Usuario              @relation(fields: [usuarioGeneradorId], references: [id])
 
   @@index([ticketId])
   @@index([pedidoId])

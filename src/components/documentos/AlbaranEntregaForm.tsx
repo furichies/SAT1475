@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Trash2, CalendarIcon, CheckCircle2 } from 'lucide-react'
+import { Plus, Trash2, CalendarIcon, CheckCircle2, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Calendar } from '@/components/ui/calendar'
@@ -33,6 +33,9 @@ export function AlbaranEntregaForm({
     onCancel,
     isSubmitting = false
 }: AlbaranEntregaFormProps) {
+    const [loading, setLoading] = useState(false)
+    const [autoLoadError, setAutoLoadError] = useState<string | null>(null)
+
     // Datos del Equipo
     const [equipo, setEquipo] = useState({
         tipo: initialValues?.equipoEntregado?.tipo || '',
@@ -71,6 +74,206 @@ export function AlbaranEntregaForm({
         identificacion: initialValues?.clienteRecibe?.identificacion || '',
     })
 
+    // Efecto para cargar datos automáticamente desde el ticket
+    useEffect(() => {
+        if (ticketId && !initialValues) {
+            cargarDatosDesdeTicket()
+        }
+    }, [ticketId])
+
+    const cargarDatosDesdeTicket = async () => {
+        setLoading(true)
+        setAutoLoadError(null)
+
+        try {
+            console.log('[AlbaranForm] 🔄 Iniciando carga de datos para ticketId:', ticketId)
+
+            // 1. Obtener información del ticket
+            console.log('[AlbaranForm] 📡 Solicitando ticket...')
+            const ticketRes = await fetch(`/api/sat/tickets/${ticketId}`)
+            console.log('[AlbaranForm] 📡 Respuesta ticket status:', ticketRes.status)
+
+            if (!ticketRes.ok) {
+                const errorText = await ticketRes.text()
+                console.error('[AlbaranForm] ❌ Error al cargar ticket:', errorText)
+                throw new Error(`No se pudo cargar el ticket (${ticketRes.status})`)
+            }
+
+            const ticketData = await ticketRes.json()
+            // La API devuelve { success: true, ticket: {...} }
+            const ticket = ticketData.ticket || ticketData.data || ticketData
+            console.log('[AlbaranForm] ✅ Ticket cargado:', ticket?.numeroTicket || ticket?.id)
+            console.log('[AlbaranForm] 📊 Estructura del ticket:', Object.keys(ticket || {}))
+
+            if (!ticket || !ticket.id) {
+                console.error('[AlbaranForm] ❌ Ticket inválido:', ticketData)
+                throw new Error('El ticket no contiene datos válidos')
+            }
+
+            // 2. Obtener documentos asociados al ticket
+            console.log('[AlbaranForm] 📡 Solicitando documentos del ticket...')
+            const docsRes = await fetch(`/api/admin/documentos?ticketId=${ticketId}`)
+            console.log('[AlbaranForm] 📡 Respuesta documentos status:', docsRes.status)
+
+            if (!docsRes.ok) {
+                const errorText = await docsRes.text()
+                console.error('[AlbaranForm] ❌ Error al cargar documentos:', errorText)
+                throw new Error(`No se pudieron cargar los documentos (${docsRes.status})`)
+            }
+
+            const docsData = await docsRes.json()
+            const documentos = docsData.data?.documentos || []
+
+            console.log('[AlbaranForm] 📄 Documentos encontrados:', documentos.length)
+            console.log('[AlbaranForm] 📋 Tipos de documentos:', documentos.map((d: any) => `${d.tipo} (${d.numeroDocumento})`).join(', '))
+
+            // 3. Extraer datos del equipo desde Orden de Servicio
+            const ordenServicio = documentos.find((d: any) =>
+                d.tipo === 'orden_servicio' || d.tipo === 'ORDEN_SERVICIO'
+            )
+
+            if (ordenServicio?.metadatos) {
+                const metaOrden = typeof ordenServicio.metadatos === 'string'
+                    ? JSON.parse(ordenServicio.metadatos)
+                    : ordenServicio.metadatos
+
+                setEquipo({
+                    tipo: metaOrden.equipo?.tipoEquipo || ticket.producto?.nombre || '',
+                    marca: metaOrden.equipo?.marca || ticket.producto?.marca || '',
+                    modelo: metaOrden.equipo?.modelo || ticket.producto?.modelo || '',
+                    numeroSerie: metaOrden.equipo?.numeroSerie || metaOrden.equipo?.imei || '',
+                })
+
+                // Auto-rellenar datos del cliente
+                if (metaOrden.cliente) {
+                    setClienteRecibe({
+                        nombre: metaOrden.cliente.nombreCompleto || `${ticket.usuario?.nombre || ''} ${ticket.usuario?.apellidos || ''}`.trim(),
+                        identificacion: metaOrden.cliente.dni || '',
+                    })
+                }
+            } else if (ticket.producto) {
+                // Fallback: usar datos del producto del ticket
+                console.log('[AlbaranForm] 🔄 Usando datos del producto del ticket')
+                setEquipo({
+                    tipo: ticket.producto.nombre || '',
+                    marca: ticket.producto.marca || '',
+                    modelo: ticket.producto.modelo || '',
+                    numeroSerie: ticket.numeroSerieProducto || '',
+                })
+            } else {
+                console.warn('[AlbaranForm] ⚠️ No se encontraron datos del equipo')
+            }
+
+            // 4. Extraer reparaciones y repuestos desde Diagnóstico y Presupuesto
+            const diagnostico = documentos.find((d: any) =>
+                d.tipo === 'diagnostico_presupuesto' || d.tipo === 'DIAGNOSTICO_PRESUPUESTO'
+            )
+
+            if (diagnostico?.metadatos) {
+                const metaDiag = typeof diagnostico.metadatos === 'string'
+                    ? JSON.parse(diagnostico.metadatos)
+                    : diagnostico.metadatos
+
+                // Extraer trabajos necesarios como reparaciones
+                const trabajos: string[] = []
+                if (metaDiag.trabajosNecesarios?.descripcionDetallada) {
+                    trabajos.push(metaDiag.trabajosNecesarios.descripcionDetallada)
+                }
+                if (metaDiag.trabajosNecesarios?.manoObra?.length > 0) {
+                    metaDiag.trabajosNecesarios.manoObra.forEach((mo: any) => {
+                        if (mo.descripcion) trabajos.push(mo.descripcion)
+                    })
+                }
+                if (trabajos.length > 0) {
+                    setReparaciones(trabajos)
+                }
+
+                // Extraer repuestos
+                if (metaDiag.trabajosNecesarios?.repuestos?.length > 0) {
+                    const repuestosFormateados = metaDiag.trabajosNecesarios.repuestos.map((r: any) => ({
+                        codigo: r.codigo || '',
+                        descripcion: r.descripcion || '',
+                        cantidad: r.cantidad || 1,
+                        garantiaMeses: 6
+                    }))
+                    setRepuestos(repuestosFormateados)
+                }
+
+                // Calcular monto total desde el presupuesto
+                if (metaDiag.costos?.total) {
+                    setPago(prev => ({
+                        ...prev,
+                        monto: metaDiag.costos.total
+                    }))
+                }
+            }
+
+            // 5. Buscar extensiones de presupuesto
+            const extensiones = documentos.filter((d: any) =>
+                d.tipo === 'extension_presupuesto' || d.tipo === 'EXTENSION_PRESUPUESTO'
+            )
+
+            extensiones.forEach((ext: any) => {
+                if (ext.metadatos) {
+                    const metaExt = typeof ext.metadatos === 'string'
+                        ? JSON.parse(ext.metadatos)
+                        : ext.metadatos
+
+                    // Agregar trabajos adicionales
+                    if (metaExt.nuevosTrabajos?.descripcionDetallada) {
+                        setReparaciones(prev => [...prev, metaExt.nuevosTrabajos.descripcionDetallada])
+                    }
+                    if (metaExt.nuevosTrabajos?.manoObraExtra?.length > 0) {
+                        metaExt.nuevosTrabajos.manoObraExtra.forEach((mo: any) => {
+                            if (mo.descripcion) {
+                                setReparaciones(prev => [...prev, mo.descripcion])
+                            }
+                        })
+                    }
+
+                    // Agregar repuestos adicionales
+                    if (metaExt.nuevosTrabajos?.repuestosAdicionales?.length > 0) {
+                        const repuestosAdicionales = metaExt.nuevosTrabajos.repuestosAdicionales.map((r: any) => ({
+                            codigo: r.codigo || '',
+                            descripcion: r.descripcion || '',
+                            cantidad: r.cantidad || 1,
+                            garantiaMeses: 6
+                        }))
+                        setRepuestos(prev => [...prev, ...repuestosAdicionales])
+                    }
+
+                    // Sumar costo adicional
+                    if (metaExt.costoAdicional?.total) {
+                        setPago(prev => ({
+                            ...prev,
+                            monto: prev.monto + metaExt.costoAdicional.total
+                        }))
+                    }
+                }
+            })
+
+            // 6. Auto-rellenar nombre del cliente si no se hizo antes
+            if (!clienteRecibe.nombre && ticket.usuario) {
+                console.log('[AlbaranForm] 👤 Auto-rellenando datos del cliente')
+                setClienteRecibe(prev => ({
+                    ...prev,
+                    nombre: `${ticket.usuario.nombre} ${ticket.usuario.apellidos || ''}`.trim()
+                }))
+            } else if (!clienteRecibe.nombre) {
+                console.warn('[AlbaranForm] ⚠️ No se encontraron datos del cliente en el ticket')
+            }
+
+            console.log('[AlbaranForm] ✅ Datos cargados automáticamente exitosamente')
+
+        } catch (error) {
+            console.error('[AlbaranForm] ❌ Error cargando datos:', error)
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+            setAutoLoadError(`Error: ${errorMessage}. Por favor, complete manualmente.`)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -100,6 +303,17 @@ export function AlbaranEntregaForm({
                 <CardHeader>
                     <CardTitle>Albarán de Entrega / Certificado de Reparación</CardTitle>
                     <CardDescription>Documento final de entrega del equipo reparado al cliente</CardDescription>
+                    {loading && (
+                        <div className="flex items-center gap-2 text-blue-600 text-sm">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Cargando datos del ticket...</span>
+                        </div>
+                    )}
+                    {autoLoadError && (
+                        <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                            ⚠️ {autoLoadError}
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="space-y-6">
 
@@ -109,19 +323,19 @@ export function AlbaranEntregaForm({
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
                                 <Label>Tipo</Label>
-                                <Input value={equipo.tipo} onChange={e => setEquipo({ ...equipo, tipo: e.target.value })} disabled={readOnly} placeholder="Smartphone, Laptop..." required />
+                                <Input value={equipo.tipo} onChange={e => setEquipo({ ...equipo, tipo: e.target.value })} disabled={readOnly || loading} placeholder="Smartphone, Laptop..." required />
                             </div>
                             <div className="space-y-2">
                                 <Label>Marca</Label>
-                                <Input value={equipo.marca} onChange={e => setEquipo({ ...equipo, marca: e.target.value })} disabled={readOnly} required />
+                                <Input value={equipo.marca} onChange={e => setEquipo({ ...equipo, marca: e.target.value })} disabled={readOnly || loading} required />
                             </div>
                             <div className="space-y-2">
                                 <Label>Modelo</Label>
-                                <Input value={equipo.modelo} onChange={e => setEquipo({ ...equipo, modelo: e.target.value })} disabled={readOnly} required />
+                                <Input value={equipo.modelo} onChange={e => setEquipo({ ...equipo, modelo: e.target.value })} disabled={readOnly || loading} required />
                             </div>
                             <div className="space-y-2">
                                 <Label>Nº Serie / IMEI</Label>
-                                <Input value={equipo.numeroSerie} onChange={e => setEquipo({ ...equipo, numeroSerie: e.target.value })} disabled={readOnly} />
+                                <Input value={equipo.numeroSerie} onChange={e => setEquipo({ ...equipo, numeroSerie: e.target.value })} disabled={readOnly || loading} />
                             </div>
                         </div>
                     </div>
@@ -132,7 +346,7 @@ export function AlbaranEntregaForm({
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Reparaciones Realizadas</h3>
-                            {!readOnly && (
+                            {!readOnly && !loading && (
                                 <Button type="button" variant="outline" size="sm" onClick={() => setReparaciones([...reparaciones, ''])}>
                                     <Plus className="h-4 w-4 mr-1" /> Añadir
                                 </Button>
@@ -148,10 +362,10 @@ export function AlbaranEntregaForm({
                                             newR[idx] = e.target.value
                                             setReparaciones(newR)
                                         }}
-                                        disabled={readOnly}
+                                        disabled={readOnly || loading}
                                         placeholder="Descripción del trabajo..."
                                     />
-                                    {!readOnly && idx > 0 && (
+                                    {!readOnly && !loading && idx > 0 && (
                                         <Button type="button" variant="ghost" size="icon" onClick={() => setReparaciones(reparaciones.filter((_, i) => i !== idx))}>
                                             <Trash2 className="h-4 w-4 text-red-500" />
                                         </Button>
@@ -165,7 +379,7 @@ export function AlbaranEntregaForm({
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Repuestos Sustituidos</h3>
-                            {!readOnly && (
+                            {!readOnly && !loading && (
                                 <Button type="button" variant="outline" size="sm" onClick={() => setRepuestos([...repuestos, { codigo: '', descripcion: '', cantidad: 1, garantiaMeses: 6 }])}>
                                     <Plus className="h-4 w-4 mr-1" /> Añadir Repuesto
                                 </Button>
@@ -180,7 +394,7 @@ export function AlbaranEntregaForm({
                                             <th className="px-4 py-2 text-left">Descripción</th>
                                             <th className="px-4 py-2 text-center w-20">Cant.</th>
                                             <th className="px-4 py-2 text-center w-32">Garantía (meses)</th>
-                                            {!readOnly && <th className="px-4 py-2 w-10"></th>}
+                                            {!readOnly && !loading && <th className="px-4 py-2 w-10"></th>}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -188,17 +402,17 @@ export function AlbaranEntregaForm({
                                             <tr key={idx} className="border-b last:border-0">
                                                 <td className="p-2"><Input className="h-8" value={r.codigo} onChange={e => {
                                                     const n = [...repuestos]; n[idx].codigo = e.target.value; setRepuestos(n)
-                                                }} disabled={readOnly} /></td>
+                                                }} disabled={readOnly || loading} /></td>
                                                 <td className="p-2"><Input className="h-8" value={r.descripcion} onChange={e => {
                                                     const n = [...repuestos]; n[idx].descripcion = e.target.value; setRepuestos(n)
-                                                }} disabled={readOnly} /></td>
+                                                }} disabled={readOnly || loading} /></td>
                                                 <td className="p-2"><Input type="number" className="h-8 text-center" value={r.cantidad} onChange={e => {
                                                     const n = [...repuestos]; n[idx].cantidad = parseInt(e.target.value); setRepuestos(n)
-                                                }} disabled={readOnly} /></td>
+                                                }} disabled={readOnly || loading} /></td>
                                                 <td className="p-2"><Input type="number" className="h-8 text-center" value={r.garantiaMeses} onChange={e => {
                                                     const n = [...repuestos]; n[idx].garantiaMeses = parseInt(e.target.value); setRepuestos(n)
-                                                }} disabled={readOnly} /></td>
-                                                {!readOnly && (
+                                                }} disabled={readOnly || loading} /></td>
+                                                {!readOnly && !loading && (
                                                     <td className="p-2">
                                                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRepuestos(repuestos.filter((_, i) => i !== idx))}>
                                                             <Trash2 className="h-4 w-4 text-red-500" />
@@ -222,7 +436,7 @@ export function AlbaranEntregaForm({
                         <div className="space-y-4">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Verificación de Calidad</h3>
                             <div className="flex items-center space-x-2 bg-green-50 p-3 rounded-lg border border-green-100">
-                                <Checkbox id="verificado" checked={verificado} onCheckedChange={c => setVerificado(!!c)} disabled={readOnly} />
+                                <Checkbox id="verificado" checked={verificado} onCheckedChange={c => setVerificado(!!c)} disabled={readOnly || loading} />
                                 <Label htmlFor="verificado" className="text-green-800 font-medium">Funcionamiento Correcto Verificado</Label>
                             </div>
                             <div className="space-y-2">
@@ -231,7 +445,7 @@ export function AlbaranEntregaForm({
                                     placeholder="Detalles sobre el estado final, recomendaciones al cliente..."
                                     value={observaciones}
                                     onChange={e => setObservaciones(e.target.value)}
-                                    disabled={readOnly}
+                                    disabled={readOnly || loading}
                                     rows={3}
                                 />
                             </div>
@@ -242,16 +456,16 @@ export function AlbaranEntregaForm({
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Meses Repuestos</Label>
-                                    <Input type="number" value={garantia.repuestos} onChange={e => setGarantia({ ...garantia, repuestos: parseInt(e.target.value) })} disabled={readOnly} />
+                                    <Input type="number" value={garantia.repuestos} onChange={e => setGarantia({ ...garantia, repuestos: parseInt(e.target.value) })} disabled={readOnly || loading} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Meses Mano Obra</Label>
-                                    <Input type="number" value={garantia.manoObra} onChange={e => setGarantia({ ...garantia, manoObra: parseInt(e.target.value) })} disabled={readOnly} />
+                                    <Input type="number" value={garantia.manoObra} onChange={e => setGarantia({ ...garantia, manoObra: parseInt(e.target.value) })} disabled={readOnly || loading} />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <Label>Condiciones Especiales</Label>
-                                <Textarea value={garantia.condiciones} onChange={e => setGarantia({ ...garantia, condiciones: e.target.value })} disabled={readOnly} rows={2} />
+                                <Textarea value={garantia.condiciones} onChange={e => setGarantia({ ...garantia, condiciones: e.target.value })} disabled={readOnly || loading} rows={2} />
                             </div>
                         </div>
                     </div>
@@ -265,7 +479,7 @@ export function AlbaranEntregaForm({
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Método</Label>
-                                    <Select value={pago.metodo} onValueChange={(v: any) => setPago({ ...pago, metodo: v })} disabled={readOnly}>
+                                    <Select value={pago.metodo} onValueChange={(v: any) => setPago({ ...pago, metodo: v })} disabled={readOnly || loading}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="efectivo">Efectivo</SelectItem>
@@ -276,8 +490,12 @@ export function AlbaranEntregaForm({
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Monto Total (€)</Label>
-                                    <Input type="number" value={pago.monto} onChange={e => setPago({ ...pago, monto: parseFloat(e.target.value) })} disabled={readOnly} />
+                                    <Input type="number" step="0.01" value={pago.monto} onChange={e => setPago({ ...pago, monto: parseFloat(e.target.value) })} disabled={readOnly || loading} />
                                 </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Referencia de Pago (Opcional)</Label>
+                                <Input value={pago.referencia} onChange={e => setPago({ ...pago, referencia: e.target.value })} disabled={readOnly || loading} placeholder="Nº transacción, recibo..." />
                             </div>
                         </div>
 
@@ -285,11 +503,11 @@ export function AlbaranEntregaForm({
                             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Recepción Cliente</h3>
                             <div className="space-y-2">
                                 <Label>Nombre de quien recibe</Label>
-                                <Input value={clienteRecibe.nombre} onChange={e => setClienteRecibe({ ...clienteRecibe, nombre: e.target.value })} disabled={readOnly} required />
+                                <Input value={clienteRecibe.nombre} onChange={e => setClienteRecibe({ ...clienteRecibe, nombre: e.target.value })} disabled={readOnly || loading} required />
                             </div>
                             <div className="space-y-2">
                                 <Label>DNI / Identificación</Label>
-                                <Input value={clienteRecibe.identificacion} onChange={e => setClienteRecibe({ ...clienteRecibe, identificacion: e.target.value })} disabled={readOnly} required />
+                                <Input value={clienteRecibe.identificacion} onChange={e => setClienteRecibe({ ...clienteRecibe, identificacion: e.target.value })} disabled={readOnly || loading} required />
                             </div>
                         </div>
                     </div>
@@ -297,9 +515,9 @@ export function AlbaranEntregaForm({
             </Card>
 
             <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>Cancelar</Button>
                 {!readOnly && (
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
+                    <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSubmitting || loading}>
                         {isSubmitting ? 'Guardando...' : 'Completar Entrega'}
                     </Button>
                 )}

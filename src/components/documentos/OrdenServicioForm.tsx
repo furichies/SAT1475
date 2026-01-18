@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, X, Save } from 'lucide-react'
 import type { MetadatosOrdenServicio } from '@/types/documentos'
+import { UsuarioSelector } from '@/components/common/UsuarioSelector'
 
 interface OrdenServicioFormProps {
     initialValues?: MetadatosOrdenServicio
@@ -68,6 +69,7 @@ export function OrdenServicioForm({
 
     const [ordenServicio, setOrdenServicio] = useState<MetadatosOrdenServicio>(initialValues || defaultValues)
     const [nuevoAccesorio, setNuevoAccesorio] = useState('')
+    const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any>(null)
 
     const handleAgregarAccesorio = () => {
         if (nuevoAccesorio.trim()) {
@@ -106,8 +108,48 @@ export function OrdenServicioForm({
                     <Card>
                         <CardHeader>
                             <CardTitle>Datos del Cliente</CardTitle>
+                            <CardDescription>
+                                Selecciona un cliente existente o crea uno nuevo
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Selector de Cliente Existente */}
+                            <div className="space-y-2">
+                                <Label htmlFor="clienteSelector">Seleccionar Cliente Existente</Label>
+                                <UsuarioSelector
+                                    value={usuarioSeleccionado?.id || ''}
+                                    onChange={(usuario) => {
+                                        setUsuarioSeleccionado(usuario)
+                                        setOrdenServicio({
+                                            ...ordenServicio,
+                                            cliente: {
+                                                nombreCompleto: `${usuario.nombre} ${usuario.apellidos || ''}`.trim(),
+                                                identificacion: usuario.codigoPostal || '',
+                                                telefono: usuario.telefono || '',
+                                                correoElectronico: usuario.email,
+                                                direccion: usuario.direccion || '',
+                                            }
+                                        })
+                                    }}
+                                    filtroRol="cliente"
+                                    placeholder="Buscar cliente por nombre, email o código postal..."
+                                    permitirCrear={true}
+                                    disabled={readOnly}
+                                />
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-white px-2 text-muted-foreground">
+                                        o editar manualmente
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Campos manuales (se rellenan automáticamente) */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
                                     <Label htmlFor="nombreCompleto">Nombre Completo *</Label>
@@ -176,10 +218,9 @@ export function OrdenServicioForm({
                                 </div>
 
                                 <div className="col-span-2">
-                                    <Label htmlFor="direccion">Dirección *</Label>
+                                    <Label htmlFor="direccion">Dirección</Label>
                                     <Input
                                         id="direccion"
-                                        required
                                         disabled={readOnly}
                                         value={ordenServicio.cliente.direccion}
                                         onChange={(e) =>
@@ -191,6 +232,14 @@ export function OrdenServicioForm({
                                     />
                                 </div>
                             </div>
+
+                            {/* Indicador si es nuevo cliente */}
+                            {!usuarioSeleccionado && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <span className="font-medium">ℹ️ Info:</span> Al guardar, se creará automáticamente
+                                    un nuevo usuario y ticket SAT para este cliente.
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

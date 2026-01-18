@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { DocumentoTipo, EstadoDocumento } from '@/types/enums'
+import path from 'path'
 import type {
     MetadatosOrdenServicio,
     MetadatosDiagnosticoPresupuesto,
@@ -51,25 +52,25 @@ export async function generarPDFDocumento(documento: any): Promise<Buffer> {
     // Generar PDF según el tipo de documento
     switch (documento.tipo) {
         case DocumentoTipo.ORDEN_SERVICIO:
-            generarOrdenServicio(doc, documento, metadatos)
+            await generarOrdenServicio(doc, documento, metadatos)
             break
         case DocumentoTipo.DIAGNOSTICO_PRESUPUESTO:
-            generarDiagnosticoPresupuesto(doc, documento, metadatos)
+            await generarDiagnosticoPresupuesto(doc, documento, metadatos)
             break
         case DocumentoTipo.ACEPTACION_PRESUPUESTO:
-            generarAceptacionPresupuesto(doc, documento, metadatos)
+            await generarAceptacionPresupuesto(doc, documento, metadatos)
             break
         case DocumentoTipo.RECHAZO_PRESUPUESTO:
-            generarRechazoPresupuesto(doc, documento, metadatos)
+            await generarRechazoPresupuesto(doc, documento, metadatos)
             break
         case DocumentoTipo.EXTENSION_PRESUPUESTO:
-            generarExtensionPresupuesto(doc, documento, metadatos)
+            await generarExtensionPresupuesto(doc, documento, metadatos)
             break
         case DocumentoTipo.ALBARAN_ENTREGA:
-            generarAlbaranEntrega(doc, documento, metadatos)
+            await generarAlbaranEntrega(doc, documento, metadatos)
             break
         case DocumentoTipo.FACTURA:
-            generarFactura(doc, documento, metadatos)
+            await generarFactura(doc, documento, metadatos)
             break
         default:
             generarDocumentoGenerico(doc, documento)
@@ -139,9 +140,185 @@ function agregarPiePagina(doc: jsPDF, numeroPagina: number = 1) {
 }
 
 /**
- * Generar Orden de Servicio (FASE 1)
+ * Agrega evidencias fotográficas al PDF
  */
-function generarOrdenServicio(doc: jsPDF, documento: any, metadatos: MetadatosOrdenServicio | null) {
+async function agregarEvidenciasPDF(
+    doc: jsPDF,
+    evidencias: any[],
+    yPos: number
+): Promise<number> {
+    if (!evidencias || evidencias.length === 0) return yPos
+
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const pageWidth = doc.internal.pageSize.getWidth()
+
+    // Verificar si hay suficiente espacio para el título y al menos 2 imágenes
+    // Título: 17px, primera imagen: 70px + descripción: 15px = ~102px
+    const espacioNecesarioMinimo = 102
+    const espacioDisponible = pageHeight - yPos - 20 // 20px de margen inferior
+
+    if (espacioDisponible < espacioNecesarioMinimo) {
+        doc.addPage()
+        yPos = 20 // Reiniciar posición en nueva página
+        console.log('[PDF] Nueva página para evidencias - Espacio disponible:', espacioDisponible, '<', espacioNecesarioMinimo)
+    }
+
+    // Agregar título
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('EVIDENCIAS FOTOGRÁFICAS', 20, yPos)
+    yPos += 7
+
+    const imgWidth = 70
+    const imgHeight = 70
+    const cols = 2
+    const gap = 10
+    const margin = 20
+
+    // Calcular altura necesaria para todas las imágenes
+    const filas = Math.ceil(evidencias.length / cols)
+    const alturaTotalNecesaria = (filas * (imgHeight + gap)) + 10 // 10px extra
+
+    // Si el espacio restante en la página actual no es suficiente para todas las imágenes,
+    // agregar nueva página inmediatamente
+    if (pageHeight - yPos - 20 < alturaTotalNecesaria && evidencias.length > 0) {
+        doc.addPage()
+        yPos = 20
+        // Agregar título en la nueva página
+        yPos += 10
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.primary)
+        doc.text('EVIDENCIAS FOTOGRÁFICAS (CONTINUACIÓN)', 20, yPos)
+        yPos += 7
+        console.log('[PDF] Nueva página para evidencias completas - Altura necesaria:', alturaTotalNecesaria)
+    }
+
+    // Procesar cada imagen
+    for (let i = 0; i < evidencias.length; i++) {
+        const evidencia = evidencias[i]
+        const col = i % cols
+        const row = Math.floor(i / cols)
+
+        const x = margin + (col * (imgWidth + gap))
+        const y = yPos + (row * (imgHeight + gap))
+
+        // Verificar si necesitamos nueva página
+        if (y + imgHeight + 15 > pageHeight - 20) {
+            doc.addPage()
+            yPos = 20
+            console.log('[PDF] Nueva página durante procesamiento de imagen', i)
+        }
+
+        try {
+            // Extraer ruta de archivo de la URL
+            let imagePath = evidencia.url
+
+            if (imagePath.startsWith('/api/uploads/')) {
+                // Convertir ruta de API a ruta del sistema de archivos
+                const pathPart = imagePath.replace('/api/uploads/', '')
+                imagePath = path.join(process.cwd(), 'uploads', pathPart)
+            } else if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+                // Es otra ruta relativa, intentar resolver desde uploads
+                imagePath = path.join(process.cwd(), 'uploads', imagePath)
+            }
+
+            console.log('[PDF] Leyendo imagen desde:', imagePath)
+
+            // Importar fs dinámicamente
+            const { readFile } = await import('fs/promises')
+
+            // Leer archivo directamente del sistema de archivos
+            const imageData = await readFile(imagePath)
+
+            console.log('[PDF] Imagen leída, tamaño:', imageData.length, 'bytes')
+
+            // Validar tamaño (máximo 4MB)
+            if (imageData.length > 4 * 1024 * 1024) {
+                console.warn('[PDF] Imagen excede 4MB, omitiendo:', imagePath)
+                doc.setFontSize(8)
+                doc.setFont('helvetica', 'italic')
+                doc.setTextColor(COLORS.warning)
+                doc.text(`Imagen omitida (excede 4MB, ${Math.round(imageData.length / 1024 / 1024)}MB)`, x, y + 30)
+                continue
+            }
+
+            // Determinar formato de imagen
+            let formato = 'JPEG'
+            if (imagePath.toLowerCase().includes('.png')) {
+                formato = 'PNG'
+            } else if (imagePath.toLowerCase().includes('.gif')) {
+                formato = 'GIF'
+            }
+
+            // Agregar imagen al PDF
+            doc.addImage(
+                imageData,
+                formato,
+                x,
+                y,
+                imgWidth,
+                imgHeight,
+                undefined,
+                'FAST'
+            )
+
+            // Agregar descripción debajo de la imagen
+            doc.setFontSize(7)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(COLORS.text)
+
+            const descripcion = evidencia.descripcion || `Evidencia ${i + 1}`
+            const fecha = new Date(evidencia.fechaCaptura).toLocaleDateString('es-ES')
+
+            const descLines = doc.splitTextToSize(`${descripcion} (${fecha})`, imgWidth)
+            doc.text(descLines, x, y + imgHeight + 3)
+
+            // Actualizar yPos para siguiente fila
+            if (col === cols - 1) {
+                yPos = y + imgHeight + 15
+            }
+        } catch (error: any) {
+            console.error('[PDF] Error al agregar imagen al PDF:', error)
+            console.error('[PDF] Detalles:', {
+                url: evidencia.url,
+                error: error.message,
+                code: error.code,
+                cause: error.cause
+            })
+
+            doc.setFontSize(8)
+            doc.setFont('helvetica', 'italic')
+            doc.setTextColor(COLORS.warning)
+
+            const errorMsg = error.cause?.code === 'ERR_INVALID_URL'
+                ? 'URL inválida'
+                : (error.message || 'Error al cargar imagen')
+
+            doc.text(`Error: ${errorMsg}`, x, y + 20)
+            doc.setFontSize(7)
+            doc.setTextColor(COLORS.textLight)
+            const urlShort = evidencia.url.length > 30
+                ? evidencia.url.substring(0, 30) + '...'
+                : evidencia.url
+            doc.text(`URL: ${urlShort}`, x, y + 25)
+        }
+    }
+
+    // Asegurar que la última fila se tenga en cuenta
+    const ultimaFila = Math.floor((evidencias.length - 1) / cols)
+    const ultimaPosicionY = 20 + (ultimaFila * (imgHeight + gap))
+
+    // Devolver la posición correcta para continuar
+    return ultimaPosicionY + 20
+}
+
+/**
+ * Generar Orden de Servicio (FASE1)
+ */
+async function generarOrdenServicio(doc: jsPDF, documento: any, metadatos: MetadatosOrdenServicio | null) {
     let yPos = agregarEncabezado(doc, 'ORDEN DE SERVICIO', documento.numeroDocumento)
 
     // Fecha de recepción
@@ -322,13 +499,25 @@ function generarOrdenServicio(doc: jsPDF, documento: any, metadatos: MetadatosOr
         doc.text(`Fecha Estimada de Diagnóstico: ${new Date(metadatos.fechaEstimadaDiagnostico).toLocaleDateString('es-ES')}`, 20, yPos)
     }
 
+    // === AGREGADO: EVIDENCIAS FOTOGRÁFICAS ===
+    if (documento.evidenciasFotos) {
+        try {
+            const evidencias = JSON.parse(documento.evidenciasFotos)
+            if (evidencias.length > 0) {
+                yPos = await agregarEvidenciasPDF(doc, evidencias, yPos)
+            }
+        } catch (error) {
+            console.error('Error al procesar evidencias:', error)
+        }
+    }
+
     agregarPiePagina(doc)
 }
 
 /**
  * Generar Diagnóstico y Presupuesto (FASE 2)
  */
-function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadatos: MetadatosDiagnosticoPresupuesto | null) {
+async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadatos: MetadatosDiagnosticoPresupuesto | null) {
     let yPos = agregarEncabezado(doc, 'DIAGNÓSTICO Y PRESUPUESTO', documento.numeroDocumento)
 
     // Fecha
@@ -510,6 +699,18 @@ function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadatos: Me
     yPos += 6
     doc.text(`Validez del Presupuesto: ${metadatos.validezPresupuesto} días`, 20, yPos)
 
+    // === AGREGADO: EVIDENCIAS FOTOGRÁFICAS ===
+    if (documento.evidenciasFotos) {
+        try {
+            const evidencias = JSON.parse(documento.evidenciasFotos)
+            if (evidencias.length > 0) {
+                yPos = await agregarEvidenciasPDF(doc, evidencias, yPos)
+            }
+        } catch (error) {
+            console.error('Error al procesar evidencias:', error)
+        }
+    }
+
     agregarPiePagina(doc)
 }
 
@@ -668,7 +869,7 @@ function generarExtensionPresupuesto(doc: jsPDF, documento: any, metadatos: Meta
 /**
  * Generar Albarán de Entrega (FASE FINAL)
  */
-function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: MetadatosAlbaranEntrega | null) {
+async function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: MetadatosAlbaranEntrega | null) {
     let yPos = agregarEncabezado(doc, 'ALBARÁN DE ENTREGA', documento.numeroDocumento)
 
     if (!metadatos) {
@@ -729,6 +930,18 @@ function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: MetadatosA
     doc.text(`Repuestos: ${metadatos.garantiaProporcionada.repuestos} meses`, 20, yPos)
     yPos += 6
     doc.text(`Mano de Obra: ${metadatos.garantiaProporcionada.manoObra} meses`, 20, yPos)
+
+    // === AGREGADO: EVIDENCIAS FOTOGRÁFICAS ===
+    if (documento.evidenciasFotos) {
+        try {
+            const evidencias = JSON.parse(documento.evidenciasFotos)
+            if (evidencias.length > 0) {
+                yPos = await agregarEvidenciasPDF(doc, evidencias, yPos)
+            }
+        } catch (error) {
+            console.error('Error al procesar evidencias:', error)
+        }
+    }
 
     agregarPiePagina(doc)
 }

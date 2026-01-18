@@ -18,6 +18,7 @@ import type {
     ItemRepuesto,
     ActividadManoObra
 } from '@/types/documentos'
+import { PresupuestoSelector } from '@/components/common/PresupuestoSelector'
 
 interface ExtensionPresupuestoFormProps {
     presupuestoOriginalId?: string
@@ -37,6 +38,7 @@ export function ExtensionPresupuestoForm({
     isSubmitting = false
 }: ExtensionPresupuestoFormProps) {
     // Estado
+    const [presupuestoSeleccionadoId, setPresupuestoSeleccionadoId] = useState(presupuestoOriginalId || '')
     const [numeroPresupuestoOriginal, setNumeroPresupuestoOriginal] = useState(initialValues?.numeroPresupuestoOriginal || '')
     const [fechaDescubrimiento, setFechaDescubrimiento] = useState<Date>(initialValues?.fechaDescubrimiento ? new Date(initialValues.fechaDescubrimiento) : new Date())
     const [motivo, setMotivo] = useState<'danos_adicionales' | 'componentes_adicionales' | 'problemas_colaterales' | 'otro'>(initialValues?.motivoExtension || 'danos_adicionales')
@@ -57,6 +59,12 @@ export function ExtensionPresupuestoForm({
     const [totalRepuestos, setTotalRepuestos] = useState(0)
     const [totalManoObra, setTotalManoObra] = useState(0)
     const [totalGeneral, setTotalGeneral] = useState(0)
+
+    // Handler para cambio de presupuesto
+    const handlePresupuestoChange = (presupuesto: any) => {
+        setPresupuestoSeleccionadoId(presupuesto.id)
+        setNumeroPresupuestoOriginal(presupuesto.numeroDocumento)
+    }
 
     // Efecto para calcular totales
     useEffect(() => {
@@ -142,13 +150,17 @@ export function ExtensionPresupuestoForm({
                     {/* Información Básica */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Número Presupuesto Original</Label>
-                            <Input
-                                value={numeroPresupuestoOriginal}
-                                onChange={(e) => setNumeroPresupuestoOriginal(e.target.value)}
+                            <Label>Presupuesto Original</Label>
+                            <PresupuestoSelector
+                                value={presupuestoSeleccionadoId}
+                                onChange={handlePresupuestoChange}
                                 disabled={readOnly}
-                                required
                             />
+                            {numeroPresupuestoOriginal && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Número: {numeroPresupuestoOriginal}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label>Fecha del Hallazgo</Label>

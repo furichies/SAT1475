@@ -41,6 +41,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
+import Image from 'next/image'
 
 const ticketsMock = [
   { id: '1', numero: 'SAT-2023-0045', cliente: 'Pedro Sánchez', asunto: 'Portátil no enciende', prioridad: 'urgente', tipo: 'incidencia', tecnico: 'Carlos García', fecha: '2023-12-30 08:00', estado: 'pendiente', descripcion: 'El equipo no da señal de vida tras una subida de tensión.' },
@@ -100,6 +101,9 @@ export default function AdminTicketsPage() {
     parts: { name: string, cost: number }[]
   }>({ laborHours: 1, parts: [] })
   const [newPart, setNewPart] = useState({ name: '', cost: '' })
+
+  // Preview de imagen
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTickets()
@@ -652,35 +656,118 @@ export default function AdminTicketsPage() {
                   </p>
                 </div>
 
-                {/* Archivos Adjuntos */}
+                {/* Archivos Adjuntos y Evidencias */}
                 {ticketSeleccionado.documentos && ticketSeleccionado.documentos.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Archivos Adjuntos</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {ticketSeleccionado.documentos.map((doc: any) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg hover:bg-gray-100 transition-colors">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="bg-primary/10 p-2 rounded-md text-primary">
-                              <FileText className="h-4 w-4" />
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                      Archivos y Evidencias ({ticketSeleccionado.documentos.length})
+                    </p>
+
+                    {ticketSeleccionado.documentos.map((doc: any) => {
+                      // Verificar si tiene evidencias fotográficas
+                      let evidencias: any[] = []
+                      try {
+                        evidencias = doc.evidenciasFotos ? JSON.parse(doc.evidenciasFotos) : []
+                      } catch (e) {
+                        console.error('Error parseando evidencias:', e)
+                      }
+
+                      const esImagen = doc.rutaArchivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+
+                      // Si es documento sin imágenes
+                      if (evidencias.length === 0 && !esImagen) {
+                        return (
+                          <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-primary/10 p-2 rounded-md text-primary">
+                                <FileText className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate max-w-[180px]">
+                                  {doc.contenido?.replace('Adjunto: ', '') || 'Documento'}
+                                </p>
+                                <p className="text-[10px] text-gray-500">
+                                  {new Date(doc.fechaGeneracion).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate max-w-[180px]">{doc.contenido ? doc.contenido.replace('Adjunto: ', '') : 'Documento Adjunto'}</p>
-                              <p className="text-[10px] text-gray-500">{new Date(doc.fechaGeneracion).toLocaleDateString()}</p>
+                            <Button variant="ghost" size="sm" asChild>
+                              <a
+                                href={doc.rutaArchivo ? (doc.rutaArchivo.startsWith('/api') ? doc.rutaArchivo : `/api${doc.rutaArchivo}`) : '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                              >
+                                <Download className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          </div>
+                        )
+                      }
+
+                      // Documento con imágenes
+                      return (
+                        <div key={doc.id} className="bg-white border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-sm">
+                                {doc.contenido?.replace('Adjunto: ', '') || `Evidencias (${evidencias.length})`}
+                              </p>
+                              <span className="text-[10px] text-gray-500">
+                                {new Date(doc.fechaGeneracion).toLocaleDateString('es-ES', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}
+                              </span>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                            <a
-                              href={doc.rutaArchivo ? (doc.rutaArchivo.startsWith('/api') ? doc.rutaArchivo : `/api${doc.rutaArchivo.startsWith('/') ? '' : '/'}${doc.rutaArchivo}`) : '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download
-                            >
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
+
+                          {/* Galería de imágenes */}
+                          {(evidencias.length > 0 || esImagen) && (
+                            <div className={`grid gap-2 ${evidencias.length > 0 ? 'grid-cols-3 md:grid-cols-4' : 'grid-cols-1'}`}>
+                              {evidencias.map((img: any, idx: number) => (
+                                <div
+                                  key={`${doc.id}-${img.id}`}
+                                  className="relative aspect-square rounded-md overflow-hidden border cursor-pointer hover:shadow-lg transition-shadow"
+                                  onClick={() => setPreviewImage(img.url)}
+                                >
+                                  <Image
+                                    src={img.url}
+                                    alt={img.descripcion || `Evidencia ${idx + 1}`}
+                                    fill
+                                    className="object-cover"
+                                    sizes="25vw"
+                                  />
+                                  {img.descripcion && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1">
+                                      <p className="text-[10px] text-white truncate px-1">
+                                        {img.descripcion}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+
+                              {/* Si es rutaArchivo de imagen individual */}
+                              {evidencias.length === 0 && esImagen && doc.rutaArchivo && (
+                                <div
+                                  className="aspect-square max-w-[200px] rounded-md overflow-hidden border cursor-pointer hover:shadow-lg"
+                                  onClick={() => setPreviewImage(doc.rutaArchivo)}
+                                >
+                                  <Image
+                                    src={doc.rutaArchivo}
+                                    alt={doc.contenido || 'Evidencia'}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
                 )}
 
@@ -1030,6 +1117,23 @@ export default function AdminTicketsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de preview de imagen */}
+      {previewImage && (
+        <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+          <DialogContent className="max-w-5xl p-0">
+            <div className="relative w-full h-[80vh]">
+              <Image
+                src={previewImage}
+                alt="Vista previa"
+                fill
+                className="object-contain bg-gray-100"
+                sizes="100vw"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div >
   )
 }

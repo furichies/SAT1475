@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { MetadatosAceptacionPresupuesto, MetadatosRechazoPresupuesto } from '@/types/documentos'
+import { PresupuestoSelector } from '@/components/common/PresupuestoSelector'
 
 // ============================================================================
 // FORMULARIO DE ACEPTACIÓN
@@ -38,6 +39,7 @@ export function AceptacionPresupuestoForm({
     isSubmitting = false
 }: AceptacionPresupuestoFormProps) {
     // Estado
+    const [presupuestoSeleccionadoId, setPresupuestoSeleccionadoId] = useState(presupuestoId || '')
     const [numeroPresupuesto, setNumeroPresupuesto] = useState(initialValues?.numeroPresupuesto || '')
     const [fechaAceptacion, setFechaAceptacion] = useState<Date>(initialValues?.fechaAceptacion ? new Date(initialValues.fechaAceptacion) : new Date())
     const [formaAprobacion, setFormaAprobacion] = useState<'firma_fisica' | 'email' | 'sms' | 'portal_web'>(initialValues?.formaAprobacion || 'firma_fisica')
@@ -54,6 +56,18 @@ export function AceptacionPresupuestoForm({
 
     // Fecha límite
     const [fechaLimite, setFechaLimite] = useState<Date | undefined>(initialValues?.fechaLimiteReparacion ? new Date(initialValues.fechaLimiteReparacion) : undefined)
+
+    // Efecto para auto-rellenar datos cuando se selecciona un presupuesto
+    const handlePresupuestoChange = (presupuesto: any) => {
+        setPresupuestoSeleccionadoId(presupuesto.id)
+        setNumeroPresupuesto(presupuesto.numeroDocumento)
+
+        // Auto-rellenar teléfono y email del cliente
+        if (presupuesto.cliente) {
+            setTelefono(presupuesto.cliente.telefono || '')
+            setEmail(presupuesto.cliente.email || '')
+        }
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -89,14 +103,17 @@ export function AceptacionPresupuestoForm({
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Número Presupuesto Referencia</Label>
-                            <Input
-                                value={numeroPresupuesto}
-                                onChange={(e) => setNumeroPresupuesto(e.target.value)}
+                            <Label>Presupuesto a Aceptar</Label>
+                            <PresupuestoSelector
+                                value={presupuestoSeleccionadoId}
+                                onChange={handlePresupuestoChange}
                                 disabled={readOnly}
-                                placeholder="Ej: PRES-1700..."
-                                required
                             />
+                            {numeroPresupuesto && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Número: {numeroPresupuesto}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -265,6 +282,7 @@ export function RechazoPresupuestoForm({
     onCancel,
     isSubmitting = false
 }: RechazoPresupuestoFormProps) {
+    const [presupuestoSeleccionadoId, setPresupuestoSeleccionadoId] = useState(presupuestoId || '')
     const [numeroPresupuesto, setNumeroPresupuesto] = useState(initialValues?.numeroPresupuesto || '')
     const [fechaRechazo, setFechaRechazo] = useState<Date>(initialValues?.fechaRechazo ? new Date(initialValues.fechaRechazo) : new Date())
     const [motivo, setMotivo] = useState<'costo_elevado' | 'tiempo_reparacion' | 'decidio_no_reparar' | 'otra_empresa' | 'otro'>(initialValues?.motivoRechazo || 'costo_elevado')
@@ -277,6 +295,12 @@ export function RechazoPresupuestoForm({
     const [costoDiagnostico, setCostoDiagnostico] = useState(initialValues?.instrucciones.costoDiagnostico?.toString() || '')
 
     const [estadoEquipo, setEstadoEquipo] = useState(initialValues?.estadoEquipo || 'Devuelto en el mismo estado en que ingresó')
+
+    // Handler para cambio de presupuesto
+    const handlePresupuestoChange = (presupuesto: any) => {
+        setPresupuestoSeleccionadoId(presupuesto.id)
+        setNumeroPresupuesto(presupuesto.numeroDocumento)
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -309,13 +333,17 @@ export function RechazoPresupuestoForm({
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Número Presupuesto Referencia</Label>
-                            <Input
-                                value={numeroPresupuesto}
-                                onChange={(e) => setNumeroPresupuesto(e.target.value)}
+                            <Label>Presupuesto a Rechazar</Label>
+                            <PresupuestoSelector
+                                value={presupuestoSeleccionadoId}
+                                onChange={handlePresupuestoChange}
                                 disabled={readOnly}
-                                required
                             />
+                            {numeroPresupuesto && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Número: {numeroPresupuesto}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
