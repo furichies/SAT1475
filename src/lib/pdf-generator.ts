@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import QRCode from 'qrcode'
 import { DocumentoTipo, EstadoDocumento } from '@/types/enums'
 import path from 'path'
 import type {
@@ -1212,5 +1213,68 @@ function generarFactura(doc: jsPDF, documento: any, metadatos: MetadatosFactura 
     agregarPiePagina(doc)
 }
 
+/**
+ * Genera una etiqueta térmica (62x40mm) para un ticket con código QR
+ */
+export async function generarEtiquetaTicket(ticket: any): Promise<Buffer> {
+    // Formato etiqueta estándar Brother/Dymo: 62mm x 40mm (landscape)
+    const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [62, 40]
+    })
+
+    // Generar QR que apunte a la gestión del ticket
+    // Usamos variables de entorno para el dominio base si existe, sino localhost
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000' // Ajustar para producción
+    const qrData = `${baseUrl}/admin/tickets?ticketId=${ticket.id}`
+
+    // Generar QR como Data URL
+    const qrImage = await QRCode.toDataURL(qrData, { margin: 0 })
+
+    doc.setFillColor(0, 0, 0) // Negro
+
+    // Título / Empresa
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('SAT - MicroInfo', 2, 5)
+
+    // Número de Ticket (Grande)
+    doc.setFontSize(14)
+    doc.text(ticket.numeroTicket || ticket.numero || '---', 2, 12)
+
+    // Fecha
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    const fechaVal = ticket.fechaCreacion || ticket.fecha || new Date()
+    const fechaStr = new Date(fechaVal).toLocaleDateString('es-ES')
+    doc.text(`Fecha: ${fechaStr}`, 2, 17)
+
+    // Cliente (Truncado si es largo)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    const clienteNombre = ticket.usuario?.nombre || ticket.cliente || 'Desconocido'
+    const clienteNombreCorto = clienteNombre.length > 20 ? clienteNombre.substring(0, 20) + '...' : clienteNombre
+    doc.text(clienteNombreCorto, 2, 23)
+
+    // Asunto / Tipo
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    const asunto = ticket.asunto || ''
+    const docText = doc.splitTextToSize(asunto, 35) // Ajustar al ancho disponible a la izquierda del QR
+    // Limitar a 3 líneas
+    const lines = docText.length > 3 ? docText.slice(0, 3) : docText
+    doc.text(lines, 2, 28)
+
+    // QR Code a la derecha
+    // x: 40, y: 2, w: 20, h: 20 (aprox)
+    doc.addImage(qrImage, 'PNG', 40, 5, 20, 20)
+
+    // Texto ID pequeño abajo derecha
+    doc.setFontSize(5)
+    doc.text(ticket.id.substring(0, 8), 45, 27, { align: 'center' })
+
+    return Buffer.from(doc.output('arraybuffer'))
+}
 
 export default generarPDFDocumento

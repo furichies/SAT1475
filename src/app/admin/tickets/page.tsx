@@ -35,6 +35,7 @@ import {
   BookOpen, // New icon for KB
   Share, // New icon for sharing to KB
   Download, // For files
+  Printer, // New icon for printing labels
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -417,6 +418,30 @@ export default function AdminTicketsPage() {
     }
   }
 
+  const handleImprimirEtiqueta = async () => {
+    if (!ticketSeleccionado) return
+    try {
+      const response = await fetch(`/api/sat/tickets/${ticketSeleccionado.id}/etiqueta`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `etiqueta-${ticketSeleccionado.numero || 'ticket'}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        console.error('Error response:', await response.text())
+        alert('Error al generar la etiqueta')
+      }
+    } catch (error) {
+      console.error('Error al descargar etiqueta:', error)
+      alert('Error de conexión')
+    }
+  }
+
   const addPart = () => {
     if (!newPart.name || !newPart.cost) return
     const cost = parseFloat(newPart.cost)
@@ -796,6 +821,9 @@ export default function AdminTicketsPage() {
                 </div>
 
                 <div className="flex gap-3 pt-6 border-t">
+                  <Button variant="outline" className="flex-1" onClick={handleImprimirEtiqueta}>
+                    <Printer className="h-4 w-4 mr-2" /> Etiqueta QR
+                  </Button>
                   <Button variant="outline" className="flex-1" onClick={() => openEdicion(ticketSeleccionado)}>
                     <Edit className="h-4 w-4 mr-2" /> Editar Información
                   </Button>
@@ -969,6 +997,11 @@ export default function AdminTicketsPage() {
               )}
 
               <div className="flex gap-3 pt-6">
+                {isEdicion && (
+                  <Button type="button" variant="secondary" onClick={handleImprimirEtiqueta} className="bg-gray-100 hover:bg-gray-200 border-gray-300 border text-gray-700">
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button variant="outline" className="flex-1" onClick={closeModals}>Cancelar</Button>
                 <Button className="flex-1" onClick={handleGuardar}>
                   {isEdicion ? 'Actualizar Ticket' : 'Crear Ticket'}
