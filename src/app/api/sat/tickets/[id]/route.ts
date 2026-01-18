@@ -76,14 +76,18 @@ export async function PATCH(
         }
 
         const body = await req.json()
-        const { estado, prioridad, tecnico, tipo, descripcion, asunto, diagnostico, solucion } = body
+        const { estado, prioridad, tecnico, tecnicoId: bodyTecnicoId, tipo, descripcion, asunto, diagnostico, solucion } = body
         const { id } = await params
 
         let tecnicoId: string | null | undefined = undefined
-        if (tecnico === 'Sin asignar') {
+
+        // Prioritize explicit tecnicoId if provided (including empty string to unassign)
+        if (bodyTecnicoId !== undefined) {
+            tecnicoId = bodyTecnicoId === 'Sin asignar' || bodyTecnicoId === '' ? null : bodyTecnicoId
+        } else if (tecnico === 'Sin asignar') {
             tecnicoId = null
         } else if (tecnico) {
-            // Buscar técnico por nombre completo o parcial
+            // FALLBACK: Buscar técnico por nombre completo o parcial (Legacy/Fallback)
             const techRecord = await db.tecnico.findFirst({
                 where: {
                     OR: [

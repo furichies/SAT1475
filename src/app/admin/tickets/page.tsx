@@ -44,10 +44,10 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import Image from 'next/image'
 
 const ticketsMock = [
-  { id: '1', numero: 'SAT-2023-0045', cliente: 'Pedro Sánchez', asunto: 'Portátil no enciende', prioridad: 'urgente', tipo: 'incidencia', tecnico: 'Carlos García', fecha: '2023-12-30 08:00', estado: 'pendiente', descripcion: 'El equipo no da señal de vida tras una subida de tensión.' },
-  { id: '2', numero: 'SAT-2023-0044', cliente: 'Laura Rodríguez', asunto: 'SSD corrupto', prioridad: 'alta', tipo: 'reparacion', tecnico: 'María Martínez', fecha: '2023-12-30 07:30', estado: 'asignado', descripcion: 'Errores constantes de lectura/escritura en el disco principal.' },
-  { id: '3', numero: 'SAT-2023-0043', cliente: 'Diego Fernández', asunto: 'Instalación de software', prioridad: 'media', tipo: 'consulta', tecnico: 'Carlos García', fecha: '2023-12-29 15:00', estado: 'en_progreso', descripcion: 'Necesita instalar suite Adobe y configurar drivers.' },
-  { id: '4', numero: 'SAT-2023-0042', cliente: 'Carmen Vázquez', asunto: 'Garantía monitor', prioridad: 'baja', tipo: 'garantia', tecnico: 'María Martínez', fecha: '2023-12-28 10:30', estado: 'resuelto', descripcion: 'Píxeles muertos en la zona central superior.' }
+  { id: '1', numero: 'SAT-2023-0045', cliente: 'Pedro Sánchez', asunto: 'Portátil no enciende', prioridad: 'urgente', tipo: 'incidencia', tecnico: 'Carlos García', tecnicoId: 'mock-tech-1', fecha: '2023-12-30 08:00', estado: 'pendiente', descripcion: 'El equipo no da señal de vida tras una subida de tensión.' },
+  { id: '2', numero: 'SAT-2023-0044', cliente: 'Laura Rodríguez', asunto: 'SSD corrupto', prioridad: 'alta', tipo: 'reparacion', tecnico: 'María Martínez', tecnicoId: 'mock-tech-2', fecha: '2023-12-30 07:30', estado: 'asignado', descripcion: 'Errores constantes de lectura/escritura en el disco principal.' },
+  { id: '3', numero: 'SAT-2023-0043', cliente: 'Diego Fernández', asunto: 'Instalación de software', prioridad: 'media', tipo: 'consulta', tecnico: 'Carlos García', tecnicoId: 'mock-tech-1', fecha: '2023-12-29 15:00', estado: 'en_progreso', descripcion: 'Necesita instalar suite Adobe y configurar drivers.' },
+  { id: '4', numero: 'SAT-2023-0042', cliente: 'Carmen Vázquez', asunto: 'Garantía monitor', prioridad: 'baja', tipo: 'garantia', tecnico: 'María Martínez', tecnicoId: 'mock-tech-2', fecha: '2023-12-28 10:30', estado: 'resuelto', descripcion: 'Píxeles muertos en la zona central superior.' }
 ]
 
 const estados = {
@@ -145,6 +145,7 @@ export default function AdminTicketsPage() {
           prioridad: t.prioridad,
           tipo: t.tipo,
           tecnico: t.tecnico?.usuario?.nombre || 'Sin asignar',
+          tecnicoId: t.tecnico?.id || null,
           fecha: new Date(t.fechaCreacion).toLocaleString(),
           estado: t.estado,
           descripcion: t.descripcion,
@@ -195,6 +196,7 @@ export default function AdminTicketsPage() {
           prioridad: t.prioridad,
           tipo: t.tipo,
           tecnico: t.tecnico?.usuario?.nombre || 'Sin asignar',
+          tecnicoId: t.tecnico?.id || null,
           fecha: new Date(t.fechaCreacion).toLocaleString(),
           estado: t.estado,
           descripcion: t.descripcion,
@@ -205,13 +207,13 @@ export default function AdminTicketsPage() {
         setTickets(mappedTickets)
       } else {
         // Fallback a mock data si no hay tickets en la base de datos
-        setTickets(ticketsMock.filter(t => {
+        setTickets(ticketsMock.filter((t: any) => {
           if (busqueda && !t.asunto.toLowerCase().includes(busqueda.toLowerCase()) &&
             !t.numero.toLowerCase().includes(busqueda.toLowerCase()) &&
             !t.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
           if (prioridad !== 'todos' && t.prioridad !== prioridad) return false
           if (tipo !== 'todos' && t.tipo !== tipo) return false
-          if (tecnico !== 'todos' && t.tecnico !== tecnico) return false
+          if (tecnico !== 'todos' && t.tecnicoId !== tecnico) return false
           return true
         }))
       }
@@ -245,6 +247,7 @@ export default function AdminTicketsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formTicket,
+          tecnicoId: formTicket.tecnico, // Send ID as tecnicoId
           guardarEnKB: undefined // Don't send this to ticket API
         })
       })
@@ -309,7 +312,7 @@ export default function AdminTicketsPage() {
       prioridad: ticket.prioridad,
       tipo: ticket.tipo,
       estado: ticket.estado,
-      tecnico: ticket.tecnico,
+      tecnico: ticket.tecnicoId || 'Sin asignar',
       cliente: ticket.cliente,
       diagnostico: ticket.diagnostico || '',
       solucion: ticket.solucion || '',
@@ -453,7 +456,7 @@ export default function AdminTicketsPage() {
       !t.cliente.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (prioridad !== 'todos' && t.prioridad !== prioridad) return false
     if (tipo !== 'todos' && t.tipo !== tipo) return false
-    if (tecnico !== 'todos' && t.tecnico !== tecnico) return false
+    if (tecnico !== 'todos' && t.tecnicoId !== tecnico) return false
     return true
   })
 
@@ -536,7 +539,7 @@ export default function AdminTicketsPage() {
                     <SelectItem value="todos">Todos los técnicos</SelectItem>
                     <SelectItem value="Sin asignar">Sin asignar</SelectItem>
                     {tecnicosList.map((t: any) => (
-                      <SelectItem key={t.id} value={`${t.nombre} ${t.apellidos}`.trim()}>
+                      <SelectItem key={t.id} value={t.id}>
                         {t.nombre} {t.apellidos}
                       </SelectItem>
                     ))}
@@ -885,7 +888,7 @@ export default function AdminTicketsPage() {
                     <SelectContent>
                       <SelectItem value="Sin asignar">Sin asignar</SelectItem>
                       {tecnicosList.map((t: any) => (
-                        <SelectItem key={t.id} value={`${t.nombre} ${t.apellidos}`.trim()}>
+                        <SelectItem key={t.id} value={t.id}>
                           {t.nombre} {t.apellidos}
                         </SelectItem>
                       ))}
