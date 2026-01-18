@@ -14,7 +14,7 @@ import { es } from 'date-fns/locale'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import type { MetadatosAceptacionPresupuesto, MetadatosRechazoPresupuesto } from '@/types/documentos'
+import type { MetadatosAceptacionPresupuesto, MetadatosRechazoPresupuesto, MetadatosDiagnosticoPresupuesto } from '@/types/documentos'
 import { PresupuestoSelector } from '@/components/common/PresupuestoSelector'
 
 // ============================================================================
@@ -45,6 +45,10 @@ export function AceptacionPresupuestoForm({
     const [formaAprobacion, setFormaAprobacion] = useState<'firma_fisica' | 'email' | 'sms' | 'portal_web'>(initialValues?.formaAprobacion || 'firma_fisica')
     const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>(initialValues?.metodoPagoAcordado || 'efectivo')
 
+    // Snapshot del presupuesto (para guardarlo en el documento de aceptación)
+    const [presupuestoSnapshot, setPresupuestoSnapshot] = useState<any>(initialValues?.presupuestoSnapshot || null)
+    const [loadingPresupuesto, setLoadingPresupuesto] = useState(false)
+
     // Autorizaciones
     const [authReparacion, setAuthReparacion] = useState<boolean>(initialValues?.autorizaciones?.procederReparacion ?? true)
     const [authRepuestos, setAuthRepuestos] = useState<boolean>(initialValues?.autorizaciones?.adquirirRepuestos ?? true)
@@ -58,7 +62,7 @@ export function AceptacionPresupuestoForm({
     const [fechaLimite, setFechaLimite] = useState<Date | undefined>(initialValues?.fechaLimiteReparacion ? new Date(initialValues.fechaLimiteReparacion) : undefined)
 
     // Efecto para auto-rellenar datos cuando se selecciona un presupuesto
-    const handlePresupuestoChange = (presupuesto: any) => {
+    const handlePresupuestoChange = async (presupuesto: any) => {
         setPresupuestoSeleccionadoId(presupuesto.id)
         setNumeroPresupuesto(presupuesto.numeroDocumento)
 
@@ -67,13 +71,40 @@ export function AceptacionPresupuestoForm({
             setTelefono(presupuesto.cliente.telefono || '')
             setEmail(presupuesto.cliente.email || '')
         }
+
+        // Cargar detalles completos del presupuesto para el snapshot
+        setLoadingPresupuesto(true)
+        try {
+            const res = await fetch(`/api/admin/documentos/${presupuesto.id}`)
+            if (res.ok) {
+                const data = await res.json()
+                if (data.success && data.data && data.data.metadatos) {
+                    const meta = JSON.parse(data.data.metadatos) as MetadatosDiagnosticoPresupuesto
+                    // Crear snapshot con lo relevante
+                    const snapshot = {
+                        repuestos: meta.reparacionPropuesta.repuestosNecesarios,
+                        manoObra: meta.reparacionPropuesta.manoObra,
+                        costos: {
+                            subtotal: meta.costos.subtotal,
+                            iva: meta.costos.iva,
+                            total: meta.costos.total
+                        }
+                    }
+                    setPresupuestoSnapshot(snapshot)
+                }
+            }
+        } catch (error) {
+            console.error("Error cargando detalles del presupuesto:", error)
+        } finally {
+            setLoadingPresupuesto(false)
+        }
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
         const metadatos: MetadatosAceptacionPresupuesto = {
-            presupuestoId,
+            presupuestoId: presupuestoSeleccionadoId,
             numeroPresupuesto,
             fechaAceptacion,
             formaAprobacion,
@@ -87,7 +118,8 @@ export function AceptacionPresupuestoForm({
                 telefono,
                 email
             },
-            fechaLimiteReparacion: fechaLimite
+            fechaLimiteReparacion: fechaLimite,
+            presupuestoSnapshot
         }
 
         onSubmit(metadatos)
@@ -113,6 +145,26 @@ export function AceptacionPresupuestoForm({
                                 <p className="text-xs text-gray-500 mt-1">
                                     Número: {numeroPresupuesto}
                                 </p>
+                            )}
+
+                            {/* Resumen del presupuesto cargado */}
+                            {loadingPresupuesto && <p className="text-xs text-blue-500">Cargando detalles...</p>}
+                            {presupuestoSnapshot && !loadingPresupuesto && (
+                                <div className="mt-2 p-2 bg-slate-50 border rounded text-xs text-slate-700">
+                                    <p className="font-semibold">Resumen del Presupuesto:</p>
+                                    <div className="flex justify-between mt-1">
+                                        <span>Repuestos ({presupuestoSnapshot.repuestos?.length || 0}):</span>
+                                        <span>{Number(presupuestoSnapshot.repuestos?.reduce((a: any, b: any) => a + b.subtotal, 0) || 0).toFixed(2)}€</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Mano de Obra ({presupuestoSnapshot.manoObra?.length || 0}):</span>
+                                        <span>{Number(presupuestoSnapshot.manoObra?.reduce((a: any, b: any) => a + b.subtotal, 0) || 0).toFixed(2)}€</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold border-t border-slate-200 mt-1 pt-1">
+                                        <span>Total:</span>
+                                        <span>{Number(presupuestoSnapshot.costos?.total || 0).toFixed(2)}€</span>
+                                    </div>
+                                </div>
                             )}
                         </div>
 

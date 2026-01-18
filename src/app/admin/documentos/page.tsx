@@ -357,7 +357,7 @@ export default function DocumentosPage() {
                                                     <TableCell>
                                                         {doc.ticket && (
                                                             <Link
-                                                                href={`/admin/tickets/${doc.ticket.id}`}
+                                                                href={`/admin/tickets?ticketId=${doc.ticket.id}`}
                                                                 className="flex items-center gap-1 text-blue-600 hover:underline"
                                                             >
                                                                 <Ticket className="h-3 w-3" />

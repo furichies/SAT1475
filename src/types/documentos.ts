@@ -162,6 +162,16 @@ export interface MetadatosAceptacionPresupuesto {
         email: string
     }
     fechaLimiteReparacion?: Date
+    // Snapshot del presupuesto aceptado
+    presupuestoSnapshot?: {
+        repuestos: ItemRepuesto[]
+        manoObra: ActividadManoObra[]
+        costos: {
+            subtotal: number
+            iva: number
+            total: number
+        }
+    }
 }
 
 // FASE 3: Rechazo del Presupuesto

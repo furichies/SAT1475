@@ -761,6 +761,81 @@ function generarAceptacionPresupuesto(doc: jsPDF, documento: any, metadatos: Met
     yPos += 6
     doc.text(`Método de Pago: ${metadatos.metodoPagoAcordado}`, 20, yPos)
 
+    // === AGREGADO: DETALLE DEL PRESUPUESTO ===
+    if (metadatos.presupuestoSnapshot) {
+        yPos += 10
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.primary)
+        doc.text('DETALLE DEL PRESUPUESTO APROBADO', 20, yPos)
+        yPos += 5
+
+        // Tabla de repuestos
+        if (metadatos.presupuestoSnapshot.repuestos && metadatos.presupuestoSnapshot.repuestos.length > 0) {
+            const repuestosData = metadatos.presupuestoSnapshot.repuestos.map(r => [
+                r.codigo,
+                r.descripcion,
+                r.cantidad.toString(),
+                `${r.precioUnitario.toFixed(2)}€`,
+                `${r.subtotal.toFixed(2)}€`,
+            ])
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Código', 'Descripción', 'Cant.', 'P. Unit.', 'Subtotal']],
+                body: repuestosData,
+                theme: 'striped',
+                headStyles: { fillColor: COLORS.secondary },
+                margin: { left: 20, right: 20 },
+                styles: { fontSize: 8 }
+            })
+
+            yPos = (doc as any).lastAutoTable.finalY + 5
+        }
+
+        // Tabla de mano de obra
+        if (metadatos.presupuestoSnapshot.manoObra && metadatos.presupuestoSnapshot.manoObra.length > 0) {
+            const manoObraData = metadatos.presupuestoSnapshot.manoObra.map(m => [
+                m.descripcion,
+                `${m.horasEstimadas}h`,
+                `${m.precioHora.toFixed(2)}€/h`,
+                `${m.subtotal.toFixed(2)}€`,
+            ])
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Mano de Obra', 'Horas', 'Precio/Hora', 'Subtotal']],
+                body: manoObraData,
+                theme: 'striped',
+                headStyles: { fillColor: COLORS.secondary },
+                margin: { left: 20, right: 20 },
+                styles: { fontSize: 8 }
+            })
+
+            yPos = (doc as any).lastAutoTable.finalY + 10
+        }
+
+        // Resumen
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const snapshotCostos = metadatos.presupuestoSnapshot.costos
+
+        doc.setFontSize(10)
+        doc.setTextColor(COLORS.text)
+
+        doc.text('Subtotal:', pageWidth - 80, yPos)
+        doc.text(`${snapshotCostos.subtotal.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
+        yPos += 5
+
+        doc.text('IVA (21%):', pageWidth - 80, yPos)
+        doc.text(`${snapshotCostos.iva.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
+        yPos += 5
+
+        doc.setFont('helvetica', 'bold')
+        doc.text('TOTAL:', pageWidth - 80, yPos)
+        doc.text(`${snapshotCostos.total.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
+        yPos += 10
+    }
+
     yPos += 15
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
@@ -842,26 +917,87 @@ function generarExtensionPresupuesto(doc: jsPDF, documento: any, metadatos: Meta
     doc.text(diagnosticoLines, 20, yPos)
     yPos += diagnosticoLines.length * 5 + 10
 
+    // === AGREGADO: DETALLE DE NUEVOS TRABAJOS ===
+    if (metadatos.nuevosTrabajos) {
+        // Tabla de Repuestos Adicionales
+        if (metadatos.nuevosTrabajos.repuestosAdicionales && metadatos.nuevosTrabajos.repuestosAdicionales.length > 0) {
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Repuestos Adicionales:', 20, yPos)
+            yPos += 5
+
+            const repuestosData = metadatos.nuevosTrabajos.repuestosAdicionales.map(r => [
+                r.codigo,
+                r.descripcion,
+                r.cantidad.toString(),
+                `${r.precioUnitario.toFixed(2)}€`,
+                `${r.subtotal.toFixed(2)}€`,
+            ])
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Código', 'Descripción', 'Cant.', 'P. Unit.', 'Subtotal']],
+                body: repuestosData,
+                theme: 'striped',
+                headStyles: { fillColor: COLORS.secondary },
+                margin: { left: 20, right: 20 },
+                styles: { fontSize: 8 }
+            })
+
+            yPos = (doc as any).lastAutoTable.finalY + 5
+        }
+
+        // Tabla de Mano de Obra Extra
+        if (metadatos.nuevosTrabajos.manoObraExtra && metadatos.nuevosTrabajos.manoObraExtra.length > 0) {
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Mano de Obra Extra:', 20, yPos)
+            yPos += 5
+
+            const manoObraData = metadatos.nuevosTrabajos.manoObraExtra.map(m => [
+                m.descripcion,
+                `${m.horasEstimadas}h`,
+                `${m.precioHora.toFixed(2)}€/h`,
+                `${m.subtotal.toFixed(2)}€`,
+            ])
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Descripción', 'Horas', 'Precio/Hora', 'Subtotal']],
+                body: manoObraData,
+                theme: 'striped',
+                headStyles: { fillColor: COLORS.secondary },
+                margin: { left: 20, right: 20 },
+                styles: { fontSize: 8 }
+            })
+
+            yPos = (doc as any).lastAutoTable.finalY + 10
+        }
+    }
+
     // Costo adicional
     const pageWidth = doc.internal.pageSize.getWidth()
+    const labelX = pageWidth - 90
+    const valueX = pageWidth - 25
+
     doc.setFont('helvetica', 'bold')
     doc.text('COSTO ADICIONAL', 20, yPos)
     yPos += 7
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
-    doc.text('Repuestos:', pageWidth - 80, yPos)
-    doc.text(`${metadatos.costoAdicional.repuestos.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
+    doc.text('Repuestos:', labelX, yPos)
+    doc.text(`${metadatos.costoAdicional.repuestos.toFixed(2)}€`, valueX, yPos, { align: 'right' })
     yPos += 6
-    doc.text('Mano de Obra:', pageWidth - 80, yPos)
-    doc.text(`${metadatos.costoAdicional.manoObra.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
+    doc.text('Mano de Obra:', labelX, yPos)
+    doc.text(`${metadatos.costoAdicional.manoObra.toFixed(2)}€`, valueX, yPos, { align: 'right' })
     yPos += 6
 
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(COLORS.primary)
-    doc.text('TOTAL ADICIONAL:', pageWidth - 80, yPos)
-    doc.text(`${metadatos.costoAdicional.total.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
+    doc.text('TOTAL ADICIONAL:', labelX, yPos)
+    doc.text(`${metadatos.costoAdicional.total.toFixed(2)}€`, valueX, yPos, { align: 'right' })
 
     agregarPiePagina(doc)
 }
