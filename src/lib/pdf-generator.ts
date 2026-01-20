@@ -125,6 +125,26 @@ function agregarEncabezado(doc: jsPDF, titulo: string, numeroDocumento: string) 
 }
 
 /**
+ * Verificar si necesitamos un salto de página
+ * @param doc - Documento PDF
+ * @param yPos - Posición Y actual
+ * @param espacioNecesario - Espacio necesario en mm
+ * @returns Nueva posición Y (20 si se agregó página, yPos si no)
+ */
+function checkPageBreak(doc: jsPDF, yPos: number, espacioNecesario: number = 20): number {
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margenInferior = 30 // Espacio para el pie de página
+
+    if (yPos + espacioNecesario > pageHeight - margenInferior) {
+        doc.addPage()
+        return 20 // Margen superior de la nueva página
+    }
+
+    return yPos
+}
+
+
+/**
  * Agregar pie de página
  */
 function agregarPiePagina(doc: jsPDF, numeroPagina: number = 1) {
@@ -541,6 +561,7 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
     doc.text(metadatos.tecnicoAsignado.nombre, 70, yPos)
 
     // DIAGNÓSTICO DETALLADO
+    yPos = checkPageBreak(doc, yPos, 50)
     yPos += 10
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
@@ -558,42 +579,54 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
     yPos += 6
     doc.setFont('helvetica', 'normal')
     metadatos.diagnostico.pruebasRealizadas.forEach(prueba => {
+        yPos = checkPageBreak(doc, yPos, 10)
         doc.text(`• ${prueba}`, 25, yPos)
         yPos += 5
     })
 
     // Resultados
+    yPos = checkPageBreak(doc, yPos, 20)
     yPos += 3
     doc.setFont('helvetica', 'bold')
     doc.text('Resultados:', 20, yPos)
     yPos += 6
     doc.setFont('helvetica', 'normal')
     const resultadosLines = doc.splitTextToSize(metadatos.diagnostico.resultadosObtenidos, 170)
-    doc.text(resultadosLines, 20, yPos)
-    yPos += resultadosLines.length * 5
+    resultadosLines.forEach((line: string) => {
+        yPos = checkPageBreak(doc, yPos, 10)
+        doc.text(line, 20, yPos)
+        yPos += 5
+    })
 
     // Componentes defectuosos
+    yPos = checkPageBreak(doc, yPos, 20)
     yPos += 3
     doc.setFont('helvetica', 'bold')
     doc.text('Componentes Defectuosos:', 20, yPos)
     yPos += 6
     doc.setFont('helvetica', 'normal')
     metadatos.diagnostico.componentesDefectuosos.forEach(componente => {
+        yPos = checkPageBreak(doc, yPos, 10)
         doc.text(`• ${componente}`, 25, yPos)
         yPos += 5
     })
 
     // Causa raíz
+    yPos = checkPageBreak(doc, yPos, 20)
     yPos += 3
     doc.setFont('helvetica', 'bold')
     doc.text('Causa Raíz:', 20, yPos)
     yPos += 6
     doc.setFont('helvetica', 'normal')
     const causaLines = doc.splitTextToSize(metadatos.diagnostico.causaRaiz, 170)
-    doc.text(causaLines, 20, yPos)
-    yPos += causaLines.length * 5
+    causaLines.forEach((line: string) => {
+        yPos = checkPageBreak(doc, yPos, 10)
+        doc.text(line, 20, yPos)
+        yPos += 5
+    })
 
     // REPARACIÓN PROPUESTA
+    yPos = checkPageBreak(doc, yPos, 50)
     yPos += 10
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
@@ -604,12 +637,24 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(COLORS.text)
+
+    // Descripción de trabajos - CAMPO CRÍTICO
+    doc.setFont('helvetica', 'bold')
+    doc.text('Descripción de Trabajos:', 20, yPos)
+    yPos += 6
+    doc.setFont('helvetica', 'normal')
     const trabajosLines = doc.splitTextToSize(metadatos.reparacionPropuesta.descripcionTrabajos, 170)
-    doc.text(trabajosLines, 20, yPos)
-    yPos += trabajosLines.length * 5 + 5
+    trabajosLines.forEach((line: string) => {
+        yPos = checkPageBreak(doc, yPos, 10)
+        doc.text(line, 20, yPos)
+        yPos += 5
+    })
+    yPos += 5
 
     // Tabla de repuestos
     if (metadatos.reparacionPropuesta.repuestosNecesarios.length > 0) {
+        yPos = checkPageBreak(doc, yPos, 40)
+
         const repuestosData = metadatos.reparacionPropuesta.repuestosNecesarios.map(r => [
             r.codigo,
             r.descripcion,
@@ -632,6 +677,8 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
 
     // Tabla de mano de obra
     if (metadatos.reparacionPropuesta.manoObra.length > 0) {
+        yPos = checkPageBreak(doc, yPos, 40)
+
         const manoObraData = metadatos.reparacionPropuesta.manoObra.map(m => [
             m.descripcion,
             `${m.horasEstimadas}h`,
@@ -652,6 +699,7 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
     }
 
     // COSTOS TOTALES
+    yPos = checkPageBreak(doc, yPos, 60)
     const pageWidth = doc.internal.pageSize.getWidth()
     yPos += 5
 
@@ -676,6 +724,7 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
 
     doc.setFontSize(10)
     costos.forEach(([label, value]) => {
+        yPos = checkPageBreak(doc, yPos, 10)
         doc.setFont('helvetica', 'normal')
         doc.text(label, pageWidth - 80, yPos)
         doc.text(value, pageWidth - 40, yPos, { align: 'right' })
@@ -683,6 +732,7 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
     })
 
     // Total
+    yPos = checkPageBreak(doc, yPos, 15)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(COLORS.primary)
@@ -690,6 +740,7 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
     doc.text(`${metadatos.costos.total.toFixed(2)}€`, pageWidth - 40, yPos, { align: 'right' })
 
     // Información adicional
+    yPos = checkPageBreak(doc, yPos, 30)
     yPos += 10
     doc.setFontSize(10)
     doc.setTextColor(COLORS.text)
