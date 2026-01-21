@@ -1275,55 +1275,93 @@ export async function generarEtiquetaTicket(ticket: any): Promise<Buffer> {
         format: [62, 40]
     })
 
+    // Dimensiones de la etiqueta
+    const width = 62
+    const height = 40
+    const margin = 2
+
     // Generar QR que apunte a la gestión del ticket
-    // Usamos variables de entorno para el dominio base si existe, sino localhost
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000' // Ajustar para producción
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const qrData = `${baseUrl}/admin/tickets?ticketId=${ticket.id}`
 
-    // Generar QR como Data URL
-    const qrImage = await QRCode.toDataURL(qrData, { margin: 0 })
+    // Generar QR como Data URL con mayor calidad
+    const qrImage = await QRCode.toDataURL(qrData, {
+        margin: 1,
+        width: 200,
+        errorCorrectionLevel: 'M'
+    })
 
-    doc.setFillColor(0, 0, 0) // Negro
+    // === LAYOUT MEJORADO: QR centrado a la derecha, info a la izquierda ===
+
+    // Dimensiones del QR (más grande y centrado verticalmente)
+    const qrSize = 28
+    const qrX = width - qrSize - margin - 2
+    const qrY = (height - qrSize) / 2
+
+    // Agregar QR Code centrado verticalmente a la derecha
+    doc.addImage(qrImage, 'PNG', qrX, qrY, qrSize, qrSize)
+
+    // === INFORMACIÓN A LA IZQUIERDA (centrada verticalmente) ===
+
+    const infoX = margin + 1
+    const infoWidth = qrX - infoX - 2 // Espacio disponible para texto
+    let yPos = 6 // Posición inicial
 
     // Título / Empresa
-    doc.setFontSize(8)
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'bold')
-    doc.text('SAT - MicroInfo', 2, 5)
+    doc.setTextColor(100, 100, 100)
+    doc.text('SAT - MicroInfo', infoX, yPos)
+    yPos += 5
 
-    // Número de Ticket (Grande)
-    doc.setFontSize(14)
-    doc.text(ticket.numeroTicket || ticket.numero || '---', 2, 12)
+    // Número de Ticket (Grande y destacado)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(0, 0, 0)
+    const numeroTicket = ticket.numeroTicket || ticket.numero || '---'
+    doc.text(numeroTicket, infoX, yPos)
+    yPos += 5
 
     // Fecha
-    doc.setFontSize(7)
+    doc.setFontSize(6)
     doc.setFont('helvetica', 'normal')
+    doc.setTextColor(80, 80, 80)
     const fechaVal = ticket.fechaCreacion || ticket.fecha || new Date()
     const fechaStr = new Date(fechaVal).toLocaleDateString('es-ES')
-    doc.text(`Fecha: ${fechaStr}`, 2, 17)
+    doc.text(fechaStr, infoX, yPos)
+    yPos += 4
 
     // Cliente (Truncado si es largo)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'bold')
-    const clienteNombre = ticket.usuario?.nombre || ticket.cliente || 'Desconocido'
-    const clienteNombreCorto = clienteNombre.length > 20 ? clienteNombre.substring(0, 20) + '...' : clienteNombre
-    doc.text(clienteNombreCorto, 2, 23)
-
-    // Asunto / Tipo
     doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(0, 0, 0)
+    const clienteNombre = ticket.usuario?.nombre || ticket.cliente || 'Desconocido'
+    const clienteLines = doc.splitTextToSize(clienteNombre, infoWidth)
+    // Mostrar solo primera línea si es muy largo
+    doc.text(clienteLines[0], infoX, yPos)
+    yPos += 4
+
+    // Asunto / Tipo (máximo 2 líneas)
+    doc.setFontSize(6)
     doc.setFont('helvetica', 'normal')
-    const asunto = ticket.asunto || ''
-    const docText = doc.splitTextToSize(asunto, 35) // Ajustar al ancho disponible a la izquierda del QR
-    // Limitar a 3 líneas
-    const lines = docText.length > 3 ? docText.slice(0, 3) : docText
-    doc.text(lines, 2, 28)
+    doc.setTextColor(60, 60, 60)
+    const asunto = ticket.asunto || ticket.tipo || ''
+    const asuntoLines = doc.splitTextToSize(asunto, infoWidth)
+    // Limitar a 2 líneas
+    const linesToShow = asuntoLines.slice(0, 2)
+    linesToShow.forEach((line: string, index: number) => {
+        if (yPos + (index * 3) < height - 3) { // Verificar que no se salga
+            doc.text(line, infoX, yPos + (index * 3))
+        }
+    })
 
-    // QR Code a la derecha
-    // x: 40, y: 2, w: 20, h: 20 (aprox)
-    doc.addImage(qrImage, 'PNG', 40, 5, 20, 20)
-
-    // Texto ID pequeño abajo derecha
+    // === PIE DE PÁGINA: ID del ticket (centrado en la parte inferior) ===
     doc.setFontSize(5)
-    doc.text(ticket.id.substring(0, 8), 45, 27, { align: 'center' })
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(150, 150, 150)
+    const ticketId = ticket.id.substring(0, 12)
+    const idWidth = doc.getTextWidth(ticketId)
+    doc.text(ticketId, (width - idWidth) / 2, height - 2)
 
     return Buffer.from(doc.output('arraybuffer'))
 }

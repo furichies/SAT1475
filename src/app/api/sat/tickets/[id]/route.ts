@@ -26,6 +26,9 @@ export async function GET(
                 seguimientos: {
                     orderBy: { fechaCreacion: 'asc' },
                     include: { usuario: { select: { nombre: true } } }
+                },
+                documentos: {
+                    orderBy: { fechaGeneracion: 'desc' }
                 }
             }
         })

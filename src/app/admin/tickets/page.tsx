@@ -305,18 +305,170 @@ export default function AdminTicketsPage() {
     }
   }
 
-  const openEdicion = (ticket: any) => {
-    setTicketSeleccionado(ticket)
+  const openEdicion = async (ticket: any) => {
+    console.log('=== openEdicion llamado ===', ticket.numero)
+
+    // IMPORTANTE: Recargar el ticket desde la API para obtener documentos actualizados
+    let ticketCompleto = ticket
+    try {
+      console.log('🔄 Recargando ticket desde API...')
+      const res = await fetch(`/api/sat/tickets/${ticket.id}`)
+      const data = await res.json()
+      if (data.success && data.ticket) {
+        ticketCompleto = {
+          id: data.ticket.id,
+          numero: data.ticket.numeroTicket,
+          cliente: data.ticket.usuario?.nombre || 'Desconocido',
+          asunto: data.ticket.asunto,
+          prioridad: data.ticket.prioridad,
+          tipo: data.ticket.tipo,
+          tecnico: data.ticket.tecnico?.usuario?.nombre || 'Sin asignar',
+          tecnicoId: data.ticket.tecnico?.id || null,
+          fecha: new Date(data.ticket.fechaCreacion).toLocaleString(),
+          estado: data.ticket.estado,
+          descripcion: data.ticket.descripcion,
+          diagnostico: data.ticket.diagnostico,
+          solucion: data.ticket.solucion,
+          documentos: data.ticket.documentos
+        }
+        console.log('✅ Ticket recargado con', ticketCompleto.documentos?.length || 0, 'documentos')
+      }
+    } catch (e) {
+      console.error('❌ Error recargando ticket:', e)
+      console.log('⚠️ Usando datos del ticket original')
+    }
+
+    console.log('Documentos:', ticketCompleto.documentos)
+    setTicketSeleccionado(ticketCompleto)
+
+    // Valores iniciales
+    let diagnosticoText = ticketCompleto.diagnostico || ''
+    let solucionText = ticketCompleto.solucion || ''
+
+    // Si el ticket tiene documentos, buscar el diagnóstico y albarán
+    if (ticketCompleto.documentos && ticketCompleto.documentos.length > 0) {
+      console.log('✓ Ticket tiene', ticketCompleto.documentos.length, 'documentos')
+      try {
+        // Buscar documento de diagnóstico (diagnostico_presupuesto)
+        const docDiagnostico = ticketCompleto.documentos.find((doc: any) => {
+          console.log('  - Documento:', doc.tipo)
+          return doc.tipo === 'diagnostico_presupuesto'
+        })
+
+        // Buscar documento de albarán (albaran_entrega)
+        const docAlbaran = ticketCompleto.documentos.find((doc: any) =>
+          doc.tipo === 'albaran_entrega'
+        )
+
+        console.log('Diagnóstico encontrado:', !!docDiagnostico)
+        console.log('Albarán encontrado:', !!docAlbaran)
+
+        // Si existe diagnóstico y albarán, extraer información
+        if (docDiagnostico && docAlbaran) {
+          console.log('✅ Extrayendo información de documentos...')
+          try {
+            const metadatos = JSON.parse(docDiagnostico.metadatos || '{}')
+            console.log('Metadatos:', metadatos)
+
+            // Construir texto de diagnóstico desde los metadatos
+            if (metadatos.diagnostico) {
+              const diagParts: string[] = []
+
+              // Pruebas realizadas
+              if (metadatos.diagnostico.pruebasRealizadas && metadatos.diagnostico.pruebasRealizadas.length > 0) {
+                diagParts.push('PRUEBAS REALIZADAS:')
+                metadatos.diagnostico.pruebasRealizadas.forEach((prueba: string) => {
+                  diagParts.push(`• ${prueba}`)
+                })
+                diagParts.push('')
+              }
+
+              // Resultados
+              if (metadatos.diagnostico.resultadosObtenidos) {
+                diagParts.push('RESULTADOS:')
+                diagParts.push(metadatos.diagnostico.resultadosObtenidos)
+                diagParts.push('')
+              }
+
+              // Componentes defectuosos
+              if (metadatos.diagnostico.componentesDefectuosos && metadatos.diagnostico.componentesDefectuosos.length > 0) {
+                diagParts.push('COMPONENTES DEFECTUOSOS:')
+                metadatos.diagnostico.componentesDefectuosos.forEach((comp: string) => {
+                  diagParts.push(`• ${comp}`)
+                })
+                diagParts.push('')
+              }
+
+              // Causa raíz
+              if (metadatos.diagnostico.causaRaiz) {
+                diagParts.push('CAUSA RAÍZ:')
+                diagParts.push(metadatos.diagnostico.causaRaiz)
+              }
+
+              diagnosticoText = diagParts.join('\n')
+              console.log('✓ Diagnóstico generado:', diagnosticoText.length, 'caracteres')
+            }
+
+            // Construir texto de solución desde reparación propuesta
+            if (metadatos.reparacionPropuesta) {
+              const solParts: string[] = []
+
+              // Descripción de trabajos
+              if (metadatos.reparacionPropuesta.descripcionTrabajos) {
+                solParts.push('TRABAJOS REALIZADOS:')
+                solParts.push(metadatos.reparacionPropuesta.descripcionTrabajos)
+                solParts.push('')
+              }
+
+              // Repuestos utilizados
+              if (metadatos.reparacionPropuesta.repuestosNecesarios && metadatos.reparacionPropuesta.repuestosNecesarios.length > 0) {
+                solParts.push('REPUESTOS UTILIZADOS:')
+                metadatos.reparacionPropuesta.repuestosNecesarios.forEach((rep: any) => {
+                  solParts.push(`• ${rep.descripcion} (Cant: ${rep.cantidad})`)
+                })
+                solParts.push('')
+              }
+
+              // Mano de obra
+              if (metadatos.reparacionPropuesta.manoObra && metadatos.reparacionPropuesta.manoObra.length > 0) {
+                solParts.push('MANO DE OBRA:')
+                metadatos.reparacionPropuesta.manoObra.forEach((mo: any) => {
+                  solParts.push(`• ${mo.descripcion} (${mo.horasEstimadas}h)`)
+                })
+                solParts.push('')
+              }
+
+              // Tiempo estimado
+              if (metadatos.tiempoEstimadoReparacion) {
+                solParts.push(`Tiempo total de reparación: ${metadatos.tiempoEstimadoReparacion} horas`)
+              }
+
+              solucionText = solParts.join('\n')
+              console.log('✓ Solución generada:', solucionText.length, 'caracteres')
+            }
+          } catch (e) {
+            console.error('❌ Error parseando metadatos del diagnóstico:', e)
+          }
+        } else {
+          console.log('⚠️ No se encontraron ambos documentos')
+        }
+      } catch (e) {
+        console.error('❌ Error procesando documentos:', e)
+      }
+    } else {
+      console.log('⚠️ Ticket sin documentos')
+    }
+
     setFormTicket({
-      asunto: ticket.asunto,
-      descripcion: ticket.descripcion || '',
-      prioridad: ticket.prioridad,
-      tipo: ticket.tipo,
-      estado: ticket.estado,
-      tecnico: ticket.tecnicoId || 'Sin asignar',
-      cliente: ticket.cliente,
-      diagnostico: ticket.diagnostico || '',
-      solucion: ticket.solucion || '',
+      asunto: ticketCompleto.asunto,
+      descripcion: ticketCompleto.descripcion || '',
+      prioridad: ticketCompleto.prioridad,
+      tipo: ticketCompleto.tipo,
+      estado: ticketCompleto.estado,
+      tecnico: ticketCompleto.tecnicoId || 'Sin asignar',
+      cliente: ticketCompleto.cliente,
+      diagnostico: diagnosticoText,
+      solucion: solucionText,
       guardarEnKB: false
     })
     setIsEdicion(true)
