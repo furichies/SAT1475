@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,7 +34,7 @@ export function DiagnosticoPresupuestoForm({
     const [causaRaiz, setCausaRaiz] = useState(initialValues?.diagnostico.causaRaiz || '')
     const [descripcionTrabajos, setDescripcionTrabajos] = useState(initialValues?.reparacionPropuesta.descripcionTrabajos || '')
     const [repuestos, setRepuestos] = useState<ItemRepuesto[]>(initialValues?.reparacionPropuesta.repuestosNecesarios || [
-        { codigo: '', descripcion: '', cantidad: 1, precioUnitario: 0, subtotal: 0 }
+        { codigo: '', descripcion: '', cantidad: 0, precioUnitario: 0, subtotal: 0 }
     ])
     const [manoObra, setManoObra] = useState<ActividadManoObra[]>(initialValues?.reparacionPropuesta.manoObra || [
         { descripcion: '', horasEstimadas: 0, precioHora: 0, subtotal: 0 }
@@ -46,6 +46,38 @@ export function DiagnosticoPresupuestoForm({
     const [validezPresupuesto, setValidezPresupuesto] = useState(initialValues?.validezPresupuesto || 15)
     const [alternativas, setAlternativas] = useState<string[]>(initialValues?.alternativasReparacion || [])
     const [recomendaciones, setRecomendaciones] = useState(initialValues?.recomendacionesAdicionales || '')
+
+    // Cargar el técnico asignado al ticket si existe
+    useEffect(() => {
+        const cargarTecnicoDelTicket = async () => {
+            if (!ticketId || initialValues?.tecnicoAsignado.id) {
+                // Si no hay ticketId o ya hay valores iniciales, no hacer nada
+                return
+            }
+
+            try {
+                // Obtener información del ticket
+                const res = await fetch(`/api/sat/tickets/${ticketId}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    const ticket = data.ticket || data
+
+                    // Si el ticket tiene un técnico asignado, pre-seleccionarlo
+                    if (ticket.tecnico?.usuario) {
+                        const nombreCompleto = `${ticket.tecnico.usuario.nombre} ${ticket.tecnico.usuario.apellidos || ''}`.trim()
+                        setTecnicoId(ticket.tecnico.usuario.id || '')
+                        setTecnicoNombre(nombreCompleto)
+                        console.log('Técnico del ticket cargado:', nombreCompleto, ticket.tecnico.usuario.id)
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar técnico del ticket:', error)
+            }
+        }
+
+        cargarTecnicoDelTicket()
+    }, [ticketId, initialValues])
+
 
     // Funciones para manejar arrays
     const agregarPrueba = () => {
@@ -77,7 +109,7 @@ export function DiagnosticoPresupuestoForm({
     }
 
     const agregarRepuesto = () => {
-        setRepuestos([...repuestos, { codigo: '', descripcion: '', cantidad: 1, precioUnitario: 0, subtotal: 0 }])
+        setRepuestos([...repuestos, { codigo: '', descripcion: '', cantidad: 0, precioUnitario: 0, subtotal: 0 }])
     }
 
     const eliminarRepuesto = (index: number) => {
@@ -151,6 +183,16 @@ export function DiagnosticoPresupuestoForm({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Validación: Si se define un repuesto (cantidad > 0 o código o precio), la descripción es obligatoria
+        const repuestoInvalido = repuestos.find(r =>
+            (r.cantidad > 0 || r.codigo.trim() !== '' || r.precioUnitario > 0) && r.descripcion.trim() === ''
+        )
+
+        if (repuestoInvalido) {
+            alert('Por favor, indique la descripción para todos los repuestos definidos.')
+            return
+        }
 
         const totales = calcularTotales()
 
@@ -382,7 +424,6 @@ export function DiagnosticoPresupuestoForm({
                                         value={repuesto.descripcion}
                                         onChange={(e) => actualizarRepuesto(index, 'descripcion', e.target.value)}
                                         placeholder="Descripción del repuesto"
-                                        required
                                     />
                                 </div>
                                 <div>

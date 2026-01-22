@@ -124,7 +124,7 @@ export function OrdenServicioForm({
                                             ...ordenServicio,
                                             cliente: {
                                                 nombreCompleto: `${usuario.nombre} ${usuario.apellidos || ''}`.trim(),
-                                                identificacion: usuario.codigoPostal || '',
+                                                identificacion: usuario.dni || '',
                                                 telefono: usuario.telefono || '',
                                                 correoElectronico: usuario.email,
                                                 direccion: usuario.direccion || '',

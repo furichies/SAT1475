@@ -148,7 +148,7 @@ export function AlbaranEntregaForm({
                 if (metaOrden.cliente) {
                     setClienteRecibe({
                         nombre: metaOrden.cliente.nombreCompleto || `${ticket.usuario?.nombre || ''} ${ticket.usuario?.apellidos || ''}`.trim(),
-                        identificacion: metaOrden.cliente.dni || '',
+                        identificacion: metaOrden.cliente.identificacion || metaOrden.cliente.dni || '',
                     })
                 }
             } else if (ticket.producto) {
@@ -174,23 +174,46 @@ export function AlbaranEntregaForm({
                     ? JSON.parse(diagnostico.metadatos)
                     : diagnostico.metadatos
 
-                // Extraer trabajos necesarios como reparaciones
+                // Extraer trabajos necesarios como reparaciones (usando reparacionPropuesta según tipo MetadatosDiagnosticoPresupuesto)
                 const trabajos: string[] = []
-                if (metaDiag.trabajosNecesarios?.descripcionDetallada) {
-                    trabajos.push(metaDiag.trabajosNecesarios.descripcionDetallada)
+
+                // Intento 1: reparacionPropuesta (Estructura correcta según tipos/documentos.ts)
+                if (metaDiag.reparacionPropuesta) {
+                    if (metaDiag.reparacionPropuesta.descripcionTrabajos) {
+                        trabajos.push(metaDiag.reparacionPropuesta.descripcionTrabajos)
+                    }
+                    if (metaDiag.reparacionPropuesta.manoObra?.length > 0) {
+                        metaDiag.reparacionPropuesta.manoObra.forEach((mo: any) => {
+                            if (mo.descripcion) trabajos.push(mo.descripcion)
+                        })
+                    }
                 }
-                if (metaDiag.trabajosNecesarios?.manoObra?.length > 0) {
-                    metaDiag.trabajosNecesarios.manoObra.forEach((mo: any) => {
-                        if (mo.descripcion) trabajos.push(mo.descripcion)
-                    })
+                // Intento 2: fallback a estructura antigua solo por si acaso (trabajosNecesarios)
+                else if (metaDiag.trabajosNecesarios) {
+                    if (metaDiag.trabajosNecesarios.descripcionDetallada) {
+                        trabajos.push(metaDiag.trabajosNecesarios.descripcionDetallada)
+                    }
+                    if (metaDiag.trabajosNecesarios.manoObra?.length > 0) {
+                        metaDiag.trabajosNecesarios.manoObra.forEach((mo: any) => {
+                            if (mo.descripcion) trabajos.push(mo.descripcion)
+                        })
+                    }
                 }
+
                 if (trabajos.length > 0) {
                     setReparaciones(trabajos)
                 }
 
                 // Extraer repuestos
-                if (metaDiag.trabajosNecesarios?.repuestos?.length > 0) {
-                    const repuestosFormateados = metaDiag.trabajosNecesarios.repuestos.map((r: any) => ({
+                let repuestosData: any[] = []
+                if (metaDiag.reparacionPropuesta?.repuestosNecesarios?.length > 0) {
+                    repuestosData = metaDiag.reparacionPropuesta.repuestosNecesarios
+                } else if (metaDiag.trabajosNecesarios?.repuestos?.length > 0) {
+                    repuestosData = metaDiag.trabajosNecesarios.repuestos
+                }
+
+                if (repuestosData.length > 0) {
+                    const repuestosFormateados = repuestosData.map((r: any) => ({
                         codigo: r.codigo || '',
                         descripcion: r.descripcion || '',
                         cantidad: r.cantidad || 1,
@@ -257,7 +280,14 @@ export function AlbaranEntregaForm({
                 console.log('[AlbaranForm] 👤 Auto-rellenando datos del cliente')
                 setClienteRecibe(prev => ({
                     ...prev,
-                    nombre: `${ticket.usuario.nombre} ${ticket.usuario.apellidos || ''}`.trim()
+                    nombre: `${ticket.usuario.nombre} ${ticket.usuario.apellidos || ''}`.trim(),
+                    identificacion: ticket.usuario.dni || prev.identificacion || ''
+                }))
+            } else if (!clienteRecibe.identificacion && ticket.usuario?.dni) {
+                console.log('[AlbaranForm] 👤 Recuperando DNI del perfil de usuario')
+                setClienteRecibe(prev => ({
+                    ...prev,
+                    identificacion: ticket.usuario.dni
                 }))
             } else if (!clienteRecibe.nombre) {
                 console.warn('[AlbaranForm] ⚠️ No se encontraron datos del cliente en el ticket')

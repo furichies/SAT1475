@@ -813,8 +813,86 @@ function generarAceptacionPresupuesto(doc: jsPDF, documento: any, metadatos: Met
     yPos += 6
     doc.text(`Método de Pago: ${metadatos.metodoPagoAcordado}`, 20, yPos)
 
+    // === AGREGADO: DATOS DEL DIAGNÓSTICO (SI ESTÁN DISPONIBLES) ===
+    // Intentamos recuperar los datos del documento padre (Diagnóstico) si existen en la relación
+    // Nota: Como 'metadatos' de Aceptación solo tiene el snapshot, si existe el documento relacionado (padre)
+    // podríamos intentar extraer info, pero 'documento' que llega aquí es el objeto plano.
+    // Asumiremos que si el usuario quiere ver esto, debemos intentar mostrar lo que tengamos o lo que el snapshot ofrezca.
+    // Actualmente el Snapshot SOLO guarda estructura de costos.
+    // FIX: Para mostrar diagnóstico completo, idealmente deberíamos haber guardado un snapshot del diagnóstico también en la aceptación
+    // O bien, confiar en que el usuario vea el documento original.
+    // PERO el usuario pide explícitamente "incluir todo lo referido en el Diagnóstico".
+
+    // Si el documento tiene relación con el documento 'padre' (documentoRelacionado), y ese padre es el diagnóstico,
+    // podríamos intentar acceder a los datos. Pero en esta función 'generarPDFDocumento',
+    // 'documento' suele venir con include: { documentoRelacionado: true }.
+
+    // Verificamos si existe el documento relacionado y tiene metadatos de diagnóstico
+    const docDiagnostico = documento.documentoRelacionado
+    let metadatosDiagnostico: MetadatosDiagnosticoPresupuesto | null = null
+
+    if (docDiagnostico && docDiagnostico.tipo === DocumentoTipo.DIAGNOSTICO_PRESUPUESTO && docDiagnostico.metadatos) {
+        try {
+            metadatosDiagnostico = JSON.parse(docDiagnostico.metadatos)
+        } catch (e) {
+            console.error('Error parseando metadatos del documento relacionado (diagnóstico):', e)
+        }
+    }
+
+    if (metadatosDiagnostico) {
+        yPos = checkPageBreak(doc, yPos, 40)
+        yPos += 10
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.primary)
+        doc.text('RESUMEN DEL DIAGNÓSTICO', 20, yPos)
+        yPos += 7
+        doc.setFontSize(10)
+        doc.setTextColor(COLORS.text)
+        doc.setFont('helvetica', 'normal')
+
+        // Resultados
+        doc.setFont('helvetica', 'bold')
+        doc.text('Resultados Diagnóstico:', 20, yPos)
+        yPos += 5
+        doc.setFont('helvetica', 'normal')
+        const resultadosLines = doc.splitTextToSize(metadatosDiagnostico.diagnostico.resultadosObtenidos, 170)
+        resultadosLines.forEach((line: string) => {
+            yPos = checkPageBreak(doc, yPos, 10)
+            doc.text(line, 20, yPos)
+            yPos += 5
+        })
+
+        // Causa raíz
+        yPos += 2
+        doc.setFont('helvetica', 'bold')
+        doc.text('Causa Raíz:', 20, yPos)
+        yPos += 5
+        doc.setFont('helvetica', 'normal')
+        const causaLines = doc.splitTextToSize(metadatosDiagnostico.diagnostico.causaRaiz, 170)
+        causaLines.forEach((line: string) => {
+            yPos = checkPageBreak(doc, yPos, 10)
+            doc.text(line, 20, yPos)
+            yPos += 5
+        })
+
+        // Trabajos a realizar
+        yPos += 2
+        doc.setFont('helvetica', 'bold')
+        doc.text('Trabajos a Realizar:', 20, yPos)
+        yPos += 5
+        doc.setFont('helvetica', 'normal')
+        const trabajosLines = doc.splitTextToSize(metadatosDiagnostico.reparacionPropuesta.descripcionTrabajos, 170)
+        trabajosLines.forEach((line: string) => {
+            yPos = checkPageBreak(doc, yPos, 10)
+            doc.text(line, 20, yPos)
+            yPos += 5
+        })
+    }
+
     // === AGREGADO: DETALLE DEL PRESUPUESTO ===
     if (metadatos.presupuestoSnapshot) {
+        yPos = checkPageBreak(doc, yPos, 30)
         yPos += 10
         doc.setFontSize(11)
         doc.setFont('helvetica', 'bold')
@@ -824,6 +902,7 @@ function generarAceptacionPresupuesto(doc: jsPDF, documento: any, metadatos: Met
 
         // Tabla de repuestos
         if (metadatos.presupuestoSnapshot.repuestos && metadatos.presupuestoSnapshot.repuestos.length > 0) {
+            yPos = checkPageBreak(doc, yPos, 30)
             const repuestosData = metadatos.presupuestoSnapshot.repuestos.map(r => [
                 r.codigo,
                 r.descripcion,
@@ -847,6 +926,7 @@ function generarAceptacionPresupuesto(doc: jsPDF, documento: any, metadatos: Met
 
         // Tabla de mano de obra
         if (metadatos.presupuestoSnapshot.manoObra && metadatos.presupuestoSnapshot.manoObra.length > 0) {
+            yPos = checkPageBreak(doc, yPos, 30)
             const manoObraData = metadatos.presupuestoSnapshot.manoObra.map(m => [
                 m.descripcion,
                 `${m.horasEstimadas}h`,
@@ -868,6 +948,7 @@ function generarAceptacionPresupuesto(doc: jsPDF, documento: any, metadatos: Met
         }
 
         // Resumen
+        yPos = checkPageBreak(doc, yPos, 30)
         const pageWidth = doc.internal.pageSize.getWidth()
         const snapshotCostos = metadatos.presupuestoSnapshot.costos
 
@@ -888,6 +969,7 @@ function generarAceptacionPresupuesto(doc: jsPDF, documento: any, metadatos: Met
         yPos += 10
     }
 
+    yPos = checkPageBreak(doc, yPos, 20)
     yPos += 15
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
@@ -1072,6 +1154,23 @@ async function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: Meta
     doc.text(`Ticket: ${metadatos.numeroTicket}`, 20, yPos)
     yPos += 6
     doc.text(`Fecha de Entrega: ${new Date(metadatos.fechaEntrega).toLocaleDateString('es-ES')}`, 20, yPos)
+    yPos += 6
+
+    // DATOS DEL CLIENTE
+    yPos += 5
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('DATOS DEL CLIENTE', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+    doc.text(`Nombre: ${metadatos.clienteRecibe.nombre}`, 20, yPos)
+    yPos += 5
+    doc.text(`Identificación/DNI: ${metadatos.clienteRecibe.identificacion}`, 20, yPos)
+    yPos += 5
 
     // Equipo entregado
     yPos += 10
@@ -1089,6 +1188,7 @@ async function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: Meta
     doc.text(`Tipo: ${metadatos.equipoEntregado.tipo}`, 20, yPos)
 
     // Reparaciones realizadas
+    yPos = checkPageBreak(doc, yPos, 30) // Verificar espacio antes de empezar sección
     yPos += 10
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
@@ -1099,13 +1199,62 @@ async function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: Meta
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(COLORS.text)
-    metadatos.reparacionesRealizadas.forEach(reparacion => {
-        doc.text(`• ${reparacion}`, 25, yPos)
+
+    if (metadatos.reparacionesRealizadas && metadatos.reparacionesRealizadas.length > 0) {
+        metadatos.reparacionesRealizadas.forEach(reparacion => {
+            // Manejar texto largo en reparaciones
+            const lines = doc.splitTextToSize(`• ${reparacion}`, 170)
+
+            // Verificar si cabe el bloque de texto
+            yPos = checkPageBreak(doc, yPos, lines.length * 5)
+
+            doc.text(lines, 25, yPos)
+            yPos += (lines.length * 5) + 2 // Espacio entre items
+        })
+    } else {
+        doc.text('• Sin reparaciones detalladas.', 25, yPos)
+        yPos += 8
+    }
+
+    // === AGREGADO: REPUESTOS UTILIZADOS EN ALBARÁN ===
+    if (metadatos.repuestosUtilizados && metadatos.repuestosUtilizados.length > 0) {
+        yPos = checkPageBreak(doc, yPos, 40) // Espacio para cabecera tabla
         yPos += 5
-    })
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.primary)
+        doc.text('REPUESTOS SUSTITUIDOS', 20, yPos)
+        yPos += 7
+
+        const repuestosData = metadatos.repuestosUtilizados.map(r => [
+            r.codigo || '-',
+            r.descripcion,
+            r.cantidad.toString(),
+            `${r.garantiaMeses || 0} meses`
+        ])
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Código', 'Descripción', 'Cant.', 'Garantía']],
+            body: repuestosData,
+            theme: 'striped',
+            headStyles: { fillColor: COLORS.secondary },
+            margin: { left: 20, right: 20 },
+            styles: { fontSize: 9 },
+            didDrawPage: (data) => {
+                // Actualizar yPos si la tabla salta de página
+                yPos = data.cursor?.y || yPos
+            }
+        })
+
+        yPos = (doc as any).lastAutoTable.finalY + 15 // Aumentar margen inferior tras tabla
+    } else {
+        yPos += 5
+    }
 
     // Garantía
-    yPos += 10
+    yPos = checkPageBreak(doc, yPos, 40) // Asegurar espacio para bloque garantía
+
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(COLORS.success)
@@ -1118,6 +1267,20 @@ async function generarAlbaranEntrega(doc: jsPDF, documento: any, metadatos: Meta
     doc.text(`Repuestos: ${metadatos.garantiaProporcionada.repuestos} meses`, 20, yPos)
     yPos += 6
     doc.text(`Mano de Obra: ${metadatos.garantiaProporcionada.manoObra} meses`, 20, yPos)
+
+    if (metadatos.garantiaProporcionada.condiciones) {
+        yPos += 6
+        const condicionesLines = doc.splitTextToSize(`Condiciones: ${metadatos.garantiaProporcionada.condiciones}`, 170)
+
+        // Verificar si cabe el texto de condiciones
+        if (yPos + (condicionesLines.length * 5) > doc.internal.pageSize.getHeight() - 20) {
+            doc.addPage()
+            yPos = 30 // Margen superior nueva página
+        }
+
+        doc.text(condicionesLines, 20, yPos)
+        yPos += (condicionesLines.length * 5) + 5
+    }
 
     // === AGREGADO: EVIDENCIAS FOTOGRÁFICAS ===
     if (documento.evidenciasFotos) {

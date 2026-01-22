@@ -40,6 +40,15 @@ import Link from 'next/link'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { DocumentoTipo, EstadoDocumento } from '@/types/enums'
 import { DocumentoConRelaciones } from '@/types'
+import { WorkflowGuide } from '@/components/documentos/WorkflowGuide'
+import { getWorkflowStatus } from '@/lib/document-workflow'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Zap, Info } from 'lucide-react'
 
 // Mapeo de etiquetas en español para los tipos de documento
 const DOCUMENTO_TIPO_LABELS: Record<DocumentoTipo, string> = {
@@ -90,12 +99,45 @@ export default function DocumentosPage() {
     const [busqueda, setBusqueda] = useState('')
     const [filtroTipo, setFiltroTipo] = useState<string>('todos')
     const [filtroEstado, setFiltroEstado] = useState<string>('todos')
+    const [filtroUsuarioGenerador, setFiltroUsuarioGenerador] = useState<string>('todos')
+    const [filtroTecnicoAsignado, setFiltroTecnicoAsignado] = useState<string>('todos')
     const [paginaActual, setPaginaActual] = useState(1)
     const [totalPaginas, setTotalPaginas] = useState(1)
+    const [usuarios, setUsuarios] = useState<{ id: string; nombre: string; apellidos?: string | null }[]>([])
+    const [tecnicos, setTecnicos] = useState<{ id: string; nombre: string; apellidos?: string | null }[]>([])
 
     useEffect(() => {
         fetchDocumentos()
-    }, [paginaActual, filtroTipo, filtroEstado, busqueda])
+    }, [paginaActual, filtroTipo, filtroEstado, busqueda, filtroUsuarioGenerador, filtroTecnicoAsignado])
+
+    useEffect(() => {
+        fetchUsuarios()
+        fetchTecnicos()
+    }, [])
+
+    const fetchUsuarios = async () => {
+        try {
+            const response = await fetch('/api/admin/usuarios')
+            const data = await response.json()
+            if (data.success) {
+                setUsuarios(data.data.usuarios)
+            }
+        } catch (error) {
+            console.error('Error al cargar usuarios:', error)
+        }
+    }
+
+    const fetchTecnicos = async () => {
+        try {
+            const response = await fetch('/api/admin/tecnicos')
+            const data = await response.json()
+            if (data.success) {
+                setTecnicos(data.data.tecnicos)
+            }
+        } catch (error) {
+            console.error('Error al cargar técnicos:', error)
+        }
+    }
 
     const fetchDocumentos = async () => {
         setIsLoading(true)
@@ -107,6 +149,8 @@ export default function DocumentosPage() {
 
             if (filtroTipo !== 'todos') params.append('tipo', filtroTipo)
             if (filtroEstado !== 'todos') params.append('estado', filtroEstado)
+            if (filtroUsuarioGenerador !== 'todos') params.append('usuarioGeneradorId', filtroUsuarioGenerador)
+            if (filtroTecnicoAsignado !== 'todos') params.append('tecnicoAsignado', filtroTecnicoAsignado)
             if (busqueda) params.append('busqueda', busqueda)
 
             const response = await fetch(`/api/admin/documentos?${params}`)
@@ -163,12 +207,15 @@ export default function DocumentosPage() {
                                     Gestiona todos los documentos del proceso de reparación
                                 </p>
                             </div>
-                            <Button asChild>
-                                <Link href="/admin/documentos/nuevo">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Nuevo Documento
-                                </Link>
-                            </Button>
+                            <div className="flex items-center gap-3">
+                                <WorkflowGuide />
+                                <Button asChild>
+                                    <Link href="/admin/documentos/nuevo">
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Documento
+                                    </Link>
+                                </Button>
+                            </div>
                         </div>
 
                         {/* Estadísticas rápidas */}
@@ -238,7 +285,7 @@ export default function DocumentosPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
@@ -302,6 +349,34 @@ export default function DocumentosPage() {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
+
+                                <Select value={filtroUsuarioGenerador} onValueChange={setFiltroUsuarioGenerador}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Generado por" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="todos">Todos los usuarios</SelectItem>
+                                        {usuarios.map((usuario) => (
+                                            <SelectItem key={usuario.id} value={usuario.id}>
+                                                {usuario.nombre} {usuario.apellidos || ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={filtroTecnicoAsignado} onValueChange={setFiltroTecnicoAsignado}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Técnico asignado" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="todos">Todos los técnicos</SelectItem>
+                                        {tecnicos.map((tecnico) => (
+                                            <SelectItem key={tecnico.id} value={tecnico.id}>
+                                                {tecnico.nombre} {tecnico.apellidos || ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </CardContent>
                     </Card>
@@ -333,6 +408,7 @@ export default function DocumentosPage() {
                                                 <TableHead>Tipo</TableHead>
                                                 <TableHead>Estado</TableHead>
                                                 <TableHead>Ticket/Pedido</TableHead>
+                                                <TableHead>Técnico Asignado</TableHead>
                                                 <TableHead>Fecha</TableHead>
                                                 <TableHead>Generado por</TableHead>
                                                 <TableHead className="text-right">Acciones</TableHead>
@@ -374,6 +450,16 @@ export default function DocumentosPage() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
+                                                        {doc.ticket?.tecnico ? (
+                                                            <div className="flex items-center gap-1 text-sm">
+                                                                <User className="h-3 w-3" />
+                                                                {doc.ticket.tecnico.usuario.nombre} {doc.ticket.tecnico.usuario.apellidos || ''}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm text-gray-400">Sin asignar</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <div className="flex items-center gap-1 text-sm text-gray-600">
                                                             <Calendar className="h-3 w-3" />
                                                             {formatearFecha(doc.fechaGeneracion)}
@@ -387,6 +473,34 @@ export default function DocumentosPage() {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex items-center justify-end gap-2">
+                                                            {getWorkflowStatus(doc.tipo) && (
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <div className="px-2 py-1 rounded bg-blue-50 border border-blue-100 flex items-center gap-1.5 cursor-help">
+                                                                                <Info className="h-3.5 w-3.5 text-blue-600" />
+                                                                                <span className="text-xs font-medium text-blue-700 hidden xl:inline-block">
+                                                                                    Siguiente paso
+                                                                                </span>
+                                                                            </div>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent className="max-w-xs p-3">
+                                                                            <p className="font-semibold text-sm mb-1">
+                                                                                {getWorkflowStatus(doc.tipo)?.description}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500 mb-2">
+                                                                                {getWorkflowStatus(doc.tipo)?.note}
+                                                                            </p>
+                                                                            {getWorkflowStatus(doc.tipo)?.autoGenerated && (
+                                                                                <div className="mt-2 text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-100 flex items-center gap-1">
+                                                                                    <Zap className="h-3 w-3" />
+                                                                                    Genera: Factura
+                                                                                </div>
+                                                                            )}
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            )}
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
@@ -446,7 +560,7 @@ export default function DocumentosPage() {
                         </div>
                     )}
                 </main>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }

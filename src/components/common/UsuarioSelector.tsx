@@ -23,6 +23,7 @@ interface Usuario {
     direccion?: string
     codigoPostal?: string
     ciudad?: string
+    dni?: string
     rol?: string
 }
 
@@ -55,7 +56,8 @@ export function UsuarioSelector({
         telefono: '',
         direccion: '',
         codigoPostal: '',
-        ciudad: ''
+        ciudad: '',
+        dni: ''
     })
     const [isCreating, setIsCreating] = useState(false)
 
@@ -69,7 +71,8 @@ export function UsuarioSelector({
                 u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.apellidos?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                u.codigoPostal?.toLowerCase().includes(searchTerm.toLowerCase())
+                u.codigoPostal?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.dni?.toLowerCase().includes(searchTerm.toLowerCase())
             )
             setFilteredUsuarios(filtered)
         } else {
@@ -121,7 +124,8 @@ export function UsuarioSelector({
                     telefono: '',
                     direccion: '',
                     codigoPostal: '',
-                    ciudad: ''
+                    ciudad: '',
+                    dni: ''
                 })
                 await fetchUsuarios()
             } else {
@@ -216,16 +220,23 @@ export function UsuarioSelector({
                                     <Input
                                         required
                                         value={newUsuario.nombre}
-                                        onChange={(e) => setNewUsuario({...newUsuario, nombre: e.target.value})}
+                                        onChange={(e) => setNewUsuario({ ...newUsuario, nombre: e.target.value })}
                                     />
                                 </div>
                                 <div>
                                     <Label>Apellidos</Label>
                                     <Input
                                         value={newUsuario.apellidos}
-                                        onChange={(e) => setNewUsuario({...newUsuario, apellidos: e.target.value})}
+                                        onChange={(e) => setNewUsuario({ ...newUsuario, apellidos: e.target.value })}
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <Label>DNI / NIF</Label>
+                                <Input
+                                    value={newUsuario.dni}
+                                    onChange={(e) => setNewUsuario({ ...newUsuario, dni: e.target.value })}
+                                />
                             </div>
                             <div>
                                 <Label>Email *</Label>
@@ -233,7 +244,7 @@ export function UsuarioSelector({
                                     type="email"
                                     required
                                     value={newUsuario.email}
-                                    onChange={(e) => setNewUsuario({...newUsuario, email: e.target.value})}
+                                    onChange={(e) => setNewUsuario({ ...newUsuario, email: e.target.value })}
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -241,14 +252,14 @@ export function UsuarioSelector({
                                     <Label>Teléfono</Label>
                                     <Input
                                         value={newUsuario.telefono}
-                                        onChange={(e) => setNewUsuario({...newUsuario, telefono: e.target.value})}
+                                        onChange={(e) => setNewUsuario({ ...newUsuario, telefono: e.target.value })}
                                     />
                                 </div>
                                 <div>
                                     <Label>Código Postal</Label>
                                     <Input
                                         value={newUsuario.codigoPostal}
-                                        onChange={(e) => setNewUsuario({...newUsuario, codigoPostal: e.target.value})}
+                                        onChange={(e) => setNewUsuario({ ...newUsuario, codigoPostal: e.target.value })}
                                     />
                                 </div>
                             </div>
@@ -256,14 +267,14 @@ export function UsuarioSelector({
                                 <Label>Dirección</Label>
                                 <Input
                                     value={newUsuario.direccion}
-                                    onChange={(e) => setNewUsuario({...newUsuario, direccion: e.target.value})}
+                                    onChange={(e) => setNewUsuario({ ...newUsuario, direccion: e.target.value })}
                                 />
                             </div>
                             <div>
                                 <Label>Ciudad</Label>
                                 <Input
                                     value={newUsuario.ciudad}
-                                    onChange={(e) => setNewUsuario({...newUsuario, ciudad: e.target.value})}
+                                    onChange={(e) => setNewUsuario({ ...newUsuario, ciudad: e.target.value })}
                                 />
                             </div>
                             <DialogFooter>

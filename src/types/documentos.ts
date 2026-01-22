@@ -423,6 +423,14 @@ export interface DocumentoConRelaciones extends DocumentoExtendido {
         id: string
         numeroTicket: string
         asunto: string
+        tecnico?: {
+            id: string
+            usuario: {
+                id: string
+                nombre: string
+                apellidos: string | null
+            }
+        } | null
     }
     pedido?: {
         id: string

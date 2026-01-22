@@ -26,8 +26,10 @@ export async function GET(request: NextRequest) {
         const busqueda = searchParams.get('busqueda')
         const ticketId = searchParams.get('ticketId')
         const pedidoId = searchParams.get('pedidoId')
+        const usuarioGeneradorId = searchParams.get('usuarioGeneradorId')
+        const tecnicoAsignado = searchParams.get('tecnicoAsignado')
 
-        console.log('[API] GET /admin/documentos params:', { page, limit, tipo, estado, ticketId, pedidoId });
+        console.log('[API] GET /admin/documentos params:', { page, limit, tipo, estado, ticketId, pedidoId, usuarioGeneradorId, tecnicoAsignado });
 
         const skip = (page - 1) * limit
 
@@ -48,6 +50,26 @@ export async function GET(request: NextRequest) {
 
         if (pedidoId) {
             where.pedidoId = pedidoId
+        }
+
+        if (usuarioGeneradorId) {
+            where.usuarioGeneradorId = usuarioGeneradorId
+        }
+
+        // Si hay filtro de técnico asignado, necesitamos manejarlo de forma especial
+        // para que no se sobrescriba con la búsqueda
+        // El frontend envía Usuario.id, pero necesitamos filtrar por ticket.tecnico.usuarioId
+        if (tecnicoAsignado) {
+            if (!where.AND) {
+                where.AND = []
+            }
+            where.AND.push({
+                ticket: {
+                    tecnico: {
+                        usuarioId: tecnicoAsignado
+                    }
+                }
+            })
         }
 
         if (busqueda) {
@@ -95,6 +117,18 @@ export async function GET(request: NextRequest) {
                             id: true,
                             numeroTicket: true,
                             asunto: true,
+                            tecnico: {
+                                select: {
+                                    id: true,
+                                    usuario: {
+                                        select: {
+                                            id: true,
+                                            nombre: true,
+                                            apellidos: true,
+                                        },
+                                    },
+                                },
+                            },
                         },
                     },
                     pedido: {
@@ -279,10 +313,10 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                             tipo: 'equipo_completo',
                             nombre: `${meta.equipo.tipoEquipo} ${meta.equipo.marca} ${meta.equipo.modelo}`,
                             descripcion: `Cliente: ${cliente.nombre} ${cliente.apellidos}\n` +
-                                         `IMEI/Serie: ${meta.equipo.imei || meta.equipo.numeroSerie || 'N/A'}\n` +
-                                         `Color: ${meta.equipo.color || 'N/A'}\n` +
-                                         `Estado físico: ${meta.estadoFisico.danosVisibles || 'Sin daños visibles'}\n` +
-                                         meta.equipo.caracteristicasFisicas,
+                                `IMEI/Serie: ${meta.equipo.imei || meta.equipo.numeroSerie || 'N/A'}\n` +
+                                `Color: ${meta.equipo.color || 'N/A'}\n` +
+                                `Estado físico: ${meta.estadoFisico.danosVisibles || 'Sin daños visibles'}\n` +
+                                meta.equipo.caracteristicasFisicas,
                             precio: 0,
                             stock: 0,
                             marca: meta.equipo.marca,
@@ -303,14 +337,14 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                         estado: 'abierto',
                         asunto: `Reparación: ${meta.equipo.tipoEquipo} ${meta.equipo.marca} ${meta.equipo.modelo}`,
                         descripcion: `Problema reportado: ${meta.problema.sintomasReportados}\n` +
-                                     `Frecuencia del fallo: ${meta.problema.frecuenciaFallo || 'No especificada'}\n` +
-                                     `Condiciones de ocurrencia: ${meta.problema.condicionesOcurrencia || 'No especificadas'}\n` +
-                                     `Accesorios entregados: ${meta.equipo.accesoriosEntregados?.join(', ') || 'Ninguno'}\n` +
-                                     `Estado físico al ingreso:\n` +
-                                     `- Golpes: ${meta.estadoFisico.golpes ? 'Sí' : 'No'}\n` +
-                                     `- Rayones: ${meta.estadoFisico.rayones ? 'Sí' : 'No'}\n` +
-                                     `- Estado pantalla: ${meta.estadoFisico.estadoPantalla || 'Normal'}\n` +
-                                     `- Daños visibles: ${meta.estadoFisico.danosVisibles || 'Ninguno'}`,
+                            `Frecuencia del fallo: ${meta.problema.frecuenciaFallo || 'No especificada'}\n` +
+                            `Condiciones de ocurrencia: ${meta.problema.condicionesOcurrencia || 'No especificadas'}\n` +
+                            `Accesorios entregados: ${meta.equipo.accesoriosEntregados?.join(', ') || 'Ninguno'}\n` +
+                            `Estado físico al ingreso:\n` +
+                            `- Golpes: ${meta.estadoFisico.golpes ? 'Sí' : 'No'}\n` +
+                            `- Rayones: ${meta.estadoFisico.rayones ? 'Sí' : 'No'}\n` +
+                            `- Estado pantalla: ${meta.estadoFisico.estadoPantalla || 'Normal'}\n` +
+                            `- Daños visibles: ${meta.estadoFisico.danosVisibles || 'Ninguno'}`,
                         diagnostico: meta.observacionesTecnico || null
                     }
                 })
@@ -338,7 +372,7 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                 usuarioGeneradorId: session.user.id,
                 metadatos: metadatos ? JSON.stringify(metadatos) : null,
                 evidenciasFotos: evidenciasFotos ? JSON.stringify(evidenciasFotos) : null,
-                estadoDocumento: estadoDocumento || EstadoDocumento.BORRADOR,
+                estadoDocumento: estadoDocumento || EstadoDocumento.PENDIENTE_FIRMA,
                 documentoRelacionadoId: cleanDocumentoRelacionadoId,
             },
             include: {
@@ -394,6 +428,36 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                 const subtotal = total / 1.21
                 const iva = total - subtotal
 
+                // Generar items de factura detallados
+                const itemsFactura: any[] = []
+
+                // Opción informativa: detallar trabajos y repuestos en la descripción DE UN ITEM ÚNICO
+                // (Ya que el Albarán no tiene precios unitarios guardados)
+
+                let descripcionDetallada = `Servicio Técnico Reparación: ${metaAlbaran.equipoEntregado?.tipo || 'Equipo'} ${metaAlbaran.equipoEntregado?.marca || ''} ${metaAlbaran.equipoEntregado?.modelo || ''}\n`
+                descripcionDetallada += `Ticket: ${metaAlbaran.numeroTicket || 'N/A'} - Albarán: ${numeroDocumento}\n\n`
+
+                if (metaAlbaran.reparacionesRealizadas?.length > 0) {
+                    descripcionDetallada += `TRABAJOS REALIZADOS:\n`
+                    metaAlbaran.reparacionesRealizadas.forEach((rep: string) => {
+                        descripcionDetallada += `- ${rep}\n`
+                    })
+                }
+
+                if (metaAlbaran.repuestosUtilizados?.length > 0) {
+                    descripcionDetallada += `\nREPUESTOS SUSTITUIDOS:\n`
+                    metaAlbaran.repuestosUtilizados.forEach((rep: any) => {
+                        descripcionDetallada += `- ${rep.descripcion} (${rep.cantidad} un.)\n`
+                    })
+                }
+
+                itemsFactura.push({
+                    descripcion: descripcionDetallada,
+                    cantidad: 1,
+                    precioUnitario: subtotal, // El subtotal calculado previamente del gran total
+                    subtotal: subtotal
+                })
+
                 const metadatosFactura = {
                     ticketId: cleanTicketId,
                     numeroTicket: metaAlbaran.numeroTicket,
@@ -411,14 +475,8 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                         modelo: metaAlbaran.equipoEntregado?.modelo || '',
                         numeroSerie: metaAlbaran.equipoEntregado?.numeroSerie || ''
                     },
-                    items: [
-                        {
-                            descripcion: `Servicio Técnico Reparación: ${metaAlbaran.equipoEntregado?.tipo || 'Equipo'} ${metaAlbaran.equipoEntregado?.marca || ''} ${metaAlbaran.equipoEntregado?.modelo || ''} (Ticket: ${metaAlbaran.numeroTicket || 'N/A'}) - Según Albarán ${numeroDocumento}`,
-                            cantidad: 1,
-                            precioUnitario: subtotal,
-                            subtotal: subtotal
-                        }
-                    ],
+
+                    items: itemsFactura,
                     totales: {
                         subtotal: subtotal,
                         iva: iva,

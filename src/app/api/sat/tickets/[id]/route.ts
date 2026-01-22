@@ -21,8 +21,8 @@ export async function GET(
         const ticket = await db.ticket.findUnique({
             where: { id },
             include: {
-                usuario: { select: { nombre: true, email: true } },
-                tecnico: { include: { usuario: { select: { nombre: true, email: true } } } },
+                usuario: { select: { nombre: true, email: true, dni: true } },
+                tecnico: { include: { usuario: { select: { id: true, nombre: true, apellidos: true, email: true } } } },
                 seguimientos: {
                     orderBy: { fechaCreacion: 'asc' },
                     include: { usuario: { select: { nombre: true } } }

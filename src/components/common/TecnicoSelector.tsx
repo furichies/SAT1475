@@ -33,7 +33,10 @@ export function TecnicoSelector({ value, onChange, disabled }: TecnicoSelectorPr
                 const res = await fetch('/api/admin/tecnicos')
                 if (res.ok) {
                     const data = await res.json()
-                    if (Array.isArray(data)) {
+                    // Manejar tanto el formato { success, data: { tecnicos } } como array directo
+                    if (data.success && data.data?.tecnicos) {
+                        setTecnicos(data.data.tecnicos)
+                    } else if (Array.isArray(data)) {
                         setTecnicos(data)
                     }
                 }
@@ -56,7 +59,8 @@ export function TecnicoSelector({ value, onChange, disabled }: TecnicoSelectorPr
 
     return (
         <Select
-            value={value}
+            key={value} // Forzamos re-render si el valor cambia para asegurar sincronización visual
+            value={value || ""}
             onValueChange={handleValueChange}
             disabled={disabled || loading}
         >

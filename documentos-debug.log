@@ -94,3 +94,27 @@ TicketId Recibido: cmkcdf8wr0002jcvgv4rjt07h
 EntidadTipo: ticket
 Metadatos: {"ticketId":"cmkcdf8wr0002jcvgv4rjt07h","numeroTicket":"","equipoEntregado":{"tipo":"gfdg","marca":"fgdfdg","modelo":"ghgh","numeroSerie":"ghgh"},"reparacionesRealizadas":["gfdgdf"],"repuestosUtilizad...
 --------------------------------------------------
+[2026-01-22T12:06:58.296Z] POST /api/admin/documentos
+Tipo: orden_servicio
+TicketId Recibido: undefined
+EntidadTipo: ticket
+Metadatos: {"cliente":{"nombreCompleto":"Juan Pérez García","identificacion":"28001","telefono":"655-123-456","correoElectronico":"juan.perez@email.com","direccion":"Calle Mayor 123, 28001 Madrid"},"equipo":{"ti...
+--------------------------------------------------
+[2026-01-22T12:08:47.264Z] POST /api/admin/documentos
+Tipo: diagnostico_presupuesto
+TicketId Recibido: cmkpepkkl0002jcmgc20muylq
+EntidadTipo: ticket
+Metadatos: {"tecnicoAsignado":{"id":"cmkbwhviy0000jcockxk48gvy","nombre":"Juan Técnico"},"diagnostico":{"pruebasRealizadas":["asa"],"resultadosObtenidos":"asa","componentesDefectuosos":[],"causaRaiz":"asa"},"rep...
+--------------------------------------------------
+[2026-01-22T12:08:53.462Z] POST /api/admin/documentos
+Tipo: diagnostico_presupuesto
+TicketId Recibido: cmkpepkkl0002jcmgc20muylq
+EntidadTipo: ticket
+Metadatos: {"tecnicoAsignado":{"id":"cmkbwhviy0000jcockxk48gvy","nombre":"Juan Técnico"},"diagnostico":{"pruebasRealizadas":["asa"],"resultadosObtenidos":"asa","componentesDefectuosos":[],"causaRaiz":"asa"},"rep...
+--------------------------------------------------
+[2026-01-22T12:10:01.148Z] POST /api/admin/documentos
+Tipo: albaran_entrega
+TicketId Recibido: cmkpepkkl0002jcmgc20muylq
+EntidadTipo: ticket
+Metadatos: {"ticketId":"cmkpepkkl0002jcmgc20muylq","numeroTicket":"","equipoEntregado":{"tipo":"laptop","marca":"fg","modelo":"xxx","numeroSerie":""},"reparacionesRealizadas":[],"repuestosUtilizados":[],"garanti...
+--------------------------------------------------

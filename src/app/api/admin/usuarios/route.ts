@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
         direccion: true,
         codigoPostal: true,
         ciudad: true,
+        dni: true,
         rol: true,
       },
       orderBy: { nombre: 'asc' }
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { nombre, apellidos, email, telefono, direccion, codigoPostal, ciudad, rol = 'cliente' } = body
+    const { nombre, apellidos, dni, email, telefono, direccion, codigoPostal, ciudad, rol = 'cliente' } = body
 
     if (!nombre || !email) {
       return NextResponse.json(
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
         direccion,
         codigoPostal,
         ciudad,
+        dni,
         rol,
         passwordHash,
         activo: true
@@ -119,6 +121,7 @@ export async function POST(req: NextRequest) {
         direccion: true,
         codigoPostal: true,
         ciudad: true,
+        dni: true,
         rol: true,
       }
     })

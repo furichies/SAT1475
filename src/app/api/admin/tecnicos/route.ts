@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
             }
         })
 
-        return NextResponse.json(tecnicos)
+        return NextResponse.json({
+            success: true,
+            data: { tecnicos }
+        })
     } catch (error) {
         console.error('Error al obtener técnicos:', error)
         return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
