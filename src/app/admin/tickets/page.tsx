@@ -746,25 +746,25 @@ export default function AdminTicketsPage() {
                         <Card key={ticket.id} className="hover:shadow-md transition-shadow cursor-pointer">
                           <CardHeader className="p-4 pb-2">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-[10px] font-mono text-muted-foreground">{ticket.numero}</span>
-                              <Badge className={`${prioBadge.color} text-[10px] px-1.5 py-0`}>
+                              <span className="text-xs font-mono text-muted-foreground font-bold">{ticket.numero}</span>
+                              <Badge className={`${prioBadge.color} text-xs px-2 py-0.5`}>
                                 {prioBadge.label}
                               </Badge>
                             </div>
-                            <h3 className="font-semibold text-sm line-clamp-2">{ticket.asunto}</h3>
+                            <h3 className="font-bold text-base text-gray-800 line-clamp-3 leading-snug">{ticket.asunto}</h3>
                           </CardHeader>
                           <CardContent className="p-4 pt-2 space-y-3">
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                              <User className="h-3 w-3" />
+                            <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                              <User className="h-4 w-4" />
                               <span>{ticket.cliente}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
                               <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
+                                <Calendar className="h-3.5 w-3.5" />
                                 <span>{ticket.fecha}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Tag className="h-3 w-3" />
+                                <Tag className="h-3.5 w-3.5" />
                                 <span>{tipos[ticket.tipo as keyof typeof tipos]}</span>
                               </div>
                             </div>
@@ -794,15 +794,15 @@ export default function AdminTicketsPage() {
 
         {/* Modal Detalle */}
         <Dialog open={ticketSeleccionado && !isEdicion} onOpenChange={(open) => !open && closeModals()}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-xl">Detalle de Ticket</DialogTitle>
+              <DialogTitle className="text-2xl">Detalle de Ticket</DialogTitle>
               {ticketSeleccionado && <p className="text-sm font-mono text-muted-foreground mt-1">{ticketSeleccionado.numero}</p>}
             </DialogHeader>
 
             {ticketSeleccionado && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Estado</p>
                     <Badge className={getEstadoBadge(ticketSeleccionado.estado).color}>
@@ -832,7 +832,7 @@ export default function AdminTicketsPage() {
 
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Descripción</p>
-                  <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">
+                  <p className="text-base text-gray-800 leading-relaxed bg-gray-50 p-6 rounded-lg border shadow-sm">
                     {ticketSeleccionado.descripcion || "Sin descripción adicional."}
                   </p>
                 </div>
@@ -1023,7 +1023,7 @@ export default function AdminTicketsPage() {
 
         {/* Modal Edición / Nuevo */}
         <Dialog open={isEdicion || isNuevo} onOpenChange={(open) => !open && closeModals()}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl">{isEdicion ? 'Editar Ticket' : 'Crear Nuevo Ticket'}</DialogTitle>
               {isEdicion && ticketSeleccionado && (
