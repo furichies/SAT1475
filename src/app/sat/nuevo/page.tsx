@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   ArrowLeft,
   AlertTriangle,
@@ -25,7 +27,10 @@ import {
   Upload,
   FileText,
   Info,
-  Lock
+  Lock,
+  Calendar,
+  MapPin,
+  Monitor
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
@@ -45,6 +50,14 @@ const prioridades = [
   { value: 'urgente', label: 'Urgente', tiempo: '4h', color: 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200' }
 ]
 
+const tiposIncidencia = [
+  { value: 'hardware', label: 'Hardware' },
+  { value: 'software', label: 'Software' },
+  { value: 'red', label: 'Red' },
+  { value: 'seguridad', label: 'Seguridad' },
+  { value: 'otro', label: 'Otro' }
+]
+
 export default function NuevoTicketPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -52,12 +65,16 @@ export default function NuevoTicketPage() {
   const [prioridad, setPrioridad] = useState('media')
   const [asunto, setAsunto] = useState('')
   const [descripcion, setDescripcion] = useState('')
-  const [pedidoId, setPedidoId] = useState('')
-  const [productoId, setProductoId] = useState('')
-  const [numeroSerie, setNumeroSerie] = useState('')
   const [adjuntos, setAdjuntos] = useState<File[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Nuevos campos para incidencias
+  const [tiposIncidenciaSeleccionados, setTiposIncidenciaSeleccionados] = useState<string[]>([])
+  const [sintomasObservados, setSintomasObservados] = useState('')
+  const [tipoAcceso, setTipoAcceso] = useState<'remoto' | 'presencial' | ''>('')
+  const [fechaPreferida, setFechaPreferida] = useState('')
+  const [horaPreferida, setHoraPreferida] = useState('')
 
   if (status === 'loading') {
     return (
@@ -96,10 +113,31 @@ export default function NuevoTicketPage() {
       return
     }
 
-    if ((tipo === 'reparacion' || tipo === 'garantia' || tipo === 'devolucion') && !numeroSerie) {
-      setError('El número de serie es obligatorio para este tipo de ticket')
-      setIsLoading(false)
-      return
+    // Validaciones específicas para incidencias
+    if (tipo === 'incidencia') {
+      if (tiposIncidenciaSeleccionados.length === 0) {
+        setError('Debes seleccionar al menos un tipo de incidencia')
+        setIsLoading(false)
+        return
+      }
+
+      if (!sintomasObservados || sintomasObservados.trim().length < 10) {
+        setError('Debes describir los síntomas observados (mínimo 10 caracteres)')
+        setIsLoading(false)
+        return
+      }
+
+      if (!tipoAcceso) {
+        setError('Debes seleccionar el tipo de acceso (remoto o presencial)')
+        setIsLoading(false)
+        return
+      }
+
+      if (!fechaPreferida || !horaPreferida) {
+        setError('Debes seleccionar una fecha y hora preferida')
+        setIsLoading(false)
+        return
+      }
     }
 
     try {
@@ -108,9 +146,15 @@ export default function NuevoTicketPage() {
       formData.append('prioridad', prioridad)
       formData.append('asunto', asunto)
       formData.append('descripcion', descripcion)
-      if (pedidoId) formData.append('pedidoId', pedidoId)
-      if (productoId) formData.append('productoId', productoId)
-      if (numeroSerie) formData.append('numeroSerie', numeroSerie)
+
+      // Campos específicos de incidencia
+      if (tipo === 'incidencia') {
+        formData.append('tiposIncidencia', JSON.stringify(tiposIncidenciaSeleccionados))
+        formData.append('sintomasObservados', sintomasObservados)
+        formData.append('tipoAcceso', tipoAcceso)
+        formData.append('fechaPreferida', fechaPreferida)
+        formData.append('horaPreferida', horaPreferida)
+      }
 
       adjuntos.forEach(file => {
         formData.append('adjuntos', file)
@@ -147,8 +191,19 @@ export default function NuevoTicketPage() {
     }
   }
 
-  const necesitaSerie = ['reparacion', 'garantia', 'devolucion'].includes(tipo)
-  const necesitaProducto = ['reparacion', 'garantia', 'devolucion', 'incidencia'].includes(tipo)
+  const handleTipoIncidenciaChange = (value: string, checked: boolean) => {
+    if (checked) {
+      setTiposIncidenciaSeleccionados([...tiposIncidenciaSeleccionados, value])
+    } else {
+      setTiposIncidenciaSeleccionados(tiposIncidenciaSeleccionados.filter(t => t !== value))
+    }
+  }
+
+  // Obtener la fecha mínima (hoy)
+  const getMinDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+  }
 
   return (
     <div className="min-h-screen py-6 bg-muted/30">
@@ -266,43 +321,157 @@ export default function NuevoTicketPage() {
                     </div>
                   </div>
 
-                  {/* Campos condicionales */}
-                  {necesitaProducto && (
+                  {/* Campos específicos para incidencias */}
+                  {tipo === 'incidencia' && (
                     <>
                       <Separator />
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Package className="h-4 w-4" />
-                          Información del Producto
-                        </div>
 
+                      {/* Tipo de Incidencia */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Monitor className="h-4 w-4" />
+                          Tipo de Incidencia *
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {tiposIncidencia.map((tipoInc) => (
+                            <div key={tipoInc.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`tipo-${tipoInc.value}`}
+                                checked={tiposIncidenciaSeleccionados.includes(tipoInc.value)}
+                                onCheckedChange={(checked) =>
+                                  handleTipoIncidenciaChange(tipoInc.value, checked as boolean)
+                                }
+                                disabled={isLoading}
+                              />
+                              <Label
+                                htmlFor={`tipo-${tipoInc.value}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {tipoInc.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Síntomas Observados */}
+                      <div className="space-y-2">
+                        <Label htmlFor="sintomas" className="text-sm">
+                          Descripción Detallada y Síntomas Observados *
+                        </Label>
+                        <Textarea
+                          id="sintomas"
+                          placeholder="Describe detalladamente los síntomas que has observado..."
+                          value={sintomasObservados}
+                          onChange={(e) => setSintomasObservados(e.target.value)}
+                          required={tipo === 'incidencia'}
+                          disabled={isLoading}
+                          rows={4}
+                          maxLength={1000}
+                          className="resize-none"
+                        />
+                        <div className="text-xs text-muted-foreground text-right">
+                          {sintomasObservados.length}/1000
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Acceso Remoto/Presencial */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <MapPin className="h-4 w-4" />
+                          Acceso Remoto/Presencial *
+                        </div>
+                        <RadioGroup
+                          value={tipoAcceso}
+                          onValueChange={(value) => setTipoAcceso(value as 'remoto' | 'presencial')}
+                          disabled={isLoading}
+                        >
+                          <div className="flex items-start space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="remoto" id="remoto" className="mt-1" />
+                            <div className="flex-1">
+                              <Label htmlFor="remoto" className="font-medium cursor-pointer">
+                                Acceso remoto
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Autorizado por: {session?.user?.name || 'Usuario'}
+                              </p>
+                              {tipoAcceso === 'remoto' && (
+                                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+                                  <p className="font-medium text-blue-900 mb-2">
+                                    📥 Descarga necesaria
+                                  </p>
+                                  <p className="text-blue-700 mb-2">
+                                    Para la asistencia remota, necesitarás descargar AnyDesk:
+                                  </p>
+                                  <a
+                                    href="https://anydesk.com/es/downloads/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                                  >
+                                    Descargar AnyDesk
+                                  </a>
+                                  <div className="mt-3 p-2 bg-white border border-blue-200 rounded">
+                                    <p className="text-blue-800 font-medium mb-1">📝 Instrucciones:</p>
+                                    <ol className="text-blue-700 space-y-1 ml-4 list-decimal">
+                                      <li>Ejecuta el archivo descargado (no requiere instalación)</li>
+                                      <li>Aparecerá un <span className="font-bold">número de 9 dígitos</span></li>
+                                      <li><span className="font-bold">Envía ese número como mensaje</span> en la plataforma</li>
+                                    </ol>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-start space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="presencial" id="presencial" className="mt-1" />
+                            <div className="flex-1">
+                              <Label htmlFor="presencial" className="font-medium cursor-pointer">
+                                Intervención presencial
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Dirección: Por especificar
+                              </p>
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* Horario Preferido */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Calendar className="h-4 w-4" />
+                          Horario Preferido *
+                        </div>
                         <div className="grid md:grid-cols-2 gap-4">
-                          {/* Número de Serie */}
                           <div className="space-y-2">
-                            <Label htmlFor="serie" className="text-sm">
-                              Número de Serie {necesitaSerie && <span className="text-destructive">*</span>}
+                            <Label htmlFor="fecha" className="text-sm">
+                              Fecha
                             </Label>
                             <Input
-                              id="serie"
-                              type="text"
-                              placeholder="SN123456789"
-                              value={numeroSerie}
-                              onChange={(e) => setNumeroSerie(e.target.value)}
-                              disabled={isLoading || !necesitaSerie}
-                              maxLength={50}
+                              id="fecha"
+                              type="date"
+                              value={fechaPreferida}
+                              onChange={(e) => setFechaPreferida(e.target.value)}
+                              min={getMinDate()}
+                              required={tipo === 'incidencia'}
+                              disabled={isLoading}
                               className="h-9"
                             />
                           </div>
-
-                          {/* ID de Pedido */}
                           <div className="space-y-2">
-                            <Label htmlFor="pedidoId" className="text-sm">ID de Pedido (opcional)</Label>
+                            <Label htmlFor="hora" className="text-sm">
+                              Hora
+                            </Label>
                             <Input
-                              id="pedidoId"
-                              type="text"
-                              placeholder="PED-2023-0001"
-                              value={pedidoId}
-                              onChange={(e) => setPedidoId(e.target.value)}
+                              id="hora"
+                              type="time"
+                              value={horaPreferida}
+                              onChange={(e) => setHoraPreferida(e.target.value)}
+                              required={tipo === 'incidencia'}
                               disabled={isLoading}
                               className="h-9"
                             />
@@ -418,7 +587,7 @@ export default function NuevoTicketPage() {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

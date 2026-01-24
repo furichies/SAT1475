@@ -61,6 +61,7 @@ const DOCUMENTO_TIPO_LABELS: Record<DocumentoTipo, string> = {
     [DocumentoTipo.ORDEN_TRABAJO_INTERNA]: 'Orden de Trabajo Interna',
     [DocumentoTipo.HOJA_RUTA]: 'Hoja de Ruta',
     [DocumentoTipo.ALBARAN_ENTREGA]: 'Albarán de Entrega',
+    [DocumentoTipo.ORDEN_INTERVENCION]: 'Orden de Intervención',
 }
 
 const ESTADO_DOCUMENTO_LABELS: Record<EstadoDocumento, string> = {

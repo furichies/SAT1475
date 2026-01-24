@@ -67,6 +67,7 @@ const DOCUMENTO_TIPO_LABELS: Record<DocumentoTipo, string> = {
     [DocumentoTipo.ORDEN_TRABAJO_INTERNA]: 'Orden de Trabajo Interna',
     [DocumentoTipo.HOJA_RUTA]: 'Hoja de Ruta',
     [DocumentoTipo.ALBARAN_ENTREGA]: 'Albarán de Entrega',
+    [DocumentoTipo.ORDEN_INTERVENCION]: 'Orden de Intervención',
 }
 
 // Mapeo de etiquetas en español para los estados de documento

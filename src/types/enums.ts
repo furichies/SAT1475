@@ -97,7 +97,8 @@ export enum DocumentoTipo {
   ACEPTACION_EXTENSION = 'aceptacion_extension',
   ORDEN_TRABAJO_INTERNA = 'orden_trabajo_interna',
   HOJA_RUTA = 'hoja_ruta',
-  ALBARAN_ENTREGA = 'albaran_entrega'
+  ALBARAN_ENTREGA = 'albaran_entrega',
+  ORDEN_INTERVENCION = 'orden_intervencion'
 }
 
 export enum DocumentoEntidadTipo {

@@ -528,8 +528,8 @@ export default function TicketDetailPage() {
                                                 >
                                                     <Star
                                                         className={`h-10 w-10 ${(hoverRating || rating) >= star
-                                                                ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm'
-                                                                : 'text-gray-300'
+                                                            ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm'
+                                                            : 'text-gray-300'
                                                             }`}
                                                     />
                                                 </button>
@@ -699,6 +699,87 @@ export default function TicketDetailPage() {
                                         </div>
                                     </>
                                 )}
+
+                                {/* Información de Cita para Incidencias con Acceso Remoto */}
+                                {ticket.tipo === 'incidencia' && ticket.documentos && ticket.documentos.some((doc: any) =>
+                                    doc.tipo === 'orden_intervencion' && doc.metadatos
+                                ) && (() => {
+                                    const ordenIntervencion = ticket.documentos.find((doc: any) => doc.tipo === 'orden_intervencion')
+                                    let metadatos: any = {}
+                                    try {
+                                        metadatos = JSON.parse(ordenIntervencion.metadatos)
+                                    } catch (e) {
+                                        console.error('Error parsing metadatos:', e)
+                                    }
+
+                                    if (metadatos.tipoAcceso === 'remoto' && metadatos.fechaHoraPreferida) {
+                                        const fecha = new Date(metadatos.fechaHoraPreferida)
+                                        return (
+                                            <>
+                                                <Separator className="opacity-50" />
+                                                <div className="space-y-4">
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Cita de Asistencia Remota</p>
+
+                                                    {/* Fecha y Hora */}
+                                                    <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl space-y-2">
+                                                        <div className="flex items-center gap-2 text-amber-900">
+                                                            <Clock className="h-5 w-5" />
+                                                            <p className="text-xs font-black uppercase">Horario Programado</p>
+                                                        </div>
+                                                        <p className="text-lg font-black text-amber-900">
+                                                            {fecha.toLocaleDateString('es-ES', {
+                                                                weekday: 'long',
+                                                                year: 'numeric',
+                                                                month: 'long',
+                                                                day: 'numeric'
+                                                            })}
+                                                        </p>
+                                                        <p className="text-2xl font-black text-amber-900">
+                                                            {fecha.toLocaleTimeString('es-ES', {
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </p>
+                                                        <p className="text-xs text-amber-700 font-medium">
+                                                            ⚠️ Debe estar disponible en este horario
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Enlace AnyDesk */}
+                                                    <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-2xl space-y-3">
+                                                        <div className="flex items-center gap-2 text-blue-900">
+                                                            <Download className="h-5 w-5" />
+                                                            <p className="text-xs font-black uppercase">Aplicación Requerida</p>
+                                                        </div>
+                                                        <p className="text-sm text-blue-800 font-medium">
+                                                            Para la asistencia remota, necesita descargar AnyDesk:
+                                                        </p>
+                                                        <a
+                                                            href="https://anydesk.com/es/downloads/"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="block w-full"
+                                                        >
+                                                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow-lg">
+                                                                <Download className="h-4 w-4 mr-2" />
+                                                                DESCARGAR ANYDESK
+                                                            </Button>
+                                                        </a>
+                                                        <div className="bg-white border border-blue-200 rounded-lg p-3 space-y-2">
+                                                            <p className="text-xs font-black text-blue-900">📝 INSTRUCCIONES:</p>
+                                                            <ol className="text-xs text-blue-800 space-y-1 ml-4 list-decimal">
+                                                                <li>Ejecuta el archivo descargado</li>
+                                                                <li>Aparecerá un <span className="font-bold">número de 9 dígitos</span></li>
+                                                                <li><span className="font-bold">Envía ese número</span> en el chat de seguimiento</li>
+                                                            </ol>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )
+                                    }
+                                    return null
+                                })()}
                             </CardContent>
                         </Card>
 
@@ -733,60 +814,60 @@ export default function TicketDetailPage() {
 
                         {/* Evidencias Fotográficas */}
                         {ticket.documentos && ticket.documentos.filter((d: any) =>
-                          d.evidenciasFotos || d.rutaArchivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+                            d.evidenciasFotos || d.rutaArchivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
                         ).length > 0 && (
-                          <Card className="shadow-xl border-none overflow-hidden rounded-3xl">
-                            <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500 w-full" />
-                            <CardHeader className="bg-muted/5 pb-2">
-                              <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
-                                <ImageIcon className="h-5 w-5" />
-                                EVIDENCIAS FOTOGRÁFICAS
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-4">
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {ticket.documentos
-                                  .filter((d: any) => d.evidenciasFotos)
-                                  .map((doc: any) => {
-                                    let evidencias: any[] = []
-                                    try {
-                                      evidencias = JSON.parse(doc.evidenciasFotos)
-                                    } catch (e) {
-                                      console.error('Error parseando evidencias:', e)
-                                    }
+                                <Card className="shadow-xl border-none overflow-hidden rounded-3xl">
+                                    <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500 w-full" />
+                                    <CardHeader className="bg-muted/5 pb-2">
+                                        <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
+                                            <ImageIcon className="h-5 w-5" />
+                                            EVIDENCIAS FOTOGRÁFICAS
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pt-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            {ticket.documentos
+                                                .filter((d: any) => d.evidenciasFotos)
+                                                .map((doc: any) => {
+                                                    let evidencias: any[] = []
+                                                    try {
+                                                        evidencias = JSON.parse(doc.evidenciasFotos)
+                                                    } catch (e) {
+                                                        console.error('Error parseando evidencias:', e)
+                                                    }
 
-                                    return evidencias.map((img: any) => (
-                                      <div key={img.id} className="border rounded-lg overflow-hidden">
-                                        <div className="aspect-square relative">
-                                          <Image
-                                            src={img.url}
-                                            alt={img.descripcion || 'Evidencia'}
-                                            fill
-                                            className="object-cover cursor-pointer hover:opacity-90"
-                                            onClick={() => setPreviewImage(img.url)}
-                                            sizes="33vw"
-                                          />
+                                                    return evidencias.map((img: any) => (
+                                                        <div key={img.id} className="border rounded-lg overflow-hidden">
+                                                            <div className="aspect-square relative">
+                                                                <Image
+                                                                    src={img.url}
+                                                                    alt={img.descripcion || 'Evidencia'}
+                                                                    fill
+                                                                    className="object-cover cursor-pointer hover:opacity-90"
+                                                                    onClick={() => setPreviewImage(img.url)}
+                                                                    sizes="33vw"
+                                                                />
+                                                            </div>
+                                                            <div className="p-3">
+                                                                <p className="text-sm font-medium truncate">
+                                                                    {img.descripcion || 'Sin descripción'}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500">
+                                                                    {new Date(img.fechaCaptura).toLocaleDateString('es-ES', {
+                                                                        day: '2-digit',
+                                                                        month: 'short',
+                                                                        year: 'numeric'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                })
+                                            }
                                         </div>
-                                        <div className="p-3">
-                                          <p className="text-sm font-medium truncate">
-                                            {img.descripcion || 'Sin descripción'}
-                                          </p>
-                                          <p className="text-xs text-gray-500">
-                                            {new Date(img.fechaCaptura).toLocaleDateString('es-ES', {
-                                              day: '2-digit',
-                                              month: 'short',
-                                              year: 'numeric'
-                                            })}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ))
-                                  })
-                                }
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
 
                         <Card className="bg-gradient-to-br from-primary/10 to-transparent border-none shadow-none p-1 rounded-3xl">
                             <div className="bg-white/80 backdrop-blur-sm rounded-[22px] p-6 space-y-4">

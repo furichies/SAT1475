@@ -402,6 +402,7 @@ enum DocumentoTipo {
   orden_trabajo_interna       // Orden de Trabajo Interna
   hoja_ruta                   // Hoja de Ruta del Equipo
   albaran_entrega             // Albarán de Entrega Reparado
+  orden_intervencion          // Orden de Intervención (para incidencias)
 }
 
 enum EstadoDocumento {

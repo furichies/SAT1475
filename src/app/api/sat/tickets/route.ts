@@ -32,10 +32,14 @@ export async function POST(req: NextRequest) {
         const prioridad: any = formData.get('prioridad')
         const asunto: any = formData.get('asunto')
         const descripcion: any = formData.get('descripcion')
-        const pedidoId: any = formData.get('pedidoId')
-        const productoId: any = formData.get('productoId')
-        const numeroSerie: any = formData.get('numeroSerie')
         const files = formData.getAll('adjuntos') as File[]
+
+        // Campos específicos de incidencia
+        const tiposIncidencia = formData.get('tiposIncidencia')
+        const sintomasObservados = formData.get('sintomasObservados')
+        const tipoAcceso = formData.get('tipoAcceso')
+        const fechaPreferida = formData.get('fechaPreferida')
+        const horaPreferida = formData.get('horaPreferida')
 
         // Validaciones básicas
         if (!tipo || !prioridad || !asunto || !descripcion) {
@@ -58,25 +62,11 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        // Resolver pedidoId (ID o NumeroPedido)
-        let resolvedPedidoId: string | null = null
-        if (pedidoId) {
-            const pedido = await db.pedido.findFirst({
-                where: {
-                    OR: [
-                        { id: pedidoId },
-                        { numeroPedido: pedidoId }
-                    ]
-                }
-            })
-
-            if (!pedido) {
-                return NextResponse.json(
-                    { success: false, error: 'El número de pedido indicado no existe' },
-                    { status: 400 }
-                )
-            }
-            resolvedPedidoId = pedido.id
+        // Construir descripción completa para incidencias
+        let descripcionCompleta = descripcion
+        if (tipo === 'incidencia' && tiposIncidencia && sintomasObservados) {
+            const tipos = JSON.parse(tiposIncidencia as string)
+            descripcionCompleta = `TIPO DE INCIDENCIA: ${tipos.join(', ')}\n\nDESCRIPCIÓN: ${descripcion}\n\nSÍNTOMAS OBSERVADOS: ${sintomasObservados}`
         }
 
         // Crear el ticket en la base de datos
@@ -86,12 +76,9 @@ export async function POST(req: NextRequest) {
                 tipo,
                 prioridad,
                 asunto,
-                descripcion,
+                descripcion: descripcionCompleta,
                 estado: 'abierto',
                 usuarioId: session.user.id,
-                pedidoId: resolvedPedidoId,
-                productoId: productoId || null,
-                numeroSerieProducto: numeroSerie || null,
             }
         })
 
@@ -124,6 +111,53 @@ export async function POST(req: NextRequest) {
                     })
                 }
             }
+        }
+
+        // Si es una incidencia, crear la Orden de Intervención
+        if (tipo === 'incidencia' && tiposIncidencia && tipoAcceso && fechaPreferida && horaPreferida) {
+            const tipos = JSON.parse(tiposIncidencia as string)
+            const fechaHoraIntervencion = `${fechaPreferida} ${horaPreferida}`
+
+            // Obtener información del usuario
+            const usuario = await db.usuario.findUnique({
+                where: { id: session.user.id }
+            })
+
+            // Construir metadatos de la orden de intervención
+            const metadatos = {
+                tiposIncidencia: tipos,
+                sintomasObservados: sintomasObservados || '',
+                tipoAcceso: tipoAcceso,
+                fechaHoraPreferida: fechaHoraIntervencion,
+                autorizadoPor: usuario?.nombre || session.user.name,
+                direccion: usuario?.direccion || 'Por especificar',
+                ciudad: usuario?.ciudad || '',
+                codigoPostal: usuario?.codigoPostal || '',
+                telefono: usuario?.telefono || '',
+                enlaceAnyDesk: tipoAcceso === 'remoto' ? 'https://anydesk.com/es/downloads/' : null
+            }
+
+            // Generar número de documento único
+            const fecha = new Date()
+            const año = fecha.getFullYear()
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+            const dia = String(fecha.getDate()).padStart(2, '0')
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+            const numeroDocumento = `OI-${año}${mes}${dia}-${random}`
+
+            // Crear la Orden de Intervención
+            await db.documento.create({
+                data: {
+                    tipo: DocumentoTipo.orden_intervencion,
+                    numeroDocumento,
+                    entidadTipo: DocumentoEntidadTipo.ticket,
+                    ticketId: ticket.id,
+                    usuarioGeneradorId: session.user.id,
+                    metadatos: JSON.stringify(metadatos),
+                    estadoDocumento: 'pendiente_firma', // Sin asignar (esperando técnico)
+                    contenido: `Orden de Intervención para ${asunto}`
+                }
+            })
         }
 
         return NextResponse.json({

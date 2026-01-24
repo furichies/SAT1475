@@ -73,6 +73,9 @@ export async function generarPDFDocumento(documento: any): Promise<Buffer> {
         case DocumentoTipo.FACTURA:
             await generarFactura(doc, documento, metadatos)
             break
+        case DocumentoTipo.ORDEN_INTERVENCION:
+            await generarOrdenIntervencion(doc, documento, metadatos)
+            break
         default:
             generarDocumentoGenerico(doc, documento)
     }
@@ -762,6 +765,311 @@ async function generarDiagnosticoPresupuesto(doc: jsPDF, documento: any, metadat
             console.error('Error al procesar evidencias:', error)
         }
     }
+
+    agregarPiePagina(doc)
+}
+
+/**
+ * Generar Orden de Intervención (para tickets de incidencia)
+ */
+async function generarOrdenIntervencion(doc: jsPDF, documento: any, metadatos: any) {
+    let yPos = agregarEncabezado(doc, 'ORDEN DE INTERVENCIÓN', documento.numeroDocumento)
+
+    // Fecha de generación
+    yPos += 5
+    doc.setFontSize(10)
+    doc.setTextColor(COLORS.text)
+    doc.text(`Fecha de Generación: ${new Date(documento.fechaGeneracion).toLocaleDateString('es-ES')}`, 20, yPos)
+
+    if (!metadatos) {
+        doc.text('No hay metadatos disponibles', 20, yPos + 10)
+        agregarPiePagina(doc)
+        return
+    }
+
+    // INFORMACIÓN DEL TICKET
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('INFORMACIÓN DEL TICKET', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    // Obtener información del ticket si está disponible
+    const ticket = documento.ticket
+
+    if (ticket) {
+        const datosTicket = [
+            ['Número de Ticket:', ticket.numeroTicket || 'N/A'],
+            ['Asunto:', ticket.asunto || 'N/A'],
+            ['Prioridad:', (ticket.prioridad || 'N/A').toUpperCase()],
+            ['Estado:', (ticket.estado || 'N/A').replace(/_/g, ' ').toUpperCase()],
+        ]
+
+        datosTicket.forEach(([label, value]) => {
+            doc.setFont('helvetica', 'bold')
+            doc.text(label, 20, yPos)
+            doc.setFont('helvetica', 'normal')
+            doc.text(value, 70, yPos)
+            yPos += 6
+        })
+    }
+
+    // TIPO DE INCIDENCIA
+    yPos += 5
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('TIPO DE INCIDENCIA', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    if (metadatos.tiposIncidencia && metadatos.tiposIncidencia.length > 0) {
+        metadatos.tiposIncidencia.forEach((tipo: string) => {
+            doc.text(`• ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, 25, yPos)
+            yPos += 5
+        })
+    } else {
+        doc.text('No especificado', 25, yPos)
+        yPos += 5
+    }
+
+    // DESCRIPCIÓN Y SÍNTOMAS
+    yPos += 5
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('DESCRIPCIÓN Y SÍNTOMAS OBSERVADOS', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    if (ticket && ticket.descripcion) {
+        doc.setFont('helvetica', 'bold')
+        doc.text('Descripción:', 20, yPos)
+        yPos += 6
+        doc.setFont('helvetica', 'normal')
+        const descripcionLines = doc.splitTextToSize(ticket.descripcion, 170)
+        descripcionLines.forEach((line: string) => {
+            yPos = checkPageBreak(doc, yPos, 10)
+            doc.text(line, 20, yPos)
+            yPos += 5
+        })
+    }
+
+    if (metadatos.sintomasObservados) {
+        yPos += 3
+        doc.setFont('helvetica', 'bold')
+        doc.text('Síntomas Observados:', 20, yPos)
+        yPos += 6
+        doc.setFont('helvetica', 'normal')
+        const sintomasLines = doc.splitTextToSize(metadatos.sintomasObservados, 170)
+        sintomasLines.forEach((line: string) => {
+            yPos = checkPageBreak(doc, yPos, 10)
+            doc.text(line, 20, yPos)
+            yPos += 5
+        })
+    }
+
+    // TIPO DE ACCESO
+    yPos = checkPageBreak(doc, yPos, 50)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('TIPO DE ACCESO', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const tipoAcceso = metadatos.tipoAcceso === 'remoto' ? 'ACCESO REMOTO' : 'INTERVENCIÓN PRESENCIAL'
+    doc.setFont('helvetica', 'bold')
+    doc.text(tipoAcceso, 20, yPos)
+    yPos += 6
+
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Autorizado por: ${metadatos.autorizadoPor || 'N/A'}`, 20, yPos)
+    yPos += 6
+
+    if (metadatos.tipoAcceso === 'remoto') {
+        // HORARIO DESTACADO PARA ACCESO REMOTO
+        yPos += 5
+        doc.setFillColor(255, 243, 205) // Color ámbar claro
+        doc.rect(20, yPos - 5, 170, 20, 'F')
+        doc.setDrawColor(245, 158, 11) // Borde ámbar
+        doc.setLineWidth(1)
+        doc.rect(20, yPos - 5, 170, 20)
+
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(146, 64, 14) // Texto ámbar oscuro
+        doc.text('⏰ HORARIO PROGRAMADO', 25, yPos)
+        yPos += 7
+
+        doc.setFontSize(12)
+        if (metadatos.fechaHoraPreferida) {
+            const fecha = new Date(metadatos.fechaHoraPreferida)
+            const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+            const horaFormateada = fecha.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            doc.text(`${fechaFormateada} a las ${horaFormateada}`, 25, yPos)
+        } else {
+            doc.text('No especificado', 25, yPos)
+        }
+        yPos += 10
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'italic')
+        doc.text('⚠️ El cliente debe estar disponible en este horario', 25, yPos)
+        yPos += 10
+
+        // INSTRUCCIONES ANYDESK
+        yPos = checkPageBreak(doc, yPos, 60)
+        doc.setFillColor(239, 246, 255) // Azul claro
+        doc.rect(20, yPos, 170, 55, 'F')
+        doc.setDrawColor(59, 130, 246) // Borde azul
+        doc.setLineWidth(0.5)
+        doc.rect(20, yPos, 170, 55)
+
+        yPos += 7
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(30, 58, 138) // Azul oscuro
+        doc.text('📥 INSTRUCCIONES PARA EL CLIENTE', 25, yPos)
+        yPos += 7
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(29, 78, 216) // Azul
+
+        const instrucciones = [
+            '1. Descargar AnyDesk desde: https://anydesk.com/es/downloads/',
+            '2. Ejecutar el archivo descargado (no requiere instalación)',
+            '3. Al abrir AnyDesk, aparecerá un número grande de 9 dígitos',
+            '4. Enviar ese número como mensaje en la plataforma para que el técnico pueda conectarse'
+        ]
+
+        instrucciones.forEach(instruccion => {
+            const lines = doc.splitTextToSize(instruccion, 160)
+            lines.forEach((line: string) => {
+                doc.text(line, 25, yPos)
+                yPos += 5
+            })
+        })
+
+        yPos += 3
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(146, 64, 14)
+        doc.text('⏰ IMPORTANTE: Tenga AnyDesk abierto en el horario programado arriba', 25, yPos)
+        yPos += 10
+
+    } else {
+        // INTERVENCIÓN PRESENCIAL
+        if (metadatos.direccion) {
+            doc.text(`Dirección: ${metadatos.direccion}`, 20, yPos)
+            yPos += 6
+        }
+        if (metadatos.ciudad) {
+            doc.text(`Ciudad: ${metadatos.ciudad}`, 20, yPos)
+            yPos += 6
+        }
+        if (metadatos.codigoPostal) {
+            doc.text(`Código Postal: ${metadatos.codigoPostal}`, 20, yPos)
+            yPos += 6
+        }
+        if (metadatos.telefono) {
+            doc.text(`Teléfono: ${metadatos.telefono}`, 20, yPos)
+            yPos += 6
+        }
+
+        // HORARIO PREFERIDO (solo para presencial)
+        yPos += 5
+        doc.setFont('helvetica', 'bold')
+        doc.text('Horario Preferido:', 20, yPos)
+        yPos += 6
+        doc.setFont('helvetica', 'normal')
+        if (metadatos.fechaHoraPreferida) {
+            const fecha = new Date(metadatos.fechaHoraPreferida)
+            const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            doc.text(fechaFormateada, 20, yPos)
+        } else {
+            doc.text('No especificado', 20, yPos)
+        }
+        yPos += 6
+    }
+
+    // INFORMACIÓN DEL CLIENTE
+    yPos = checkPageBreak(doc, yPos, 40)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('INFORMACIÓN DEL CLIENTE', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const datosCliente = [
+        ['Nombre:', metadatos.autorizadoPor || 'N/A'],
+    ]
+
+    if (metadatos.telefono) {
+        datosCliente.push(['Teléfono:', metadatos.telefono])
+    }
+
+    datosCliente.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(label, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(value, 70, yPos)
+        yPos += 6
+    })
+
+    // ESTADO DEL DOCUMENTO
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('ESTADO', 20, yPos)
+
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const estadoTexto = documento.estadoDocumento === 'pendiente_firma'
+        ? 'SIN ASIGNAR (Esperando asignación de técnico)'
+        : documento.estadoDocumento.replace(/_/g, ' ').toUpperCase()
+
+    doc.text(`Estado: ${estadoTexto}`, 20, yPos)
 
     agregarPiePagina(doc)
 }
