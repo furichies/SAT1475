@@ -98,7 +98,13 @@ export enum DocumentoTipo {
   ORDEN_TRABAJO_INTERNA = 'orden_trabajo_interna',
   HOJA_RUTA = 'hoja_ruta',
   ALBARAN_ENTREGA = 'albaran_entrega',
-  ORDEN_INTERVENCION = 'orden_intervencion'
+  ORDEN_INTERVENCION = 'orden_intervencion',
+  // Nuevas plantillas de documentos
+  INFORME_MANTENIMIENTO = 'informe_mantenimiento',
+  ACTA_INSTALACION = 'acta_instalacion',
+  INFORME_ENTREGA = 'informe_entrega',
+  AUTORIZACION_ACCESO_REMOTO = 'autorizacion_acceso_remoto',
+  ENCUESTA_SATISFACCION = 'encuesta_satisfaccion'
 }
 
 export enum DocumentoEntidadTipo {

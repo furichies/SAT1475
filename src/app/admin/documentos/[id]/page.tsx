@@ -62,6 +62,11 @@ const DOCUMENTO_TIPO_LABELS: Record<DocumentoTipo, string> = {
     [DocumentoTipo.HOJA_RUTA]: 'Hoja de Ruta',
     [DocumentoTipo.ALBARAN_ENTREGA]: 'Albarán de Entrega',
     [DocumentoTipo.ORDEN_INTERVENCION]: 'Orden de Intervención',
+    [DocumentoTipo.INFORME_MANTENIMIENTO]: 'Informe de Mantenimiento',
+    [DocumentoTipo.ACTA_INSTALACION]: 'Acta de Instalación',
+    [DocumentoTipo.INFORME_ENTREGA]: 'Informe de Entrega',
+    [DocumentoTipo.AUTORIZACION_ACCESO_REMOTO]: 'Autorización Remota',
+    [DocumentoTipo.ENCUESTA_SATISFACCION]: 'Encuesta Satisfacción',
 }
 
 const ESTADO_DOCUMENTO_LABELS: Record<EstadoDocumento, string> = {

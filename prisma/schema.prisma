@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
@@ -14,7 +14,6 @@ model Usuario {
   passwordHash  String
   nombre        String
   apellidos     String?
-  dni           String?             @unique
   telefono      String?
   direccion     String?
   codigoPostal  String?
@@ -24,6 +23,7 @@ model Usuario {
   activo        Boolean             @default(true)
   fechaRegistro DateTime            @default(now())
   ultimoAcceso  DateTime?
+  dni           String?             @unique
   conocimiento  BaseConocimiento[]
   carritoItems  Carrito[]
   documentos    Documento[]
@@ -82,10 +82,10 @@ model Producto {
   conocimiento       BaseConocimiento[]
   carritoItems       Carrito[]
   pedidoDetalles     DetallePedido[]
+  documentos         Documento[]
   categoria          Categoria?         @relation(fields: [categoriaId], references: [id])
   tickets            Ticket[]
   valoraciones       Valoracion[]
-  documentos         Documento[]
 
   @@index([categoriaId])
   @@index([tipo])
@@ -128,9 +128,9 @@ model DetallePedido {
   precioUnitario Float
   descuento      Float    @default(0)
   subtotal       Float
-  descripcion    String?  // Description override for custom repair items
-  producto       Producto @relation(fields: [productoId], references: [id])
+  descripcion    String?
   pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto       Producto @relation(fields: [productoId], references: [id])
 
   @@index([pedidoId])
   @@index([productoId])
@@ -177,14 +177,14 @@ model Ticket {
   fechaResolucion     DateTime?
   fechaCierre         DateTime?
   satisfaccion        Int?
+  resolucionId        String?
   documentos          Documento[]
   seguimientos        SeguimientoTicket[]
-  producto            Producto?           @relation(fields: [productoId], references: [id])
-  pedido              Pedido?             @relation(fields: [pedidoId], references: [id])
-  tecnico             Tecnico?            @relation(fields: [tecnicoId], references: [id])
-  resolucionId        String?
-  resolucion          BaseConocimiento?   @relation(fields: [resolucionId], references: [id])
   usuario             Usuario             @relation(fields: [usuarioId], references: [id])
+  resolucion          BaseConocimiento?   @relation(fields: [resolucionId], references: [id])
+  tecnico             Tecnico?            @relation(fields: [tecnicoId], references: [id])
+  pedido              Pedido?             @relation(fields: [pedidoId], references: [id])
+  producto            Producto?           @relation(fields: [productoId], references: [id])
 
   @@index([usuarioId])
   @@index([tecnicoId])
@@ -203,8 +203,8 @@ model SeguimientoTicket {
   esInterno     Boolean         @default(false)
   adjuntos      String?
   fechaCreacion DateTime        @default(now())
-  usuario       Usuario         @relation(fields: [usuarioId], references: [id])
   ticket        Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario       Usuario         @relation(fields: [usuarioId], references: [id])
 
   @@index([ticketId])
 }
@@ -224,8 +224,8 @@ model BaseConocimiento {
   activo                Boolean          @default(true)
   fechaCreacion         DateTime         @default(now())
   fechaActualizacion    DateTime         @updatedAt
-  autor                 Usuario          @relation(fields: [autorId], references: [id])
   productoRelacionado   Producto?        @relation(fields: [productoRelacionadoId], references: [id])
+  autor                 Usuario          @relation(fields: [autorId], references: [id])
   ticketsResueltos      Ticket[]
 
   @@index([categoria])
@@ -234,40 +234,32 @@ model BaseConocimiento {
 }
 
 model Documento {
-  id                 String               @id @default(cuid())
-  tipo               DocumentoTipo
-  numeroDocumento    String               @unique
-  entidadTipo        DocumentoEntidadTipo
-  
-  // Separate FKs to avoid multiple constraint issues on a single column
-  ticketId           String?
-  pedidoId           String?
-  productoId         String?
-
-  usuarioGeneradorId String
-  contenido          String?
-  rutaArchivo        String?
-  fechaGeneracion    DateTime             @default(now())
-  
-  // Nuevos campos para el sistema de seguimiento y documentación
-  metadatos          String?              // JSON con datos específicos del documento
-  estadoDocumento    EstadoDocumento      @default(borrador)
-  firmaCliente       String?              // Firma digital del cliente (base64)
-  firmaTecnico       String?              // Firma digital del técnico (base64)
-  evidenciasFotos    String?              // JSON array con URLs/paths de fotos
-  fechaVencimiento   DateTime?            // Para presupuestos
-  fechaFirma         DateTime?            // Fecha de firma del documento
-  fechaEnvio         DateTime?            // Fecha de envío al cliente
-  
-  // Relación con otros documentos (ej: extensión relacionada con presupuesto original)
+  id                     String               @id @default(cuid())
+  tipo                   DocumentoTipo
+  numeroDocumento        String               @unique
+  entidadTipo            DocumentoEntidadTipo
+  ticketId               String?
+  pedidoId               String?
+  productoId             String?
+  usuarioGeneradorId     String
+  contenido              String?
+  rutaArchivo            String?
+  fechaGeneracion        DateTime             @default(now())
+  metadatos              String?
+  estadoDocumento        EstadoDocumento      @default(borrador)
+  firmaCliente           String?
+  firmaTecnico           String?
+  evidenciasFotos        String?
+  fechaVencimiento       DateTime?
+  fechaFirma             DateTime?
+  fechaEnvio             DateTime?
   documentoRelacionadoId String?
-  documentoRelacionado   Documento?       @relation("DocumentoRelacion", fields: [documentoRelacionadoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  documentosHijos        Documento[]      @relation("DocumentoRelacion")
-  
-   ticket             Ticket?              @relation(fields: [ticketId], references: [id], onDelete: Restrict)
-   pedido             Pedido?              @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
-   producto           Producto?            @relation(fields: [productoId], references: [id], onDelete: Cascade)
-   usuarioGenerador   Usuario              @relation(fields: [usuarioGeneradorId], references: [id])
+  usuarioGenerador       Usuario              @relation(fields: [usuarioGeneradorId], references: [id])
+  producto               Producto?            @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  pedido                 Pedido?              @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
+  ticket                 Ticket?              @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  documentoRelacionado   Documento?           @relation("DocumentoRelacion", fields: [documentoRelacionadoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentosHijos        Documento[]          @relation("DocumentoRelacion")
 
   @@index([ticketId])
   @@index([pedidoId])
@@ -284,8 +276,8 @@ model Carrito {
   productoId    String
   cantidad      Int      @default(1)
   fechaAgregado DateTime @default(now())
-  producto      Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
   usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  producto      Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([sessionId])
@@ -302,9 +294,9 @@ model Valoracion {
   comentario    String?
   verificada    Boolean  @default(false)
   fechaCreacion DateTime @default(now())
-  pedido        Pedido?  @relation(fields: [pedidoId], references: [id])
-  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
   producto      Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+  pedido        Pedido?  @relation(fields: [pedidoId], references: [id])
 
   @@unique([productoId, usuarioId, pedidoId])
   @@index([productoId])
@@ -392,28 +384,32 @@ enum DocumentoTipo {
   informe_reparacion
   garantia
   manual
-  // Nuevos tipos para el flujo de reparación
-  orden_servicio              // FASE 1: Orden de Servicio/Recibo de Entrega
-  diagnostico_presupuesto     // FASE 2: Informe de Diagnóstico y Presupuesto
-  aceptacion_presupuesto      // FASE 3: Aceptación del Presupuesto
-  rechazo_presupuesto         // FASE 3: Rechazo del Presupuesto
-  extension_presupuesto       // FASE 4: Extensión de Presupuesto
-  aceptacion_extension        // FASE 4: Aceptación de la Extensión
-  orden_trabajo_interna       // Orden de Trabajo Interna
-  hoja_ruta                   // Hoja de Ruta del Equipo
-  albaran_entrega             // Albarán de Entrega Reparado
-  orden_intervencion          // Orden de Intervención (para incidencias)
+  orden_servicio
+  diagnostico_presupuesto
+  aceptacion_presupuesto
+  rechazo_presupuesto
+  extension_presupuesto
+  aceptacion_extension
+  orden_trabajo_interna
+  hoja_ruta
+  albaran_entrega
+  orden_intervencion
+  informe_mantenimiento
+  acta_instalacion
+  informe_entrega
+  autorizacion_acceso_remoto
+  encuesta_satisfaccion
 }
 
 enum EstadoDocumento {
-  borrador          // Documento en edición
-  pendiente_firma   // Esperando firma del cliente/técnico
-  firmado           // Documento firmado
-  enviado           // Enviado al cliente
-  aceptado          // Aceptado por el cliente
-  rechazado         // Rechazado por el cliente
-  vencido           // Presupuesto vencido
-  anulado           // Documento anulado
+  borrador
+  pendiente_firma
+  firmado
+  enviado
+  aceptado
+  rechazado
+  vencido
+  anulado
 }
 
 enum DocumentoEntidadTipo {

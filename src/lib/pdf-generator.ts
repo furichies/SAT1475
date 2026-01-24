@@ -76,6 +76,21 @@ export async function generarPDFDocumento(documento: any): Promise<Buffer> {
         case DocumentoTipo.ORDEN_INTERVENCION:
             await generarOrdenIntervencion(doc, documento, metadatos)
             break
+        case DocumentoTipo.INFORME_MANTENIMIENTO:
+            await generarInformeMantenimiento(doc, documento, metadatos)
+            break
+        case DocumentoTipo.ACTA_INSTALACION:
+            await generarActaInstalacion(doc, documento, metadatos)
+            break
+        case DocumentoTipo.INFORME_ENTREGA:
+            await generarInformeEntrega(doc, documento, metadatos)
+            break
+        case DocumentoTipo.AUTORIZACION_ACCESO_REMOTO:
+            await generarAccesoRemoto(doc, documento, metadatos)
+            break
+        case DocumentoTipo.ENCUESTA_SATISFACCION:
+            await generarEncuestaSatisfaccion(doc, documento, metadatos)
+            break
         default:
             generarDocumentoGenerico(doc, documento)
     }
@@ -1835,6 +1850,457 @@ export async function generarEtiquetaTicket(ticket: any): Promise<Buffer> {
     doc.text(ticketId, (width - idWidth) / 2, height - 2)
 
     return Buffer.from(doc.output('arraybuffer'))
+}
+
+
+// ==========================================
+// NUEVAS PLANTILLAS DE DOCUMENTOS
+// ==========================================
+
+async function generarInformeMantenimiento(doc: jsPDF, documento: any, metadatos: any) {
+    const ticket = documento.ticket
+    const numero = documento.numeroDocumento || `MANT-${ticket.numeroTicket}`
+
+    let yPos = agregarEncabezado(doc, 'INFORME DE MANTENIMIENTO PREVENTIVO', numero)
+
+    // Datos del Cliente y Equipo
+    const cliente = ticket.usuario?.nombre || 'Desconocido'
+    const equipo = ticket.numeroSerieProducto || 'S/N Desconocido'
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['DATOS GENERALES', '']],
+        body: [
+            ['Cliente:', cliente],
+            ['Fecha:', new Date().toLocaleDateString()],
+            ['Equipo:', equipo],
+            ['Periodicidad:', (metadatos.periodicidad || 'N/A').toUpperCase()]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Revisión Hardware
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('REVISIÓN HARDWARE', 20, yPos)
+    yPos += 5
+
+    const hardwareRows = Object.entries(metadatos.hardware || {}).map(([k, v]) => {
+        // Formatear nombre camelCase a Texto Legible
+        const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+        return [label, v ? 'OK' : 'Revisar/KO']
+    })
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['Componente', 'Estado']],
+        body: hardwareRows,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.secondary },
+        columnStyles: { 1: { fontStyle: 'bold' } }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Limpieza y Observaciones
+    if (metadatos.limpiezaFisica) {
+        doc.setFontSize(10)
+        doc.setTextColor(COLORS.success)
+        doc.text('✔ Limpieza física interna y externa realizada', 20, yPos)
+        doc.setTextColor(COLORS.text)
+        yPos += 6
+    }
+
+    if (metadatos.observacionesHardware) {
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Observaciones Hardware:', 20, yPos)
+        yPos += 5
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        const splitText = doc.splitTextToSize(metadatos.observacionesHardware, 170)
+        doc.text(splitText, 20, yPos)
+        yPos += (splitText.length * 4) + 5
+    }
+
+    // Software y Rendimiento
+    yPos = checkPageBreak(doc, yPos, 40)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('SOFTWARE Y RENDIMIENTO', 20, yPos)
+    yPos += 5
+
+    const softwareRows = [
+        ['Actualizaciones S.O.', (metadatos.software?.actualizacionesSo || '').toUpperCase()],
+        ['Antivirus', (metadatos.software?.actualizacionesAntivirus || '').toUpperCase()],
+        ['Espacio en Disco', `${metadatos.software?.espacioDiscoLibre || 0}% Libre`],
+        ['Copia de Seguridad', metadatos.software?.copiasSeguridad?.estado ? 'VERIFICADA OK' : 'NO VERIFICADA'],
+        ['Rendimiento Global', (metadatos.rendimiento?.testRendimiento || 'N/A').toUpperCase()]
+    ]
+
+    autoTable(doc, {
+        startY: yPos,
+        body: softwareRows,
+        theme: 'grid',
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Recomendaciones
+    doc.setFillColor(255, 247, 237) // Amber-50
+    doc.rect(20, yPos, 170, 30, 'F')
+    doc.setDrawColor(COLORS.warning)
+    doc.rect(20, yPos, 170, 30, 'S')
+
+    doc.setFontSize(11)
+    doc.setTextColor(COLORS.warning)
+    doc.text('RECOMENDACIONES', 25, yPos + 8)
+
+    doc.setTextColor(COLORS.text)
+    doc.setFontSize(9)
+    let recY = yPos + 15
+    if (metadatos.recomendaciones?.ampliacionRam) { doc.text('• Se recomienda ampliar memoria RAM', 25, recY); recY += 5 }
+    if (metadatos.recomendaciones?.actualizacionSsd) { doc.text('• Se recomienda cambiar disco mecánico por SSD', 25, recY); recY += 5 }
+    if (metadatos.recomendaciones?.otras) {
+        doc.text(`• ${metadatos.recomendaciones.otras}`, 25, recY)
+    }
+
+    // Pie de firma
+    agregarPiePagina(doc)
+    agregarZonaFirma(doc, 'Técnico Responsable', 'Cliente (Conforme)')
+}
+
+async function generarActaInstalacion(doc: jsPDF, documento: any, metadatos: any) {
+    const ticket = documento.ticket
+    const numero = documento.numeroDocumento || `INST-${ticket.numeroTicket}`
+
+    let yPos = agregarEncabezado(doc, 'ACTA DE INSTALACIÓN Y CONFIGURACIÓN', numero)
+
+    // Detalle Proyecto
+    doc.setFontSize(10)
+    doc.text(`PROYECTO: ${metadatos.proyecto || ticket.asunto}`, 20, yPos)
+    doc.text(`DURACIÓN: ${metadatos.duracionHoras} Horas`, 140, yPos)
+    yPos += 10
+
+    // Tabla Equipamiento
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('EQUIPAMIENTO INSTALADO', 20, yPos)
+    yPos += 5
+
+    const equiposData = (metadatos.equipamiento || []).map((eq: any) => [
+        eq.descripcion,
+        eq.ubicacion,
+        eq.cantidad,
+        eq.numSerie || '-'
+    ])
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['Descripción', 'Ubicación', 'Cant.', 'S/N']],
+        body: equiposData,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.primary }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Configuración (Checklist visual)
+    doc.text('CONFIGURACIÓN REALIZADA', 20, yPos)
+    yPos += 8
+
+    const configKeys = Object.keys(metadatos.configuracion || {})
+    let col = 0
+    let startYConfig = yPos
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+
+    configKeys.forEach((key, i) => {
+        if (typeof metadatos.configuracion[key] === 'boolean') {
+            const check = metadatos.configuracion[key] ? '[ X ]' : '[   ]'
+            // Convertir camelCase a texto
+            const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+
+            doc.text(`${check} ${label}`, 20 + (col * 80), yPos)
+
+            if (col === 1) {
+                col = 0
+                yPos += 6
+            } else {
+                col = 1
+            }
+        }
+    })
+    if (col === 1) yPos += 6 // Salto final si quedó impar
+
+    yPos += 5
+
+    // Entregables
+    doc.setFont('helvetica', 'bold')
+    doc.text('DOCUMENTACIÓN Y ENTREGABLES', 20, yPos)
+    yPos += 6
+    doc.setFont('helvetica', 'normal')
+
+    const docs = metadatos.documentacionEntregada || {}
+    const docsList: string[] = []
+    if (docs.manualUsuario) docsList.push('Manual de Usuario')
+    if (docs.credenciales) docsList.push('Credenciales de Acceso')
+    if (docs.garantias) docsList.push('Garantías y Licencias')
+
+    doc.text(docsList.join(', ') || 'Ninguna documentación adicional', 20, yPos)
+    yPos += 10
+
+    // Cierre
+    doc.setDrawColor(COLORS.success)
+    doc.rect(20, yPos, 170, 20)
+    doc.setFontSize(10)
+    doc.setTextColor(COLORS.success)
+    doc.text('El usuario confirma la recepción y el correcto funcionamiento.', 30, yPos + 12)
+    doc.setTextColor(COLORS.text)
+
+    agregarPiePagina(doc)
+    agregarZonaFirma(doc, 'Técnico Instalador', 'Usuario / Cliente')
+}
+
+async function generarInformeEntrega(doc: jsPDF, documento: any, metadatos: any) {
+    const ticket = documento.ticket
+    const numero = documento.numeroDocumento || `ENT-${ticket.numeroTicket}`
+
+    let yPos = agregarEncabezado(doc, 'INFORME DE ENTREGA POST-REPARACIÓN', numero)
+
+    // Datos Equipo
+    autoTable(doc, {
+        startY: yPos,
+        head: [['DATOS DEL EQUIPO', '']],
+        body: [
+            ['Marca/Modelo:', metadatos.equipo?.marcaModelo || ''],
+            ['Número de Serie:', metadatos.equipo?.numSerie || ''],
+            ['Accesorios Entregados:', metadatos.equipo?.accesorios || 'Ninguno']
+        ],
+        theme: 'grid',
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+    })
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Reparación
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('DETALLE DE LA REPARACIÓN', 20, yPos)
+    yPos += 5
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    const desc = metadatos.reparacion?.descripcionTecnica || 'Sin descripción técnica.'
+    const descLines = doc.splitTextToSize(desc, 170)
+    doc.text(descLines, 20, yPos)
+    yPos += (descLines.length * 4) + 5
+
+    if (metadatos.reparacion?.componentes?.length > 0) {
+        doc.setFont('helvetica', 'bold')
+        doc.text('Componentes Reemplazados:', 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(metadatos.reparacion.componentes.join(', '), 75, yPos)
+        yPos += 6
+    }
+
+    // Garantía
+    doc.setFillColor(240, 253, 244) // Green-50
+    doc.rect(20, yPos, 170, 15, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.success)
+    doc.text(`GARANTÍA DE LA REPARACIÓN: ${metadatos.reparacion?.garantiaMeses} Meses (Válida hasta ${metadatos.reparacion?.garantiaHasta})`, 25, yPos + 10)
+    doc.setTextColor(COLORS.text)
+    yPos += 25
+
+    // Instrucciones
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('INSTRUCCIONES Y MANTENIMIENTO', 20, yPos)
+    yPos += 6
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    metadatos.instrucciones?.forEach((inst: string) => {
+        doc.text(`• ${inst}`, 20, yPos)
+        yPos += 5
+    })
+
+    agregarPiePagina(doc)
+    agregarZonaFirma(doc, 'Técnico Responsable', 'Cliente (Recibí Conforme)')
+}
+
+async function generarAccesoRemoto(doc: jsPDF, documento: any, metadatos: any) {
+    const ticket = documento.ticket
+    const numero = documento.numeroDocumento || `REM-${ticket.numeroTicket}`
+
+    let yPos = agregarEncabezado(doc, 'AUTORIZACIÓN DE ACCESO REMOTO', numero)
+
+    doc.setFontSize(9)
+    doc.text('En cumplimiento de la normativa de Protección de Datos y Seguridad de la Información.', 20, yPos)
+    yPos += 10
+
+    // Autorizante
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('1. DATOS DEL AUTORIZANTE (CLIENTE)', 20, yPos)
+    yPos += 5
+
+    const authData = [
+        ['Nombre:', metadatos.autorizante?.nombre],
+        ['Empresa:', metadatos.autorizante?.empresa],
+        ['CIF/NIF:', metadatos.autorizante?.cif],
+        ['Cargo:', metadatos.autorizante?.cargo]
+    ]
+
+    autoTable(doc, {
+        startY: yPos,
+        body: authData,
+        theme: 'plain',
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } }
+    })
+    yPos = (doc as any).lastAutoTable.finalY + 5
+
+    // Equipos
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('2. EQUIPOS AUTORIZADOS', 20, yPos)
+    yPos += 5
+
+    const equipos = (metadatos.equiposAutorizados || []).map((eq: any) => [
+        eq.nombreId,
+        eq.ipIdRemoto,
+        eq.sistema
+    ])
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['ID Equipo', 'IP / Acceso', 'Sistema Operativo']],
+        body: equipos,
+        headStyles: { fillColor: COLORS.secondary }
+    })
+    yPos = (doc as any).lastAutoTable.finalY + 10
+
+    // Condiciones
+    doc.setFontSize(11)
+    doc.text('3. CONDICIONES DEL ACCESO', 20, yPos)
+    yPos += 5
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    const condiciones = [
+        `• Propósito: ${metadatos.tipoAcceso?.soportePuntual ? 'Soporte Técnico Puntual' : 'Mantenimiento'}`,
+        `• Horario Permitido: ${metadatos.limitaciones?.horario?.desde || '09:00'} - ${metadatos.limitaciones?.horario?.hasta || '18:00'} (${metadatos.limitaciones?.horario?.dias || 'L-V'})`,
+        `• Vigencia: Desde ${metadatos.vigencia?.desde}`
+    ]
+
+    condiciones.forEach(c => {
+        doc.text(c, 20, yPos)
+        yPos += 5
+    })
+
+    yPos += 5
+    doc.setFontSize(8)
+    doc.setTextColor(COLORS.textLight)
+    const clausula = "El cliente autoriza expresamente el acceso remoto a los equipos descritos para las finalidades técnicas indicadas. EL PROVEEDOR se compromete a mantener la confidencialidad de toda la información a la que pudiera tener acceso incidental."
+    const clausulaLines = doc.splitTextToSize(clausula, 170)
+    doc.text(clausulaLines, 20, yPos)
+
+    doc.setTextColor(COLORS.text)
+    agregarPiePagina(doc)
+    agregarZonaFirma(doc, 'EL PROVEEDOR (Técnico)', 'EL CLIENTE (Autorizante)')
+}
+
+async function generarEncuestaSatisfaccion(doc: jsPDF, documento: any, metadatos: any) {
+    const ticket = documento.ticket
+    const numero = documento.numeroDocumento || `ENC-${ticket.numeroTicket}`
+
+    let yPos = agregarEncabezado(doc, 'ENCUESTA DE SATISFACCIÓN', numero)
+
+    doc.setFontSize(10)
+    doc.text('Valoración del servicio recibido (1: Muy Insatisfecho - 5: Muy Satisfecho)', 20, yPos)
+    yPos += 10
+
+    // Valoraciones Técnicas
+    const ratings = [
+        ['Tiempo de respuesta', metadatos.valoracionTecnica?.tiempoRespuesta],
+        ['Profesionalidad', metadatos.valoracionTecnica?.profesionalidad],
+        ['Claridad explicación', metadatos.valoracionTecnica?.claridad],
+        ['Resolución problema', metadatos.valoracionTecnica?.resolucion],
+        ['Tiempo total', metadatos.valoracionTecnica?.tiempoTotal],
+    ].map(([label, rate]) => [label, '★'.repeat(rate as number) + '☆'.repeat(5 - (rate as number))])
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['Aspecto Evaluado', 'Valoración']],
+        body: ratings,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.primary },
+        columnStyles: { 1: { fontStyle: 'bold', textColor: COLORS.warning, fontSize: 14 } }
+    })
+    yPos = (doc as any).lastAutoTable.finalY + 15
+
+    // Global
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('VALORACIÓN GLOBAL', 20, yPos)
+    yPos += 8
+
+    const globalChecks: string[] = []
+    if (metadatos.valoracionGlobal?.recomendaria) globalChecks.push('✔ Recomendaría el servicio')
+    if (metadatos.valoracionGlobal?.volveriaSolicitar) globalChecks.push('✔ Volvería a solicitar soporte')
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    globalChecks.forEach(c => {
+        doc.text(c, 20, yPos)
+        yPos += 6
+    })
+
+    if (metadatos.comentarios?.positivos || metadatos.comentarios?.mejorar) {
+        yPos += 5
+        doc.setFont('helvetica', 'bold')
+        doc.text('COMENTARIOS DEL CLIENTE:', 20, yPos)
+        yPos += 6
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(9)
+
+        if (metadatos.comentarios.positivos) {
+            doc.text(`Positivo: "${metadatos.comentarios.positivos}"`, 20, yPos)
+            yPos += doc.splitTextToSize(metadatos.comentarios.positivos, 170).length * 4 + 4
+        }
+        if (metadatos.comentarios.mejorar) {
+            doc.text(`A mejorar: "${metadatos.comentarios.mejorar}"`, 20, yPos)
+        }
+    }
+
+    yPos += 20
+    doc.setFontSize(8)
+    doc.text('Gracias por ayudarnos a mejorar.', 105, yPos, { align: 'center' })
+
+    agregarPiePagina(doc)
+}
+
+function agregarZonaFirma(doc: jsPDF, etiqueta1: string, etiqueta2: string) {
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const yPos = pageHeight - 50 // Posición fija al final
+
+    doc.setLineWidth(0.5)
+    doc.setDrawColor(COLORS.textLight)
+
+    // Firma 1
+    doc.line(30, yPos, 90, yPos)
+    doc.setFontSize(8)
+    doc.text(etiqueta1, 60, yPos + 5, { align: 'center' })
+
+    // Firma 2
+    doc.line(120, yPos, 180, yPos)
+    doc.text(etiqueta2, 150, yPos + 5, { align: 'center' })
 }
 
 export default generarPDFDocumento

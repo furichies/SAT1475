@@ -200,8 +200,13 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
         }
 
         const session = await getServerSession(authOptions)
+        console.log('--- DEBUG POST /api/admin/documentos ---')
+        console.log('Session:', session ? session.user : 'No session')
+        console.log('Payload Type:', tipo)
+        console.log('TicketID:', ticketId)
 
         if (!session || (session.user.role !== 'admin' && session.user.role !== 'tecnico' && session.user.role !== 'superadmin')) {
+            console.log('--- DEBUG: Unauthorized access attempt ---')
             return NextResponse.json(
                 { success: false, error: 'No autorizado' },
                 { status: 401 }
@@ -365,7 +370,7 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
             data: {
                 tipo,
                 numeroDocumento,
-                entidadTipo,
+                entidadTipo: entidadTipo || DocumentoEntidadTipo.TICKET,
                 ticketId: cleanTicketId,
                 pedidoId: cleanPedidoId,
                 productoId: cleanProductoId,

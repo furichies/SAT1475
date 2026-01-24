@@ -43,6 +43,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import Image from 'next/image'
+import { PlantillaSelector } from '@/components/documentos/PlantillaSelector'
 
 const ticketsMock = [
   { id: '1', numero: 'SAT-2023-0045', cliente: 'Pedro Sánchez', asunto: 'Portátil no enciende', prioridad: 'urgente', tipo: 'incidencia', tecnico: 'Carlos García', tecnicoId: 'mock-tech-1', fecha: '2023-12-30 08:00', estado: 'pendiente', descripcion: 'El equipo no da señal de vida tras una subida de tensión.' },
@@ -834,6 +835,21 @@ export default function AdminTicketsPage() {
                   <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">
                     {ticketSeleccionado.descripcion || "Sin descripción adicional."}
                   </p>
+                </div>
+
+                {/* Selector de Plantillas */}
+                <div className="border-t pt-4">
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Generar Documentación</p>
+                  <PlantillaSelector
+                    ticket={ticketSeleccionado}
+                    onDocumentGenerated={() => {
+                      console.log('Documento generado, refrescando ticket...')
+                      // Refresca la lista y el detalle
+                      fetchTickets()
+                      // Pequeño hack para refrescar el detalle sin parpadeo excesivo
+                      setTimeout(() => fetchTicketById(ticketSeleccionado.id), 500)
+                    }}
+                  />
                 </div>
 
                 {/* Archivos Adjuntos y Evidencias */}
