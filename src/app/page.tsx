@@ -20,6 +20,7 @@ import {
 import Image from 'next/image'
 import { useCartStore } from '@/store/use-cart-store'
 import { useToast } from '@/hooks/use-toast'
+import { SupportChatbot } from '@/components/SupportChatbot'
 
 const categories = [
   { id: '1', nombre: 'Ordenadores', icon: Monitor, imagen: '/images/categoria_ordenadores.png', productos: 45 },
@@ -152,6 +153,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      <SupportChatbot />
     </div>
   )
 }
