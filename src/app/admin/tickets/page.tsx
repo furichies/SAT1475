@@ -646,6 +646,19 @@ export default function AdminTicketsPage() {
     return estados[est as keyof typeof estados] || estados.abierto
   }
 
+  const getEstadoCardBackground = (est: string) => {
+    const backgrounds: Record<string, string> = {
+      abierto: 'bg-yellow-50 border-yellow-200',
+      asignado: 'bg-blue-50 border-blue-200',
+      en_progreso: 'bg-purple-100 border-purple-200',
+      pendiente_cliente: 'bg-orange-100 border-orange-200',
+      pendiente_pieza: 'bg-indigo-100 border-indigo-200',
+      resuelto: 'bg-green-200 border-green-300',
+      cancelado: 'bg-gray-200 border-gray-300'
+    }
+    return backgrounds[est] || 'bg-white border-gray-200'
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <AdminSidebar />
@@ -742,8 +755,9 @@ export default function AdminTicketsPage() {
                   <div className="space-y-3">
                     {ticketsFiltrados.filter(t => t.estado === key).map((ticket) => {
                       const prioBadge = getPrioridadBadge(ticket.prioridad)
+                      const cardBg = getEstadoCardBackground(ticket.estado)
                       return (
-                        <Card key={ticket.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                        <Card key={ticket.id} className={`hover:shadow-md transition-shadow cursor-pointer ${cardBg}`}>
                           <CardHeader className="p-4 pb-2">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-mono text-muted-foreground font-bold">{ticket.numero}</span>

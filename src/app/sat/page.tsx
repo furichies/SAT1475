@@ -258,6 +258,19 @@ export default function SatPage() {
     return Object.entries(estados).find(([key]) => key === estado)?.[1] || { label: estado, color: 'bg-gray-100', icon: AlertCircle }
   }
 
+  const getEstadoCardBackground = (est: string) => {
+    const backgrounds: Record<string, string> = {
+      abierto: 'bg-yellow-50 border-yellow-200',
+      asignado: 'bg-blue-50 border-blue-200',
+      en_progreso: 'bg-purple-100 border-purple-200',
+      pendiente_cliente: 'bg-orange-100 border-orange-200',
+      pendiente_pieza: 'bg-indigo-100 border-indigo-200',
+      resuelto: 'bg-green-200 border-green-300',
+      cancelado: 'bg-gray-200 border-gray-300'
+    }
+    return backgrounds[est] || 'bg-white border-gray-200'
+  }
+
   return (
     <div className="min-h-screen py-8 bg-muted/30">
       <div className="container max-w-7xl">
@@ -382,8 +395,9 @@ export default function SatPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {ticketsFiltrados.map((ticket) => {
               const estadoInfo = getEstadoEstado(ticket.estado)
+              const cardBg = getEstadoCardBackground(ticket.estado)
               return (
-                <Card key={ticket.id} className="hover:shadow-lg transition-all cursor-pointer" onClick={() => router.push(`/sat/${ticket.id}`)}>
+                <Card key={ticket.id} className={`hover:shadow-lg transition-all cursor-pointer ${cardBg}`} onClick={() => router.push(`/sat/${ticket.id}`)}>
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">

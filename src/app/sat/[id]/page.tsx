@@ -92,10 +92,42 @@ export default function TicketDetailPage() {
             }
         } else {
             // 2. Si no tiene, preparamos para crear una nueva
+            let contenidoInicial = '## Procedimiento de Resolución\n\n1. Diagnóstico:\n2. Acciones realizadas:\n3. Pruebas finales:\n'
+
+            // --- Lógica de Auto-rellenado desde Documentos ---
+            if (ticket.documentos && ticket.documentos.length > 0) {
+                const docsRelevantes = ticket.documentos.filter((d: any) =>
+                    ['diagnostico_presupuesto', 'informe_mantenimiento', 'informe_entrega', 'acta_instalacion'].includes(d.tipo)
+                )
+
+                if (docsRelevantes.length > 0) {
+                    contenidoInicial += '\n\n---\n### Histórico de Documentación Adjunta\n'
+
+                    docsRelevantes.forEach((doc: any) => {
+                        try {
+                            const meta = typeof doc.metadatos === 'string' ? JSON.parse(doc.metadatos) : doc.metadatos
+                            contenidoInicial += `\n#### Documento: ${doc.tipo.toUpperCase()} (${doc.numeroDocumento})\n`
+
+                            if (doc.tipo === 'diagnostico_presupuesto') {
+                                contenidoInicial += `- Diagnóstico: ${meta.diagnostico?.resultadosObtenidos || 'N/A'}\n`
+                                contenidoInicial += `- Causa: ${meta.diagnostico?.causaRaiz || 'N/A'}\n`
+                            } else if (doc.tipo === 'informe_mantenimiento') {
+                                contenidoInicial += `- Obs. Hardware: ${meta.observacionesHardware || 'N/A'}\n`
+                                contenidoInicial += `- Rendimiento: ${meta.rendimiento?.testRendimiento || 'N/A'}\n`
+                            } else if (doc.tipo === 'informe_entrega') {
+                                contenidoInicial += `- Reparación: ${meta.reparacion?.descripcionTecnica || 'N/A'}\n`
+                            }
+                        } catch (e) {
+                            console.error('Error parseando metadatos para KB', e)
+                        }
+                    })
+                }
+            }
+
             setResolucionData({
                 id: '',
                 title: `Resolución: ${ticket.asunto}`,
-                content: '## Procedimiento de Resolución\n\n1. Diagnóstico:\n2. Acciones realizadas:\n3. Pruebas finales:\n'
+                content: contenidoInicial
             })
             setIsResolucionModalOpen(true)
         }
@@ -639,7 +671,12 @@ export default function TicketDetailPage() {
                                         className="w-full bg-white text-primary hover:bg-white/90 font-bold shadow-sm"
                                     >
                                         <FileText className="h-4 w-4 mr-2" />
-                                        {ticket.resolucionId ? 'Ver / Editar Procedimiento Resolución' : 'Crear Procedimiento de Resolución'}
+                                        {ticket.resolucionId
+                                            ? 'Ver / Editar Procedimiento Resolución'
+                                            : (['asignado', 'en_progreso', 'pendiente_cliente'].includes(ticket.estado))
+                                                ? 'AGREGAR HISTÓRICO A LA BASE DE CONOCIMIENTO'
+                                                : 'Crear Procedimiento de Resolución'
+                                        }
                                     </Button>
                                     {ticket.resolucionId && (
                                         <p className="text-xs text-center text-primary/60 font-medium">
