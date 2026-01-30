@@ -11,6 +11,7 @@ import {
     Users,
     Settings,
     FileText,
+    Slack,
 } from 'lucide-react'
 
 // Define the menu items directly in the component so it's easy to manage
@@ -54,10 +55,16 @@ export function AdminSidebar() {
                 })}
             </nav>
 
-            <div className="mt-8 pt-8 border-t">
-                <p className="text-xs text-gray-500 mb-2">Administrador</p>
-                <p className="text-sm font-semibold">Admin Principal</p>
-                <p className="text-xs text-gray-500">admin@microinfo.es</p>
+            <div className="mt-auto pt-8 border-t">
+                <a
+                    href="https://micro1475.slack.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-50 hover:text-[#4A154B] transition-colors"
+                >
+                    <Slack className="h-5 w-5" />
+                    Slack Corporativo
+                </a>
             </div>
         </aside>
     )
