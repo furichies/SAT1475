@@ -17,13 +17,15 @@ import {
 import { Plus, X, Save } from 'lucide-react'
 import type { MetadatosOrdenServicio } from '@/types/documentos'
 import { UsuarioSelector } from '@/components/common/UsuarioSelector'
+import { TicketSelector } from '@/components/tickets/TicketSelector'
 
 interface OrdenServicioFormProps {
     initialValues?: MetadatosOrdenServicio
     readOnly?: boolean
-    onSubmit: (metadatos: MetadatosOrdenServicio) => void
+    onSubmit: (metadatos: MetadatosOrdenServicio, ticketId?: string) => void
     onCancel: () => void
     isSubmitting?: boolean
+    ticketIdProp?: string // Ticket TKT pasado desde props (ej: desde página de tickets)
 }
 
 export function OrdenServicioForm({
@@ -31,7 +33,8 @@ export function OrdenServicioForm({
     readOnly = false,
     onSubmit,
     onCancel,
-    isSubmitting = false
+    isSubmitting = false,
+    ticketIdProp
 }: OrdenServicioFormProps) {
     const defaultValues: MetadatosOrdenServicio = {
         cliente: {
@@ -70,6 +73,7 @@ export function OrdenServicioForm({
     const [ordenServicio, setOrdenServicio] = useState<MetadatosOrdenServicio>(initialValues || defaultValues)
     const [nuevoAccesorio, setNuevoAccesorio] = useState('')
     const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any>(null)
+    const [ticketTKTId, setTicketTKTId] = useState<string>(ticketIdProp || '')
 
     const handleAgregarAccesorio = () => {
         if (nuevoAccesorio.trim()) {
@@ -96,7 +100,7 @@ export function OrdenServicioForm({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        onSubmit(ordenServicio)
+        onSubmit(ordenServicio, ticketTKTId || undefined)
     }
 
     return (
@@ -104,6 +108,47 @@ export function OrdenServicioForm({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Formulario principal */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Vincular a Ticket TKT Existente (Opcional) */}
+                    {!ticketIdProp && (
+                        <Card className="border-blue-200 bg-blue-50/30">
+                            <CardHeader>
+                                <CardTitle className="text-base">Vincular a Ticket TKT Existente (Opcional)</CardTitle>
+                                <CardDescription>
+                                    Si deseas vincular esta orden a un ticket TKT existente, selecciónalo aquí.
+                                    Si no seleccionas ninguno, se creará automáticamente un ticket SAT nuevo.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <TicketSelector
+                                    value={ticketTKTId}
+                                    onChange={setTicketTKTId}
+                                    disabled={readOnly}
+                                />
+                                {ticketTKTId && (
+                                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                                        <span className="font-medium">✓ Vinculado:</span> Este documento se asociará al ticket seleccionado.
+                                    </div>
+                                )}
+                                {!ticketTKTId && (
+                                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                                        <span className="font-medium">ℹ️ Info:</span> Sin ticket seleccionado, se creará un nuevo ticket SAT automáticamente.
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {ticketIdProp && (
+                        <Card className="border-green-200 bg-green-50/30">
+                            <CardContent className="py-4">
+                                <div className="flex items-center gap-2 text-sm text-green-800">
+                                    <span className="font-medium">✓ Vinculado a Ticket:</span>
+                                    <span className="font-mono font-bold">{ticketIdProp}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Datos del Cliente */}
                     <Card>
                         <CardHeader>
@@ -232,14 +277,6 @@ export function OrdenServicioForm({
                                     />
                                 </div>
                             </div>
-
-                            {/* Indicador si es nuevo cliente */}
-                            {!usuarioSeleccionado && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                                    <span className="font-medium">ℹ️ Info:</span> Al guardar, se creará automáticamente
-                                    un nuevo usuario y ticket SAT para este cliente.
-                                </div>
-                            )}
                         </CardContent>
                     </Card>
 

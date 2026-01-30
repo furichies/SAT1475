@@ -1104,6 +1104,18 @@ export default function AdminTicketsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {isEdicion && ticketSeleccionado && (
+                    <div className="pt-1 text-right">
+                      <Link
+                        href={`/admin/documentos/nuevo?ticketId=${ticketSeleccionado.id}`}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center justify-end gap-1"
+                      >
+                        <FileText className="h-3 w-3" />
+                        Generar Orden de Servicio
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
 

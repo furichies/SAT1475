@@ -54,19 +54,23 @@ export default function NuevoDocumentoPage() {
         | MetadatosExtensionPresupuesto
         | MetadatosAlbaranEntrega
 
-    const handleSubmit = async (metadatos: AnyMetadatos) => {
+    const handleSubmit = async (metadatos: AnyMetadatos, ticketIdFromForm?: string) => {
         console.log('--- INTENTANDO CREAR DOCUMENTO ---')
         console.log('Tipo:', tipoDocumento)
-        console.log('TicketID:', ticketId || ticketIdParam)
+        console.log('TicketID desde URL:', ticketId || ticketIdParam)
+        console.log('TicketID desde Form:', ticketIdFromForm)
         console.log('Metadatos:', metadatos)
 
         setIsSubmitting(true)
 
         try {
+            // Para Orden de Servicio, usar el ticketId del formulario si existe
+            const finalTicketId = ticketIdFromForm || ticketId || ticketIdParam || undefined
+
             const payload = {
                 tipo: tipoDocumento,
                 entidadTipo: DocumentoEntidadTipo.TICKET,
-                ticketId: ticketId || ticketIdParam || undefined,
+                ticketId: finalTicketId,
                 metadatos: metadatos,
             }
             console.log('Payload a enviar:', payload)

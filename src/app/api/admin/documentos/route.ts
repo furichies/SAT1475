@@ -267,9 +267,13 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
         }
 
         // === AUTO-GENERACIÓN DE TICKET PARA ORDEN DE SERVICIO ===
+        // Solo crear un nuevo ticket SAT si:
+        // 1. Es una orden de servicio
+        // 2. NO se proporcionó un ticketId (no se está vinculando a un TKT existente)
+        // 3. Hay metadatos disponibles
         if ((tipo === 'orden_servicio' || tipo === 'ORDEN_SERVICIO') && !cleanTicketId && metadatos) {
             try {
-                console.log('[Auto-Generación] Creando ticket desde Orden de Servicio')
+                console.log('[Auto-Generación] Creando ticket SAT desde Orden de Servicio')
                 const meta = metadatos as any // MetadatosOrdenServicio
 
                 // 1. Buscar o Crear Cliente (Usuario)
@@ -354,7 +358,7 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                     }
                 })
 
-                console.log('[Auto-Generación] Ticket creado exitosamente:', ticket.numeroTicket)
+                console.log('[Auto-Generación] Ticket SAT creado exitosamente:', ticket.numeroTicket)
                 cleanTicketId = ticket.id
 
             } catch (autoGenError) {
@@ -364,6 +368,8 @@ Metadatos: ${JSON.stringify(metadatos || {}).substring(0, 200)}...
                     { status: 500 }
                 )
             }
+        } else if ((tipo === 'orden_servicio' || tipo === 'ORDEN_SERVICIO') && cleanTicketId) {
+            console.log('[Vinculación] Orden de Servicio vinculada a ticket TKT existente:', cleanTicketId)
         }
 
         const documento = await prisma.documento.create({
