@@ -12,7 +12,7 @@ const EMPRESA = {
     web: 'www.microinfo.es',
 };
 
-export type TemplateType = 'intervencion' | 'reparacion_equipo' | 'reparacion_impresora';
+export type TemplateType = 'intervencion' | 'reparacion_equipo' | 'reparacion_impresora' | 'mantenimiento_preventivo' | 'instalacion_configuracion';
 
 export type TemplateData = {
     fecha?: string;
@@ -32,6 +32,18 @@ export type TemplateData = {
     modelo?: string;
     numeroSerie?: string;
     observaciones?: string;
+    // Campos para Mantenimiento Preventivo
+    equipo?: string;
+    periodicidad?: string;
+    proximoMantenimiento?: string;
+    hardware?: Record<string, { estado: 'OK' | 'KO'; accion: string }>;
+    software?: Record<string, boolean>;
+    // Campos para Instalación y Configuración
+    proyecto?: string;
+    duracion?: string;
+    equipamientoResumen?: string;
+    periodoPrueba?: string;
+    configuraciones?: Record<string, 'SI' | 'NO' | 'NA'>;
     // Specific fields will be handled dynamically
     [key: string]: any;
 };
@@ -258,6 +270,259 @@ export const generateTemplatePDF = (type: TemplateType, data: TemplateData) => {
 
         doc.rect(margin + (boxWidth / 2) + 5, y, (boxWidth / 2) - 5, 25);
         doc.text('Firma del Cliente:', margin + (boxWidth / 2) + 7, y + 5);
+    } else if (type === 'mantenimiento_preventivo') {
+        y = drawHeader('INFORME DE MANTENIMIENTO PREVENTIVO');
+        const boxWidth = pageWidth - (margin * 2);
+
+        // Row 1: Datos Generales
+        doc.rect(margin, y, boxWidth, 20);
+        doc.setFontSize(10);
+        doc.text('Datos Generales:', margin + 2, y + 5);
+
+        doc.text(`Cliente: [ ${data.cliente || '_______________________'} ]`, margin + 5, y + 12);
+        doc.text(`Fecha: [ ${data.fecha || '____/____/____'} ]`, margin + (boxWidth * 0.6), y + 12);
+
+        doc.text(`Equipo: [ ${data.equipo || '_______________________'} ]`, margin + 5, y + 18);
+        doc.text(`Periodicidad: [ ${data.periodicidad || '__________'} ]`, margin + (boxWidth * 0.6), y + 18);
+
+        y += 25;
+
+        // Row 2: Checklist Hardware
+        doc.setFont('helvetica', 'bold');
+        doc.text('Revisión de Hardware:', margin, y);
+        y += 5;
+
+        const hwItems = [
+            'Fuente de Alimentación', 'Ventilación / Cooling', 'Disco Duro / SSD', 'Memoria RAM',
+            'Tarjeta Gráfica', 'Placa Base', 'Conectividad (RJ45/Wifi)', 'Periféricos'
+        ];
+
+        // Header tabla hardware
+        doc.rect(margin, y, boxWidth, 8);
+        doc.setFontSize(9);
+        doc.text('Componente', margin + 2, y + 5);
+        doc.text('Estado (OK/KO)', margin + (boxWidth * 0.4), y + 5);
+        doc.text('Acción Realizada', margin + (boxWidth * 0.7), y + 5);
+        y += 8;
+
+        // Rows tabla hardware
+        hwItems.forEach((item) => {
+            doc.rect(margin, y, boxWidth, 8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(item, margin + 2, y + 5);
+
+            // Checkboxes
+            doc.rect(margin + (boxWidth * 0.45), y + 2, 4, 4); // Checkbox OK
+            doc.rect(margin + (boxWidth * 0.55), y + 2, 4, 4); // Checkbox KO
+
+            const hwData = data.hardware?.[item];
+            if (hwData?.estado === 'OK') {
+                doc.setFontSize(8);
+                doc.text('X', margin + (boxWidth * 0.45) + 1, y + 5);
+            }
+            if (hwData?.estado === 'KO') {
+                doc.setFontSize(8);
+                doc.text('X', margin + (boxWidth * 0.55) + 1, y + 5);
+            }
+            doc.setFontSize(9); // Reset size
+
+            doc.text('OK', margin + (boxWidth * 0.48), y + 5);
+            doc.text('KO', margin + (boxWidth * 0.58), y + 5);
+
+            // Action Text
+            if (hwData?.accion) {
+                doc.text(hwData.accion, margin + (boxWidth * 0.7), y + 5);
+            }
+
+            y += 8;
+        });
+
+        y += 5;
+
+        // Row 3: Revision Software
+        doc.setFont('helvetica', 'bold');
+        doc.text('Revisión de Software:', margin, y);
+        y += 5;
+
+        const swItems = [
+            'Actualizaciones S.O.', 'Actualizaciones Antivirus', 'Espacio en Disco',
+            'Fragmentación HDD', 'Limpieza Archivos Temp.', 'Revisión Logs Eventos'
+        ];
+
+        // Header tabla software
+        doc.rect(margin, y, boxWidth, 8);
+        doc.setFontSize(9);
+        doc.text('Tarea', margin + 2, y + 5);
+        doc.text('Estado', margin + (boxWidth * 0.4), y + 5);
+        doc.text('Observaciones', margin + (boxWidth * 0.7), y + 5);
+        y += 8;
+
+        // Rows tabla software
+        swItems.forEach((item) => {
+            doc.rect(margin, y, boxWidth, 8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(item, margin + 2, y + 5);
+            doc.rect(margin + (boxWidth * 0.45), y + 2, 4, 4); // Checkbox OK
+
+            if (data.software?.[item] === true) {
+                doc.setFontSize(8);
+                doc.text('X', margin + (boxWidth * 0.45) + 1, y + 5);
+                doc.setFontSize(9);
+            }
+
+            doc.text('Realizado', margin + (boxWidth * 0.48), y + 5);
+            y += 8;
+        });
+
+        y += 10;
+
+        // Row 4: Observaciones y Recomendaciones
+        doc.setFont('helvetica', 'bold');
+        doc.text('Observaciones y Recomendaciones:', margin, y);
+        y += 2;
+        doc.rect(margin, y, boxWidth, 30);
+        if (data.observaciones) {
+            doc.setFont('helvetica', 'normal');
+            const splitText = doc.splitTextToSize(data.observaciones, boxWidth - 4);
+            doc.text(splitText, margin + 2, y + 6);
+        }
+
+        y += 35;
+
+        // Row 5: Proximo mantenimiento
+        doc.text(`Próximo Mantenimiento Recomendado: [ ${data.proximoMantenimiento || '____/____/____'} ]`, margin, y);
+        y += 10;
+
+        // Signatures
+        doc.rect(margin, y, (boxWidth / 2) - 5, 25);
+        doc.text('Firma del Técnico:', margin + 2, y + 5);
+
+        doc.rect(margin + (boxWidth / 2) + 5, y, (boxWidth / 2) - 5, 25);
+        doc.text('Firma del Cliente:', margin + (boxWidth / 2) + 7, y + 5);
+
+    } else if (type === 'instalacion_configuracion') {
+        y = drawHeader('ACTA DE INSTALACIÓN Y CONFIGURACIÓN');
+        const boxWidth = pageWidth - (margin * 2);
+
+        // Row 1: Datos Generales
+        doc.rect(margin, y, boxWidth, 20);
+        doc.setFontSize(10);
+        doc.text('Datos del Proyecto:', margin + 2, y + 5);
+
+        doc.text(`Cliente: [ ${data.cliente || '_______________________'} ]`, margin + 5, y + 12);
+        doc.text(`Fecha: [ ${data.fecha || '____/____/____'} ]`, margin + (boxWidth * 0.6), y + 12);
+
+        doc.text(`Proyecto: [ ${data.proyecto || '_______________________'} ]`, margin + 5, y + 18);
+        doc.text(`Duración: [ ${data.duracion || '___'} horas ]`, margin + (boxWidth * 0.6), y + 18);
+
+        y += 25;
+
+        // Row 2: Equipamiento Instalado
+        doc.setFont('helvetica', 'bold');
+        doc.text('Equipamiento Instalado (Resumen):', margin, y);
+        y += 2;
+        doc.rect(margin, y, boxWidth, 25);
+
+        doc.setFont('helvetica', 'normal');
+        if (data.equipamientoResumen) {
+            const splitText = doc.splitTextToSize(data.equipamientoResumen, boxWidth - 4);
+            doc.text(splitText, margin + 2, y + 6);
+        } else {
+            // Lines for manual entry
+            doc.line(margin + 2, y + 8, margin + boxWidth - 2, y + 8);
+            doc.line(margin + 2, y + 16, margin + boxWidth - 2, y + 16);
+            doc.line(margin + 2, y + 24, margin + boxWidth - 2, y + 24);
+        }
+
+        y += 30;
+
+        // Row 3: Configuraciones Realizadas
+        doc.setFont('helvetica', 'bold');
+        doc.text('Configuraciones Realizadas:', margin, y);
+        y += 5;
+
+        const configItems = [
+            'Instalación Sistema Operativo',
+            'Configuración de Red (IP, DNS, Gateway)',
+            'Unión a Dominio / Grupo de Trabajo',
+            'Configuración de Correo Electrónico',
+            'Instalación de Software Específico',
+            'Configuración de Impresoras',
+            'Configuración de Copias de Seguridad',
+            'Políticas de Seguridad / Antivirus'
+        ];
+
+        // Legend
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Leyenda: [SI] Realizado | [NO] No realizado | [NA] No aplica', margin, y);
+        y += 4;
+
+        configItems.forEach((item) => {
+            doc.rect(margin, y, boxWidth, 8);
+
+            doc.setFontSize(9);
+            doc.text(item, margin + 2, y + 5);
+
+            // Checkboxes position (Right aligned)
+            const xRight = margin + boxWidth - 65;
+
+            // SI
+            doc.rect(xRight, y + 2, 4, 4);
+            doc.text('SI', xRight + 5, y + 5);
+
+            // NO
+            doc.rect(xRight + 15, y + 2, 4, 4);
+            doc.text('NO', xRight + 20, y + 5);
+
+            // N/A
+            doc.rect(xRight + 30, y + 2, 4, 4);
+            doc.text('NA', xRight + 35, y + 5);
+
+            // Logic to fill
+            const status = data.configuraciones?.[item];
+            doc.setFontSize(8);
+            if (status === 'SI') doc.text('X', xRight + 1, y + 5);
+            if (status === 'NO') doc.text('X', xRight + 16, y + 5);
+            if (status === 'NA') doc.text('X', xRight + 31, y + 5);
+
+            y += 8;
+        });
+
+        // Ensure Y encompasses list
+        y += 5;
+
+        // Row 4: Observaciones
+        doc.setFont('helvetica', 'bold');
+        doc.text('Observaciones Adicionales:', margin, y);
+        y += 2;
+        doc.rect(margin, y, boxWidth, 25);
+        if (data.observaciones) {
+            doc.setFont('helvetica', 'normal');
+            const splitText = doc.splitTextToSize(data.observaciones, boxWidth - 4);
+            doc.text(splitText, margin + 2, y + 6);
+        }
+
+        y += 30;
+
+        // Row 5: Aceptación
+        doc.setFont('helvetica', 'bold');
+        doc.text('Aceptación de Instalación y Período de Prueba:', margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const textAceptacion = `El cliente declara haber recibido la instalación y configuración descrita en perfectas condiciones de funcionamiento. Se establece un período de prueba de ${data.periodoPrueba || '_______'} días a partir de la fecha de hoy para verificar el correcto funcionamiento.`;
+        const splitAceptacion = doc.splitTextToSize(textAceptacion, boxWidth);
+        doc.text(splitAceptacion, margin, y);
+
+        y += 15;
+
+        // Signatures
+        doc.rect(margin, y, (boxWidth / 2) - 5, 25);
+        doc.text('Firma del Técnico:', margin + 2, y + 5);
+
+        doc.rect(margin + (boxWidth / 2) + 5, y, (boxWidth / 2) - 5, 25);
+        doc.text('Firma del Cliente (Conforme):', margin + (boxWidth / 2) + 7, y + 5);
     }
 
     // doc.save(`plantilla_${type}_${new Date().getTime()}.pdf`);

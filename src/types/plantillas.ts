@@ -172,3 +172,96 @@ export interface MetadatosEncuesta {
         leccionesAprendidas?: string;
     };
 }
+
+export interface MetadatosMantenimientoPreventivo {
+    equipo: string;
+    periodicidad: 'mensual' | 'trimestral' | 'semestral' | 'anual';
+    revisionHardware: {
+        fuenteAlimentacion: { estado: 'ok' | 'ko'; accion: string };
+        ventilacion: { estado: 'ok' | 'ko'; accion: string };
+        discoDuro: { estado: 'ok' | 'ko'; accion: string };
+        memoriaRam: { estado: 'ok' | 'ko'; accion: string };
+        tarjetaGrafica: { estado: 'ok' | 'ko'; accion: string };
+        placaBase: { estado: 'ok' | 'ko'; accion: string };
+        conectividad: { estado: 'ok' | 'ko'; accion: string };
+        perifericos: { estado: 'ok' | 'ko'; accion: string };
+    };
+    limpiezaFisica: boolean;
+    observacionesHardware: string;
+    revisionSoftware: {
+        actualizacionesSo: 'completas' | 'pendientes';
+        detallesPendientes?: string;
+        actualizacionesAntivirus: 'ok' | 'requiere_atencion';
+        espacioDiscoLibre: number;
+        fragmentacion: 'ok' | 'desfragmentado';
+        programasInstalados: 'revisado' | 'limpieza_realizada';
+        licenciasVigentes: 'ok' | 'renovaciones';
+        detallesRenovaciones?: string;
+        copiasSeguridad: {
+            ultimaCopia?: string;
+            estado: boolean;
+        };
+    };
+    rendimiento: {
+        tiempoArranqueActual: number;
+        tiempoArranqueAnterior?: number;
+        testRendimiento: 'optimo' | 'aceptable' | 'mejorable';
+    };
+    recomendaciones: {
+        ampliacionRam: boolean;
+        actualizacionSsd: boolean;
+        renovacionEquipo: boolean;
+        antiguedadEquipo?: number;
+        mejoraSeguridad: string;
+        otras: string;
+    };
+    proximoMantenimiento?: string;
+}
+
+export interface MetadatosInstalacionConfiguracion {
+    proyecto: string;
+    duracionHoras: number;
+    equipamiento: {
+        descripcion: string;
+        marcaModelo: string;
+        numSerie: string;
+        cantidad: number;
+        ubicacion: string;
+    }[];
+    configuracion: {
+        sistemaOperativo: boolean;
+        detallesSo?: string;
+        red: boolean;
+        detallesRed?: string;
+        dominio: boolean;
+        detalleDominio?: string;
+        email: boolean;
+        detalleEmail?: string;
+        softwareEspecifico: string[];
+        impresoras: boolean;
+        detalleImpresoras?: string;
+        migracionDatos: string;
+        seguridad: boolean;
+        detalleSeguridad?: string;
+        politicas: boolean;
+        detallePoliticas?: string;
+        backup: boolean;
+        detalleBackup?: string;
+    };
+    documentacionEntregada: {
+        manualUsuario: boolean;
+        guiaPrimerosPasos: boolean;
+        credenciales: boolean;
+        licencias: boolean;
+        garantias: boolean;
+    };
+    formacion: {
+        impartida: boolean;
+        duracionMinutos: number;
+        temas: string[];
+        nivelComprension: 'alto' | 'medio' | 'bajo';
+    };
+    periodoPrueba: 7 | 15 | 30;
+    contactoSoporte: string;
+    confirmacionUsuario: boolean;
+}

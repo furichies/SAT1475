@@ -22,6 +22,8 @@ import { InstalacionForm } from './plantillas/InstalacionForm'
 import { EntregaForm } from './plantillas/EntregaForm'
 import { AccesoRemotoForm } from './plantillas/AccesoRemotoForm'
 import { EncuestaForm } from './plantillas/EncuestaForm'
+import { MantenimientoPreventivoForm } from './plantillas/MantenimientoPreventivoForm'
+import { InstalacionConfiguracionForm } from './plantillas/InstalacionConfiguracionForm'
 
 interface PlantillaSelectorProps {
     ticket: any
@@ -34,6 +36,8 @@ type TipoPlantilla =
     | 'entrega'
     | 'acceso_remoto'
     | 'encuesta'
+    | 'mantenimiento_preventivo'
+    | 'instalacion_configuracion'
     | null
 
 export function PlantillaSelector({ ticket, onDocumentGenerated }: PlantillaSelectorProps) {
@@ -66,6 +70,10 @@ export function PlantillaSelector({ ticket, onDocumentGenerated }: PlantillaSele
                 return <AccesoRemotoForm ticket={ticket} onSuccess={handleSuccess} onCancel={handleCancel} />
             case 'encuesta':
                 return <EncuestaForm ticket={ticket} onSuccess={handleSuccess} onCancel={handleCancel} />
+            case 'mantenimiento_preventivo':
+                return <MantenimientoPreventivoForm ticket={ticket} onSuccess={handleSuccess} onCancel={handleCancel} />
+            case 'instalacion_configuracion':
+                return <InstalacionConfiguracionForm ticket={ticket} onSuccess={handleSuccess} onCancel={handleCancel} />
             default:
                 return null
         }
@@ -138,13 +146,37 @@ export function PlantillaSelector({ ticket, onDocumentGenerated }: PlantillaSele
 
                         <Button
                             variant="outline"
-                            className="h-auto py-6 flex flex-col gap-2 hover:border-primary hover:bg-primary/5 group md:col-span-2"
+                            className="h-auto py-6 flex flex-col gap-2 hover:border-primary hover:bg-primary/5 group"
                             onClick={() => setSelectedTipo('encuesta')}
                         >
                             <Star className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                             <div className="text-center">
                                 <span className="font-bold block text-lg">Encuesta de Satisfacción</span>
                                 <span className="text-xs text-muted-foreground">Valoración del cliente</span>
+                            </div>
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            className="h-auto py-6 flex flex-col gap-2 hover:border-primary hover:bg-primary/5 group"
+                            onClick={() => setSelectedTipo('mantenimiento_preventivo')}
+                        >
+                            <FileText className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <div className="text-center">
+                                <span className="font-bold block text-lg">Informe Mantenimiento Preventivo</span>
+                                <span className="text-xs text-muted-foreground">Revisión completa de hardware y software</span>
+                            </div>
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            className="h-auto py-6 flex flex-col gap-2 hover:border-primary hover:bg-primary/5 group md:col-span-2"
+                            onClick={() => setSelectedTipo('instalacion_configuracion')}
+                        >
+                            <Monitor className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <div className="text-center">
+                                <span className="font-bold block text-lg">Acta Instalación y Configuración</span>
+                                <span className="text-xs text-muted-foreground">Instalación completa de equipos y sistemas</span>
                             </div>
                         </Button>
                     </div>

@@ -104,7 +104,9 @@ export enum DocumentoTipo {
   ACTA_INSTALACION = 'acta_instalacion',
   INFORME_ENTREGA = 'informe_entrega',
   AUTORIZACION_ACCESO_REMOTO = 'autorizacion_acceso_remoto',
-  ENCUESTA_SATISFACCION = 'encuesta_satisfaccion'
+  ENCUESTA_SATISFACCION = 'encuesta_satisfaccion',
+  INFORME_MANTENIMIENTO_PREVENTIVO = 'informe_mantenimiento_preventivo',
+  ACTA_INSTALACION_CONFIGURACION = 'acta_instalacion_configuracion'
 }
 
 export enum DocumentoEntidadTipo {

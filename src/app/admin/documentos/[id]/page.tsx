@@ -67,6 +67,8 @@ const DOCUMENTO_TIPO_LABELS: Record<DocumentoTipo, string> = {
     [DocumentoTipo.INFORME_ENTREGA]: 'Informe de Entrega',
     [DocumentoTipo.AUTORIZACION_ACCESO_REMOTO]: 'Autorización Remota',
     [DocumentoTipo.ENCUESTA_SATISFACCION]: 'Encuesta Satisfacción',
+    [DocumentoTipo.INFORME_MANTENIMIENTO_PREVENTIVO]: 'Informe Mantenimiento Preventivo',
+    [DocumentoTipo.ACTA_INSTALACION_CONFIGURACION]: 'Acta Instalación y Configuración',
 }
 
 const ESTADO_DOCUMENTO_LABELS: Record<EstadoDocumento, string> = {

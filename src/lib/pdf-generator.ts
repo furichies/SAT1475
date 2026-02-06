@@ -12,6 +12,10 @@ import type {
     MetadatosAlbaranEntrega,
     MetadatosFactura,
 } from '@/types/documentos'
+import type {
+    MetadatosMantenimientoPreventivo,
+    MetadatosInstalacionConfiguracion
+} from '@/types/plantillas'
 
 // Configuración de la empresa
 const EMPRESA = {
@@ -90,6 +94,12 @@ export async function generarPDFDocumento(documento: any): Promise<Buffer> {
             break
         case DocumentoTipo.ENCUESTA_SATISFACCION:
             await generarEncuestaSatisfaccion(doc, documento, metadatos)
+            break
+        case DocumentoTipo.INFORME_MANTENIMIENTO_PREVENTIVO:
+            await generarMantenimientoPreventivo(doc, documento, metadatos)
+            break
+        case DocumentoTipo.ACTA_INSTALACION_CONFIGURACION:
+            await generarInstalacionConfiguracion(doc, documento, metadatos)
             break
         default:
             generarDocumentoGenerico(doc, documento)
@@ -2301,6 +2311,463 @@ function agregarZonaFirma(doc: jsPDF, etiqueta1: string, etiqueta2: string) {
     // Firma 2
     doc.line(120, yPos, 180, yPos)
     doc.text(etiqueta2, 150, yPos + 5, { align: 'center' })
+}
+
+/**
+ * Generar Informe de Mantenimiento Preventivo
+ */
+async function generarMantenimientoPreventivo(doc: jsPDF, documento: any, metadatos: MetadatosMantenimientoPreventivo | null) {
+    let yPos = agregarEncabezado(doc, 'INFORME DE MANTENIMIENTO PREVENTIVO', documento.numeroDocumento)
+
+    if (!metadatos) {
+        doc.text('No hay metadatos disponibles', 20, yPos + 10)
+        agregarPiePagina(doc)
+        return
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth()
+
+    // Datos generales
+    yPos += 5
+    doc.setFontSize(10)
+    doc.setTextColor(COLORS.text)
+    doc.setFont('helvetica', 'bold')
+    doc.text('CLIENTE:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(documento.ticket?.cliente?.nombre || 'N/A', 50, yPos)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('FECHA:', pageWidth - 80, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(new Date(documento.fechaGeneracion).toLocaleDateString('es-ES'), pageWidth - 50, yPos)
+
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('EQUIPO:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(metadatos.equipo, 50, yPos)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('PERIODICIDAD:', pageWidth - 80, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(metadatos.periodicidad.toUpperCase(), pageWidth - 50, yPos)
+
+    // REVISIÓN HARDWARE
+    yPos = checkPageBreak(doc, yPos, 80)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('REVISIÓN HARDWARE', 20, yPos)
+    yPos += 7
+
+    const componentesHardware = [
+        ['Fuente alimentación', metadatos.revisionHardware.fuenteAlimentacion],
+        ['Ventilación/cooling', metadatos.revisionHardware.ventilacion],
+        ['Disco duro/SSD', metadatos.revisionHardware.discoDuro],
+        ['Memoria RAM', metadatos.revisionHardware.memoriaRam],
+        ['Tarjeta gráfica', metadatos.revisionHardware.tarjetaGrafica],
+        ['Placa base', metadatos.revisionHardware.placaBase],
+        ['Conectividad (RJ45)', metadatos.revisionHardware.conectividad],
+        ['Periféricos', metadatos.revisionHardware.perifericos]
+    ]
+
+    const hardwareData = componentesHardware.map(([nombre, datos]: any) => [
+        nombre,
+        datos.estado === 'ok' ? '☑ OK  ☐ KO' : '☐ OK  ☑ KO',
+        datos.accion || '-'
+    ])
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['Componente', 'Estado', 'Acción realizada']],
+        body: hardwareData,
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary, fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: {
+            0: { cellWidth: 45 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 'auto' }
+        },
+        margin: { left: 20, right: 20 }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 5
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+    doc.text(`Limpieza física realizada: ${metadatos.limpiezaFisica ? '☑ Sí  ☐ No' : '☐ Sí  ☑ No'}`, 20, yPos)
+    yPos += 5
+
+    if (metadatos.observacionesHardware) {
+        doc.setFont('helvetica', 'bold')
+        doc.text('Observaciones hardware:', 20, yPos)
+        yPos += 4
+        doc.setFont('helvetica', 'normal')
+        const obsLines = doc.splitTextToSize(metadatos.observacionesHardware, 170)
+        doc.text(obsLines, 20, yPos)
+        yPos += obsLines.length * 4
+    }
+
+    // REVISIÓN SOFTWARE
+    yPos = checkPageBreak(doc, yPos, 60)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('REVISIÓN SOFTWARE', 20, yPos)
+    yPos += 7
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const softwareItems = [
+        ['Actualizaciones SO:', metadatos.revisionSoftware.actualizacionesSo === 'completas' ?
+            '☑ Completas  ☐ Pendientes' :
+            `☐ Completas  ☑ Pendientes: ${metadatos.revisionSoftware.detallesPendientes || ''}`],
+        ['Actualizaciones antivirus:', metadatos.revisionSoftware.actualizacionesAntivirus === 'ok' ?
+            '☑ OK  ☐ Requiere atención' : '☐ OK  ☑ Requiere atención'],
+        ['Espacio en disco:', `${metadatos.revisionSoftware.espacioDiscoLibre}% libre (recomendado >20%)`],
+        ['Fragmentación (HDD):', metadatos.revisionSoftware.fragmentacion === 'ok' ?
+            '☑ OK  ☐ Desfragmentado' : '☐ OK  ☑ Desfragmentado'],
+        ['Programas instalados:', metadatos.revisionSoftware.programasInstalados === 'revisado' ?
+            '☑ Revisado  ☐ Limpieza realizada' : '☐ Revisado  ☑ Limpieza realizada'],
+        ['Licencias vigentes:', metadatos.revisionSoftware.licenciasVigentes === 'ok' ?
+            '☑ OK  ☐ Renovaciones' :
+            `☐ OK  ☑ Renovaciones: ${metadatos.revisionSoftware.detallesRenovaciones || ''}`],
+        ['Copias de seguridad:', `Última: ${metadatos.revisionSoftware.copiasSeguridad.ultimaCopia ?
+            new Date(metadatos.revisionSoftware.copiasSeguridad.ultimaCopia).toLocaleDateString('es-ES') : 'N/A'}  ${metadatos.revisionSoftware.copiasSeguridad.estado ? '☑ OK' : '☐ OK'}`]
+    ]
+
+    softwareItems.forEach(([label, value]) => {
+        yPos = checkPageBreak(doc, yPos, 6)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`• ${label}`, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        const valueLines = doc.splitTextToSize(value, 140)
+        doc.text(valueLines, 75, yPos)
+        yPos += Math.max(5, valueLines.length * 4)
+    })
+
+    // RENDIMIENTO
+    yPos = checkPageBreak(doc, yPos, 30)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('RENDIMIENTO', 20, yPos)
+    yPos += 7
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    doc.text(`Tiempo de arranque: ${metadatos.rendimiento.tiempoArranqueActual} seg`, 20, yPos)
+    if (metadatos.rendimiento.tiempoArranqueAnterior) {
+        doc.text(`(anterior: ${metadatos.rendimiento.tiempoArranqueAnterior} seg)`, 90, yPos)
+    }
+    yPos += 5
+
+    const testRendimiento = metadatos.rendimiento.testRendimiento
+    doc.text(`Test de rendimiento: ${testRendimiento === 'optimo' ? '☑ Óptimo  ☐ Aceptable  ☐ Mejorable' :
+        testRendimiento === 'aceptable' ? '☐ Óptimo  ☑ Aceptable  ☐ Mejorable' :
+            '☐ Óptimo  ☐ Aceptable  ☑ Mejorable'}`, 20, yPos)
+
+    // RECOMENDACIONES
+    yPos = checkPageBreak(doc, yPos, 50)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('RECOMENDACIONES', 20, yPos)
+    yPos += 7
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const recomendaciones = [
+        [metadatos.recomendaciones.ampliacionRam, 'Ampliación de memoria RAM'],
+        [metadatos.recomendaciones.actualizacionSsd, 'Actualización a SSD'],
+        [metadatos.recomendaciones.renovacionEquipo,
+        `Renovación de equipo${metadatos.recomendaciones.antiguedadEquipo ? ` (antigüedad: ${metadatos.recomendaciones.antiguedadEquipo} años)` : ''}`]
+    ]
+
+    recomendaciones.forEach(([checked, text]: any) => {
+        yPos = checkPageBreak(doc, yPos, 5)
+        doc.text(`${checked ? '☑' : '☐'} ${text}`, 20, yPos)
+        yPos += 5
+    })
+
+    if (metadatos.recomendaciones.mejoraSeguridad) {
+        yPos = checkPageBreak(doc, yPos, 8)
+        doc.text(`☑ Mejora de seguridad: ${metadatos.recomendaciones.mejoraSeguridad}`, 20, yPos)
+        yPos += 5
+    }
+
+    if (metadatos.recomendaciones.otras) {
+        yPos = checkPageBreak(doc, yPos, 8)
+        doc.text(`☑ Otras:`, 20, yPos)
+        yPos += 4
+        const otrasLines = doc.splitTextToSize(metadatos.recomendaciones.otras, 170)
+        doc.text(otrasLines, 25, yPos)
+        yPos += otrasLines.length * 4
+    }
+
+    if (metadatos.proximoMantenimiento) {
+        yPos = checkPageBreak(doc, yPos, 10)
+        yPos += 5
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Próximo mantenimiento programado: ${new Date(metadatos.proximoMantenimiento).toLocaleDateString('es-ES')}`, 20, yPos)
+    }
+
+    // Firmas
+    yPos = checkPageBreak(doc, yPos, 30)
+    yPos += 15
+    agregarZonaFirma(doc, 'Firma del Cliente', 'Firma del Técnico')
+
+    agregarPiePagina(doc)
+}
+
+/**
+ * Generar Acta de Instalación y Configuración
+ */
+async function generarInstalacionConfiguracion(doc: jsPDF, documento: any, metadatos: MetadatosInstalacionConfiguracion | null) {
+    let yPos = agregarEncabezado(doc, 'ACTA DE INSTALACIÓN Y CONFIGURACIÓN', documento.numeroDocumento)
+
+    if (!metadatos) {
+        doc.text('No hay metadatos disponibles', 20, yPos + 10)
+        agregarPiePagina(doc)
+        return
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth()
+
+    // Datos generales
+    yPos += 5
+    doc.setFontSize(10)
+    doc.setTextColor(COLORS.text)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PROYECTO:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(metadatos.proyecto, 50, yPos)
+
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('CLIENTE:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(documento.ticket?.cliente?.nombre || 'N/A', 50, yPos)
+
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('FECHA:', 20, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(new Date(documento.fechaGeneracion).toLocaleDateString('es-ES'), 50, yPos)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('DURACIÓN:', pageWidth - 80, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${metadatos.duracionHoras} horas`, pageWidth - 50, yPos)
+
+    // EQUIPAMIENTO INSTALADO
+    if (metadatos.equipamiento.length > 0) {
+        yPos = checkPageBreak(doc, yPos, 50)
+        yPos += 10
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.primary)
+        doc.text('EQUIPAMIENTO INSTALADO', 20, yPos)
+        yPos += 7
+
+        const equipamientoData = metadatos.equipamiento.map(eq => [
+            eq.descripcion,
+            eq.marcaModelo,
+            eq.numSerie || '-',
+            eq.cantidad.toString(),
+            eq.ubicacion
+        ])
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Descripción', 'Marca/Modelo', 'Nº Serie', 'Cant.', 'Ubicación']],
+            body: equipamientoData,
+            theme: 'striped',
+            headStyles: { fillColor: COLORS.primary, fontSize: 8 },
+            bodyStyles: { fontSize: 8 },
+            columnStyles: {
+                0: { cellWidth: 40 },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 30 },
+                3: { cellWidth: 15 },
+                4: { cellWidth: 'auto' }
+            },
+            margin: { left: 20, right: 20 }
+        })
+
+        yPos = (doc as any).lastAutoTable.finalY + 5
+    }
+
+    // CONFIGURACIÓN REALIZADA
+    yPos = checkPageBreak(doc, yPos, 80)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('CONFIGURACIÓN REALIZADA', 20, yPos)
+    yPos += 7
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const configuraciones = [
+        [metadatos.configuracion.sistemaOperativo, 'Instalación sistema operativo', metadatos.configuracion.detallesSo],
+        [metadatos.configuracion.red, 'Configuración red (IP/DNS/DHCP)', metadatos.configuracion.detallesRed],
+        [metadatos.configuracion.dominio, 'Unión a dominio/grupo trabajo', metadatos.configuracion.detalleDominio],
+        [metadatos.configuracion.email, 'Configuración correo electrónico', metadatos.configuracion.detalleEmail],
+        [metadatos.configuracion.impresoras, 'Configuración impresoras/dispositivos', metadatos.configuracion.detalleImpresoras],
+        [metadatos.configuracion.seguridad, 'Configuración seguridad/antivirus', metadatos.configuracion.detalleSeguridad],
+        [metadatos.configuracion.politicas, 'Políticas de grupo/permisos', metadatos.configuracion.detallePoliticas],
+        [metadatos.configuracion.backup, 'Copia de seguridad automatizada', metadatos.configuracion.detalleBackup]
+    ]
+
+    configuraciones.forEach(([checked, label, detalle]: any) => {
+        yPos = checkPageBreak(doc, yPos, 8)
+        doc.text(`${checked ? '☑' : '☐'} ${label}`, 20, yPos)
+        if (checked && detalle) {
+            yPos += 4
+            doc.setFont('helvetica', 'italic')
+            const detalleLines = doc.splitTextToSize(`   ${detalle}`, 165)
+            doc.text(detalleLines, 25, yPos)
+            doc.setFont('helvetica', 'normal')
+            yPos += detalleLines.length * 4
+        } else {
+            yPos += 5
+        }
+    })
+
+    // Software específico
+    if (metadatos.configuracion.softwareEspecifico.length > 0) {
+        yPos = checkPageBreak(doc, yPos, 10)
+        doc.text('☑ Instalación software específico:', 20, yPos)
+        yPos += 4
+        metadatos.configuracion.softwareEspecifico.forEach(sw => {
+            yPos = checkPageBreak(doc, yPos, 5)
+            doc.text(`   • ${sw}`, 25, yPos)
+            yPos += 4
+        })
+        yPos += 2
+    }
+
+    // Migración de datos
+    if (metadatos.configuracion.migracionDatos) {
+        yPos = checkPageBreak(doc, yPos, 8)
+        doc.text(`☑ Migración de datos desde: ${metadatos.configuracion.migracionDatos}`, 20, yPos)
+        yPos += 5
+    }
+
+    // DOCUMENTACIÓN ENTREGADA
+    yPos = checkPageBreak(doc, yPos, 30)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('DOCUMENTACIÓN ENTREGADA', 20, yPos)
+    yPos += 7
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const documentacion = [
+        [metadatos.documentacionEntregada.manualUsuario, 'Manual de usuario básico'],
+        [metadatos.documentacionEntregada.guiaPrimerosPasos, 'Guía de primeros pasos'],
+        [metadatos.documentacionEntregada.credenciales, 'Credenciales de acceso (sobre cerrado)'],
+        [metadatos.documentacionEntregada.licencias, 'Licencias/originales software'],
+        [metadatos.documentacionEntregada.garantias, 'Garantías equipamiento']
+    ]
+
+    documentacion.forEach(([checked, label]: any) => {
+        yPos = checkPageBreak(doc, yPos, 5)
+        doc.text(`${checked ? '☑' : '☐'} ${label}`, 20, yPos)
+        yPos += 5
+    })
+
+    // FORMACIÓN AL USUARIO
+    if (metadatos.formacion.impartida) {
+        yPos = checkPageBreak(doc, yPos, 40)
+        yPos += 10
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.primary)
+        doc.text('FORMACIÓN AL USUARIO', 20, yPos)
+        yPos += 7
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(COLORS.text)
+
+        doc.text(`☑ Sesión de formación impartida: ${metadatos.formacion.duracionMinutos} minutos`, 20, yPos)
+        yPos += 5
+
+        if (metadatos.formacion.temas.length > 0) {
+            doc.setFont('helvetica', 'bold')
+            doc.text('Temas cubiertos:', 20, yPos)
+            yPos += 4
+            doc.setFont('helvetica', 'normal')
+            metadatos.formacion.temas.forEach(tema => {
+                yPos = checkPageBreak(doc, yPos, 5)
+                doc.text(`• ${tema}`, 25, yPos)
+                yPos += 4
+            })
+            yPos += 2
+        }
+
+        doc.text(`Nivel de comprensión usuario: `, 20, yPos)
+        const nivel = metadatos.formacion.nivelComprension
+        doc.text(nivel === 'alto' ? '☑ Alto  ☐ Medio  ☐ Bajo' :
+            nivel === 'medio' ? '☐ Alto  ☑ Medio  ☐ Bajo' :
+                '☐ Alto  ☐ Medio  ☑ Bajo', 80, yPos)
+        yPos += 5
+    }
+
+    // PERÍODO DE PRUEBA
+    yPos = checkPageBreak(doc, yPos, 30)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.primary)
+    doc.text('PERÍODO DE PRUEBA', 20, yPos)
+    yPos += 7
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.text)
+
+    const periodo = metadatos.periodoPrueba
+    doc.text(periodo === 7 ? '☑ 7 días  ☐ 15 días  ☐ 30 días' :
+        periodo === 15 ? '☐ 7 días  ☑ 15 días  ☐ 30 días' :
+            '☐ 7 días  ☐ 15 días  ☑ 30 días', 20, yPos)
+    yPos += 5
+
+    if (metadatos.contactoSoporte) {
+        doc.text(`Contacto soporte durante pruebas: ${metadatos.contactoSoporte}`, 20, yPos)
+        yPos += 5
+    }
+
+    yPos += 3
+    doc.setFont('helvetica', 'bold')
+    doc.text(`El usuario confirma funcionamiento correcto: ${metadatos.confirmacionUsuario ? '☑ Sí' : '☐ Sí'}`, 20, yPos)
+
+    // Firmas
+    yPos = checkPageBreak(doc, yPos, 30)
+    yPos += 15
+    agregarZonaFirma(doc, 'Firma del Cliente', 'Firma del Técnico')
+
+    agregarPiePagina(doc)
 }
 
 export default generarPDFDocumento

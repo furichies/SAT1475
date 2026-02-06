@@ -21,6 +21,28 @@ import {
     marcasImpresora
 } from '@/lib/service-template-data'
 import { generateTemplatePDF, TemplateType } from '@/lib/pdf-service-templates'
+import { Checkbox } from '@/components/ui/checkbox'
+
+const HW_ITEMS = [
+    'Fuente de Alimentación', 'Ventilación / Cooling', 'Disco Duro / SSD', 'Memoria RAM',
+    'Tarjeta Gráfica', 'Placa Base', 'Conectividad (RJ45/Wifi)', 'Periféricos'
+]
+
+const SW_ITEMS = [
+    'Actualizaciones S.O.', 'Actualizaciones Antivirus', 'Espacio en Disco',
+    'Fragmentación HDD', 'Limpieza Archivos Temp.', 'Revisión Logs Eventos'
+]
+
+const CONFIG_ITEMS = [
+    'Instalación Sistema Operativo',
+    'Configuración de Red (IP, DNS, Gateway)',
+    'Unión a Dominio / Grupo de Trabajo',
+    'Configuración de Correo Electrónico',
+    'Instalación de Software Específico',
+    'Configuración de Impresoras',
+    'Configuración de Copias de Seguridad',
+    'Políticas de Seguridad / Antivirus'
+]
 
 export default function PlantillasPage() {
     const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('intervencion')
@@ -97,6 +119,8 @@ export default function PlantillasPage() {
                                         <SelectItem value="intervencion">Intervención Genérica</SelectItem>
                                         <SelectItem value="reparacion_equipo">Reparación de Equipo</SelectItem>
                                         <SelectItem value="reparacion_impresora">Reparación de Impresora</SelectItem>
+                                        <SelectItem value="mantenimiento_preventivo">Informe de Mantenimiento Preventivo</SelectItem>
+                                        <SelectItem value="instalacion_configuracion">Acta de Instalación y Configuración</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -335,37 +359,229 @@ export default function PlantillasPage() {
                                             <Input
                                                 value={formData.numeroSerie || ''}
                                                 onChange={(e) => handleInputChange('numeroSerie', e.target.value)}
-                                                pattern="^[a-zA-Z0-9]{6,20}$"
                                             />
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            <div className="space-y-4">
-                                <Label>Tareas a Realizar</Label>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {['Limpieza', 'Formateo', 'Instalación SW', 'Cambio Pieza', 'Backup', 'Otros'].map((task) => (
-                                        <div key={task} className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                id={task}
-                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                                checked={formData.tareas?.includes(task) || false}
-                                                onChange={(e) => {
-                                                    const currentTasks = formData.tareas || []
-                                                    if (e.target.checked) {
-                                                        handleInputChange('tareas', [...currentTasks, task])
-                                                    } else {
-                                                        handleInputChange('tareas', currentTasks.filter((t: string) => t !== task))
-                                                    }
-                                                }}
-                                            />
-                                            <Label htmlFor={task} className="font-normal cursor-pointer">{task}</Label>
+                            {selectedTemplate === 'mantenimiento_preventivo' && (
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium">Detalles de Mantenimiento</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label>Equipo</Label>
+                                                <Input
+                                                    value={formData.equipo || ''}
+                                                    onChange={(e) => handleInputChange('equipo', e.target.value)}
+                                                    placeholder="Ej: Servidor Principal"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Periodicidad</Label>
+                                                <Select onValueChange={(val) => handleInputChange('periodicidad', val)}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Mensual">Mensual</SelectItem>
+                                                        <SelectItem value="Trimestral">Trimestral</SelectItem>
+                                                        <SelectItem value="Semestral">Semestral</SelectItem>
+                                                        <SelectItem value="Anual">Anual</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
-                                    ))}
+
+                                        <div className="space-y-2">
+                                            <Label>Próximo Mantenimiento</Label>
+                                            <Input
+                                                value={formData.proximoMantenimiento || ''}
+                                                onChange={(e) => handleInputChange('proximoMantenimiento', e.target.value)}
+                                                placeholder="DD/MM/AAAA"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Checklist Hardware */}
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <h3 className="font-medium">Revisión de Hardware</h3>
+                                        <div className="space-y-2 bg-slate-50 p-4 rounded-md">
+                                            <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground mb-2">
+                                                <div className="col-span-4">COMPONENTE</div>
+                                                <div className="col-span-3">ESTADO</div>
+                                                <div className="col-span-5">ACCIÓN / NOTA</div>
+                                            </div>
+                                            {HW_ITEMS.map((item) => (
+                                                <div key={item} className="grid grid-cols-12 gap-2 items-center text-sm py-1 border-b border-slate-100 last:border-0">
+                                                    <div className="col-span-4 font-medium">{item}</div>
+                                                    <div className="col-span-3 flex items-center space-x-4">
+                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                            <input type="radio"
+                                                                className="accent-primary"
+                                                                name={`hw_${item}`}
+                                                                checked={formData.hardware?.[item]?.estado === 'OK'}
+                                                                onChange={() => handleInputChange('hardware', { ...formData.hardware, [item]: { ...formData.hardware?.[item], estado: 'OK' } })}
+                                                            />
+                                                            <span className="text-xs">OK</span>
+                                                        </label>
+                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                            <input type="radio"
+                                                                className="accent-destructive"
+                                                                name={`hw_${item}`}
+                                                                checked={formData.hardware?.[item]?.estado === 'KO'}
+                                                                onChange={() => handleInputChange('hardware', { ...formData.hardware, [item]: { ...formData.hardware?.[item], estado: 'KO' } })}
+                                                            />
+                                                            <span className="text-xs">KO</span>
+                                                        </label>
+                                                    </div>
+                                                    <div className="col-span-5">
+                                                        <Input
+                                                            placeholder="Acción realizada..."
+                                                            className="h-7 text-xs"
+                                                            value={formData.hardware?.[item]?.accion || ''}
+                                                            onChange={(e) => handleInputChange('hardware', { ...formData.hardware, [item]: { ...formData.hardware?.[item], accion: e.target.value } })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Checklist Software */}
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <h3 className="font-medium">Revisión de Software</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {SW_ITEMS.map((item) => (
+                                                <div key={item} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`sw_${item}`}
+                                                        checked={formData.software?.[item] === true}
+                                                        onCheckedChange={(checked) => handleInputChange('software', { ...formData.software, [item]: checked === true })}
+                                                    />
+                                                    <Label htmlFor={`sw_${item}`} className="cursor-pointer font-normal">{item}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {selectedTemplate === 'instalacion_configuracion' && (
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium">Detalles de Instalación</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label>Proyecto</Label>
+                                                <Input
+                                                    value={formData.proyecto || ''}
+                                                    onChange={(e) => handleInputChange('proyecto', e.target.value)}
+                                                    placeholder="Nombre del proyecto"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Duración (horas)</Label>
+                                                <Input
+                                                    value={formData.duracion || ''}
+                                                    onChange={(e) => handleInputChange('duracion', e.target.value)}
+                                                    type="number"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Equipamiento (Resumen)</Label>
+                                            <Textarea
+                                                placeholder="Descripción breve del equipamiento principal..."
+                                                value={formData.equipamientoResumen || ''}
+                                                onChange={(e) => handleInputChange('equipamientoResumen', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Período de Prueba</Label>
+                                            <Select onValueChange={(val) => handleInputChange('periodoPrueba', val)}>
+                                                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="7 días">7 días</SelectItem>
+                                                    <SelectItem value="15 días">15 días</SelectItem>
+                                                    <SelectItem value="30 días">30 días</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* Configuraciones Realizadas */}
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <h3 className="font-medium">Configuraciones Realizadas</h3>
+                                        <div className="space-y-2 bg-slate-50 p-4 rounded-md">
+                                            <p className="text-xs text-muted-foreground mb-4">Marque las configuraciones realizadas y entregadas.</p>
+
+                                            {CONFIG_ITEMS.map((item) => (
+                                                <div key={item} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                                                    <span className="text-sm font-medium">{item}</span>
+                                                    <div className="flex items-center space-x-4">
+                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                            <input type="radio"
+                                                                className="accent-primary"
+                                                                name={`config_${item}`}
+                                                                checked={formData.configuraciones?.[item] === 'SI'}
+                                                                onChange={() => handleInputChange('configuraciones', { ...formData.configuraciones, [item]: 'SI' })}
+                                                            />
+                                                            <span className="text-xs">SI</span>
+                                                        </label>
+                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                            <input type="radio"
+                                                                className="accent-gray-500"
+                                                                name={`config_${item}`}
+                                                                checked={formData.configuraciones?.[item] === 'NO'}
+                                                                onChange={() => handleInputChange('configuraciones', { ...formData.configuraciones, [item]: 'NO' })}
+                                                            />
+                                                            <span className="text-xs">NO</span>
+                                                        </label>
+                                                        <label className="flex items-center space-x-1 cursor-pointer">
+                                                            <input type="radio"
+                                                                className="accent-gray-300"
+                                                                name={`config_${item}`}
+                                                                checked={formData.configuraciones?.[item] === 'NA'}
+                                                                onChange={() => handleInputChange('configuraciones', { ...formData.configuraciones, [item]: 'NA' })}
+                                                            />
+                                                            <span className="text-xs">N/A</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!['mantenimiento_preventivo', 'instalacion_configuracion'].includes(selectedTemplate) && (
+                                <div className="space-y-4">
+                                    <Label>Tareas a Realizar</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {['Limpieza', 'Formateo', 'Instalación SW', 'Cambio Pieza', 'Backup', 'Otros'].map((task) => (
+                                            <div key={task} className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={task}
+                                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    checked={formData.tareas?.includes(task) || false}
+                                                    onChange={(e) => {
+                                                        const currentTasks = formData.tareas || []
+                                                        if (e.target.checked) {
+                                                            handleInputChange('tareas', [...currentTasks, task])
+                                                        } else {
+                                                            handleInputChange('tareas', currentTasks.filter((t: string) => t !== task))
+                                                        }
+                                                    }}
+                                                />
+                                                <Label htmlFor={task} className="font-normal cursor-pointer">{task}</Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <Separator />
 
